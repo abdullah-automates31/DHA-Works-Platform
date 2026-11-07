@@ -25,6 +25,7 @@ import {
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { useMyProfile } from '@/lib/profile';
+import { signOut } from '@/lib/signOut';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
@@ -196,7 +197,7 @@ export default function AboutScreen() {
 
           <InfoNote>{t('about.cnicNote')}</InfoNote>
           {formError ? <FieldError>{formError}</FieldError> : null}
-          <TextLink label={t('temp.notYou')} onPress={() => void supabase.auth.signOut()} />
+          <TextLink label={t('temp.notYou')} onPress={() => void signOut()} />
         </ScrollView>
         <BottomBar label={t('about.next')} onPress={() => void onNext()} loading={saving} />
       </KeyboardAvoidingView>

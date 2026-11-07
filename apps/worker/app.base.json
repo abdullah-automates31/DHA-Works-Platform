@@ -25,6 +25,14 @@
       "expo-font",
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#0E5A3A",
+          "defaultChannel": "job_updates"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "cameraPermission": "DHA Works uses the camera so you can photograph your CNIC, police certificate and profile picture.",

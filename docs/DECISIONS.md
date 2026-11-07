@@ -6,6 +6,7 @@ Most recent first within each group. "Confirmed" means agreed with Shariq Bhai; 
 
 | Decision | Status |
 | --- | --- |
+| **Push notifications (7 Nov):** one sender, `send-push`, sends through FCM directly for both apps (the Expo dispatcher is retired); both apps register raw FCM tokens (worker app: `expo-notifications` `getDevicePushTokenAsync`; Android only until there is an Apple account); every job event is pushed. Customer pushes may name the worker and show the quote amount (e.g. "Ahmed quoted 2,500 Rs"); worker pushes show the job title only; resident details never appear. Firebase project `dha-works`; worker ids `pk.dhaworks.worker` and `pk.dhaworks.worker.dev` | Decided by Shariq, 7 Nov |
 | Two mobile apps and one web admin portal | Confirmed |
 | Customer and worker accounts are separate | Confirmed (23 Oct) |
 | Payment is cash only | Confirmed |

@@ -4,10 +4,11 @@ import { ActivityIndicator, View } from 'react-native';
 import { TextLink, PrimaryButton } from '@/components/AuthForm';
 import { AppText } from '@/components/AppText';
 import { allowedRoutes, isRouteAllowed, type ProfileSnapshot } from '@/features/profile/routing';
+import { usePushNotifications } from '@/features/push/usePushNotifications';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { ProfileProvider, useMyProfile } from '@/lib/profile';
-import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/signOut';
 import { colors } from '@/theme';
 
 // Everything a signed-in user sees goes through here: the profile is loaded once, and the worker may only be on
@@ -15,6 +16,7 @@ import { colors } from '@/theme';
 function ProfileGate() {
   const { state, refresh } = useMyProfile();
   const pathname = usePathname();
+  usePushNotifications(state.status !== 'loading' && state.status !== 'error');
 
   if (state.status === 'loading') {
     return (
@@ -31,7 +33,7 @@ function ProfileGate() {
           {t('temp.loadFailed')}
         </AppText>
         <PrimaryButton label={t('common.retry')} onPress={() => void refresh()} showArrow={false} />
-        <TextLink label={t('temp.signOut')} onPress={() => void supabase.auth.signOut()} />
+        <TextLink label={t('temp.signOut')} onPress={() => void signOut()} />
       </View>
     );
   }

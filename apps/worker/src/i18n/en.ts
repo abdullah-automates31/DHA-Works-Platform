@@ -683,6 +683,10 @@ export const en = {
       refresh: 'Check my status',
     },
   },
+  push: {
+    // Android notification channel name, shown in the phone's notification settings.
+    channelName: 'Job updates',
+  },
   foundation: {
     envMissing: 'Supabase is not configured. Copy apps/worker/.env.example to .env.',
   },

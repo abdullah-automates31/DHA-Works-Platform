@@ -14,6 +14,7 @@ import { useProfileSummary } from '@/features/profile/useProfileSummary';
 import { toggleTrade } from '@/features/work/rules';
 import { t } from '@/i18n';
 import { useMyProfile } from '@/lib/profile';
+import { signOut } from '@/lib/signOut';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
@@ -135,7 +136,7 @@ export default function ProfileScreen() {
               <Row title={t('profile.areas')} value={areaSummary(areas)} onPress={() => router.push('/areas')} divider />
               <Row title={t('profile.help')} onPress={() => router.push('/help')} divider />
               <Row title={t('profile.signOutOthers')} value={t('profile.signOutOthersHint')} onPress={confirmSignOutOthers} divider />
-              <Row title={t('profile.signOut')} danger onPress={() => void supabase.auth.signOut()} />
+              <Row title={t('profile.signOut')} danger onPress={() => void signOut()} />
             </View>
             {switchError ? <FieldError>{t('profile.errors.generic')}</FieldError> : null}
           </>

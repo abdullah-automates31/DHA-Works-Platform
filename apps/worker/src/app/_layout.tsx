@@ -13,10 +13,12 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { WebFrame } from '@/components/WebFrame';
+import { showPushesInForeground } from '@/features/push/device';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { colors } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
+showPushesInForeground();
 
 function RootStack() {
   const { ready, session } = useAuth();

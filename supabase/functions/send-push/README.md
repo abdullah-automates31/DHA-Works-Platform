@@ -1,72 +1,58 @@
-# send-push (Expo push dispatcher)
+# send-push (FCM push dispatcher)
 
-Status: **implemented and tested locally, NOT deployed.** Deployment waits for
-the user's go-ahead, the secret and a scheduler (0014 is on hosted DEV).
-
-## What it does
-
-Reads `notifications` rows with `push_sent_at is null` (created in the last 24
-h), finds the owner's rows in `device_tokens`, sends them through the Expo push
-service (`https://exp.host/--/api/v2/push/send`, batches of 100) and sets
-`push_sent_at`. The `notifications` table already stores every alert, so a
-failed push loses nothing.
+Status: **deployed on DEV** (7 Nov 2026). Replaces the earlier Expo dispatcher (in git history before this
+change): both apps register raw FCM tokens, so one sender serves the customer app (Kotlin Multiplatform, separate
+repo) and the worker app (Expo, `expo-notifications` `getDevicePushTokenAsync`). Decisions: `docs/DECISIONS.md`
+(7 Nov, push notifications).
 
 ## How it is called
 
-Server to server only (pg_cron + pg_net, or a database webhook), `POST` with
-header `x-push-secret: <PUSH_DISPATCH_SECRET>` and an optional body
-`{"limit": 1..100}`. No other input is accepted. Apps never call it. The
-schedule/webhook is not created yet (it needs a migration and a deployed
-function).
+```
+RPC → insert public.notifications rows
+  → AFTER INSERT statement trigger notifications_push (migration 20261107100229)
+     → private.post_push(ids): pg_net POST {"ids": [...]} with header x-push-secret
+        → send-push
+pg_cron dw-push-retry (every 10 min): rows still unclaimed 2 to 60 minutes after creation are posted again.
+```
 
-## Security
+- The secret lives only in Vault (`push_webhook_secret`, next to `push_function_url`). The function checks the
+  header through `public.push_webhook_secret_matches` (service role only, migration 20261107100423).
+  `verify_jwt = false` in `config.toml` because the caller is the database, not a user.
+- Without the Vault entries `post_push` does nothing, and it never raises: a push problem cannot undo a job action.
 
-- Shared-secret check, constant time, fails closed if the secret is unset.
-  `verify_jwt = false` in `config.toml` because the callers are not users; the
-  secret is the gate.
-- Recipients are never taken from the request. They come from
-  `notifications.user_id`; only that user's own tokens are used. A body naming
-  `user_id`, `to`, tokens etc. is rejected with 400.
-- Rows are claimed one by one (`update ... where push_sent_at is null`), so two
-  runs never send the same notification twice. After an Expo outage
-  (5xx/429/network) the rows are released for retry; a 400 is not retried.
-- `DeviceNotRegistered` tokens are deleted. Tokens that do not look like Expo
-  tokens are never forwarded. Suspended accounts get no push.
-- Push text uses only the job title (cleaned, 60 characters). No phone, plot
-  number, name or amount. Unknown notification types get a generic message.
-- Responses and logs contain counts only: no tokens, user ids or message text.
-  The service-role key stays inside the function environment.
+## What it does
 
-## Secrets (set with `supabase secrets set`, never committed)
+1. Claims the rows (`push_sent_at = now() where push_sent_at is null`), so a row is pushed at most once even when
+   the trigger and the retry overlap.
+2. Reads the recipients (role, account status), the jobs (title, accepted worker), the quotes (worker, total) and
+   the recipients' tokens. If any read fails, the claim is released and the retry tries again.
+3. Writes the text from `templates.ts` by type and recipient role. Customers see the worker's name and the quote
+   amount; workers see the job title only. Resident name, phone, plot and address are never read.
+4. Sends each message through FCM HTTP v1 (`fcm.ts`, service account OAuth). Data: `type`, `job_id`,
+   `notification_id`; Android channel `job_updates`.
+5. Deletes tokens FCM reports as dead (`UNREGISTERED`, invalid, `SENDER_ID_MISMATCH`). Expo-format tokens are
+   skipped, never deleted. Suspended accounts get no push. If every send for a row failed transiently (429/5xx),
+   the claim is released for the retry.
 
-`PUSH_DISPATCH_SECRET` (required, long random), `EXPO_ACCESS_TOKEN` (optional,
-enables Expo enhanced security). `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
-are injected by Supabase.
+Logs and responses hold counts only: no tokens, user ids, names or text.
+
+## Secrets
+
+- Edge Function secret `FIREBASE_SERVICE_ACCOUNT`: the Firebase service account JSON key (Firebase → Project
+  settings → Service accounts). Never committed.
+- Vault: `push_function_url`, `push_webhook_secret` (create per project with `vault.create_secret`).
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by Supabase.
 
 ## Database privileges
 
-Migration `20261029000014_send_push_grants.sql` gives `service_role` exactly
-what the queries in `index.ts` use, column by column: read the push columns of
-`notifications` (not `read_at`) and update only `push_sent_at`; read `user_id`
-and `push_token` of `device_tokens` and delete rows; read `id` and
-`account_status` of `profiles`. Nothing for `anon` or `authenticated`.
-`supabase/tests/service_role_grants.test.sql` pins these privileges. If the
-function starts using another column, add a grant in a new migration and update
-that test. 0014 is applied on hosted DEV (29 Oct).
+`service_role` gets exactly the columns used: 0014 (notifications push columns, `push_sent_at` update,
+`device_tokens` read/delete, `profiles.id/account_status`) plus 20261107103106 (`profiles.role/full_name`,
+`jobs.id/title/accepted_worker_id`, `quotes.id/worker_id/total`). Pinned by
+`supabase/tests/service_role_grants.test.sql`.
 
 ## Tests
 
-- `deno test` in this folder: 23 unit tests (authorization, validation,
-  recipients, tokens, failures, privacy).
-- `bash supabase/functions/send-push/integration/run.sh` from the repo root with
-  the local stack running: 12 end-to-end checks against the real local database
-  and a mock Expo server. Then `supabase db reset`.
-- `supabase/tests/notifications_privacy.test.sql` (pgTAP): who can read or
-  change notifications and device tokens.
-- `supabase/tests/service_role_grants.test.sql` (pgTAP): the exact privileges
-  from migration 0014.
-
-## Not covered
-
-Expo push receipts (delivery confirmation after the fact), a scheduler, and a
-real push to a physical phone (needs the apps and an Expo project id).
+- `deno test` here: the push wording (`templates_test.ts`).
+- pgTAP: `notifications_privacy.test.sql` (tokens, `unregister_device_token`, the secret check is not callable by
+  app users) and `service_role_grants.test.sql`.
+- Not automated: a real push to a phone (needs a development build of an app and the Firebase key).

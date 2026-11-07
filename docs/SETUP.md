@@ -28,7 +28,8 @@ pnpm dev                 # runs apps through Turborepo
 | `NEXT_PUBLIC_SUPABASE_URL` | admin | public |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | admin | publishable key only |
 | `SUPABASE_SERVICE_ROLE_KEY` | server-side / Edge Functions only | **never** in an app or browser |
-| `EXPO_ACCESS_TOKEN` | CI / Edge Functions | push and builds |
+| `EXPO_ACCESS_TOKEN` | CI | EAS builds |
+| `FIREBASE_SERVICE_ACCOUNT` | Edge Function secret (`send-push`) | **never** in an app or git |
 
 ## Conventions
 
@@ -68,6 +69,30 @@ Rules:
 - Migrations are the same files in both environments; never edit either database by hand.
 - Keep separate keys per environment in untracked `.env` files; only `.env.example` is committed.
 
-## Push Edge Function (built 29 Oct, not deployed)
+## Firebase files for the worker app (push notifications) — copy these by hand
 
-`supabase/functions/send-push`, see its README. Local checks: `cd supabase/functions/send-push && deno test`, and `bash supabase/functions/send-push/integration/run.sh` (then `npm run db:local -- db reset`). Deploying needs: migration `20261029000014_send_push_grants.sql` applied to the target project (on DEV since 29 Oct), `supabase secrets set PUSH_DISPATCH_SECRET=...`, `supabase functions deploy send-push`, and a scheduler call. Types: `packages/supabase/database.types.ts` reflects the local schema, including 0017's `quote_count`; regenerate with `supabase gen types typescript --local`, then from `--linked` after 0016, 0017 and 0020 are pushed.
+The worker app needs three Firebase config files that are **git-ignored and never committed**. Every developer
+must put them in place manually before building the app. Get them from the Firebase console (project `dha-works`,
+Project settings → Your apps) or ask Shariq Bhai.
+
+| File (in `apps/worker/`) | Firebase app | Used by |
+| --- | --- | --- |
+| `google-services.json` | Android `pk.dhaworks.worker` and `pk.dhaworks.worker.dev` (one file lists both) | both Android variants |
+| `GoogleService-Info.plist` | iOS `pk.dhaworks.worker` | production iOS build |
+| `GoogleService-Info.dev.plist` | iOS `pk.dhaworks.worker.dev` | development iOS build |
+
+- Without `google-services.json` a development build still runs, but gets no push. A production build refuses to
+  start (`app.config.ts` throws) so a store build can never ship without push.
+- EAS builds: upload the same files as EAS file environment variables `GOOGLE_SERVICES_JSON` and
+  `GOOGLE_SERVICE_INFO_PLIST` (per environment) instead of committing them.
+- Push needs a development build (`npx expo run:android` or EAS `development`); Expo Go cannot receive remote pushes.
+- iOS push is not active yet (needs an Apple Developer account and an APNs key); the plists are only stored.
+
+## Push Edge Function (FCM, deployed on DEV 7 Nov)
+
+`supabase/functions/send-push`, see its README: FCM sender for both apps, called by the notifications insert
+trigger and a 10-minute retry cron (migrations `20261107100229`, `20261107100423`, `20261107103106`). Local checks:
+`cd supabase/functions/send-push && deno test && deno lint`. A project needs: those migrations, the Vault entries
+`push_function_url` and `push_webhook_secret`, the Edge Function secret `FIREBASE_SERVICE_ACCOUNT`, and
+`supabase functions deploy send-push --no-verify-jwt`. Types: regenerate `packages/supabase/database.types.ts`
+after schema changes (`supabase gen types typescript --linked`).

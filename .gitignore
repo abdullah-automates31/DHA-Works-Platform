@@ -11,6 +11,10 @@ build/
 Thumbs.db
 *.keystore
 *.jks
+# Firebase config (push): fetched from the vault / EAS file variables, never committed
+apps/worker/google-services.json
+apps/worker/GoogleService-Info.plist
+apps/worker/GoogleService-Info.dev.plist
 supabase/.temp/
 .supabase-local/
 .turbo/

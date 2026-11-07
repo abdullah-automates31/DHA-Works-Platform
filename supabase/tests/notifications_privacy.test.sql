@@ -63,11 +63,30 @@ select is((select count(*) from public.device_tokens where push_token = 'Exponen
 select is((select user_id from public.device_tokens where push_token = 'ExponentPushToken[user_one_token_0001]'),
   '00000000-0000-0000-0000-0000000000a2'::uuid, 'and now belongs to user two, so user one gets no pushes on that phone');
 
+-- Signing out removes the phone's token, and only from the caller's own account.
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select lives_ok($$select public.unregister_device_token('ExponentPushToken[user_one_token_0001]')$$,
+  'user one may call unregister for a token they no longer own');
+select tests.back();
+select is((select count(*) from public.device_tokens where push_token = 'ExponentPushToken[user_one_token_0001]'), 1::bigint,
+  'but it does not remove user two''s token');
+select tests.act('00000000-0000-0000-0000-0000000000a2');
+select lives_ok($$select public.unregister_device_token('ExponentPushToken[user_one_token_0001]')$$, 'user two signs out on that phone');
+select tests.back();
+select is((select count(*) from public.device_tokens where push_token = 'ExponentPushToken[user_one_token_0001]'), 0::bigint,
+  'the token is gone, so the phone gets no more pushes');
+
 -- Anonymous callers get nothing.
 set local role anon;
 select throws_ok($$select count(*) from public.notifications$$, null, null, 'anon cannot read notifications');
 select throws_ok($$select public.register_device_token('ExponentPushToken[anon_token_000001]', 'android')$$, null, null,
   'anon cannot register a token');
+select throws_ok($$select public.unregister_device_token('ExponentPushToken[anon_token_000001]')$$, null, null,
+  'anon cannot remove a token');
+select throws_ok($$select public.push_webhook_secret_matches('guess')$$, null, null, 'anon cannot probe the push secret');
+reset role;
+set local role authenticated;
+select throws_ok($$select public.push_webhook_secret_matches('guess')$$, null, null, 'a signed-in user cannot probe the push secret');
 reset role;
 
 select * from finish();
