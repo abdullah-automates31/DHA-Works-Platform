@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { isUuid } from './parse';
@@ -42,5 +43,7 @@ export async function decideAction(_prev: DecideState, formData: FormData): Prom
     // The database writes plain-English refusals (code P0001); anything else is shown generically.
     return { error: error.code === 'P0001' ? error.message : 'The decision could not be saved. Reload the page and try again.' };
   }
+  // The sidebar counts live in the layout, so refresh it too (otherwise the badge keeps the old number).
+  revalidatePath('/', 'layout');
   redirect(`/${role}s?done=${decision}`);
 }

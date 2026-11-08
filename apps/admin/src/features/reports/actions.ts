@@ -10,6 +10,7 @@ function refresh(id: string) {
   revalidatePath(`/reports/${id}`);
   revalidatePath('/reports');
   revalidatePath('/dashboard');
+  revalidatePath('/', 'layout'); // the sidebar "open reports" badge
 }
 
 /** One decision on a case. The form is checked again here; the database then applies its own rules and audits it. */

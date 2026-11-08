@@ -4,7 +4,7 @@ import { ActionForm } from '@/components/FormKit';
 import { LoadError, PagerBar, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { buildHref, dateOnly, dateTime, jobStatus, lastPage, PAGE_SIZE, pageNumber, rupees } from '@/lib/format';
 import { isUuid } from '@/lib/json';
 import { parseReviews } from '../reviews/parse';
@@ -15,7 +15,7 @@ import { loadUserDetail, userDocUrls } from './queries';
 
 /** One person (A13): details, numbers, recent jobs, documents, reviews, staff notes and the account controls. */
 export async function UserView({ id, params }: { id: string; params: { tab?: string; page?: string } }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   if (!isUuid(id)) notFound();
   const d = await loadUserDetail(supabase, id);
   if (!d) notFound();

@@ -5,7 +5,7 @@ import type { Database } from '@dha/supabase';
 // Runs before every page. Two jobs:
 //  1. Keep the Supabase session cookie fresh (a Server Component cannot write cookies, so the refresh happens here).
 //  2. Send anyone who is not signed in to the sign-in page. This is only the first, cheap gate: every page and action
-//     also calls requireAdmin(), and the database decides what an account may read or change (migration 0037).
+//     also calls requireSession() (layout and actions: requireAdmin()), and the database decides what an account may read or change (migration 0037).
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

@@ -4,7 +4,7 @@ import { ActionForm } from '@/components/FormKit';
 import { PhotoGrid } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Chip, Icon, ICONS } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { dateTime, firstName, jobStatus, phoneText, REPORT_ACTION_TEXT, reportKind, reportStatus, rupees, sentence, telHref } from '@/lib/format';
 import { isUuid } from '@/lib/json';
 import { addReportNoteAction, logCallAction } from './actions';
@@ -21,7 +21,7 @@ function CallButton({ p, red }: { p: Person; red?: boolean }) {
 
 /** The case screen (A08): what was reported, the job, the activity, and the staff controls on the right. */
 export async function ReportCase({ id }: { id: string }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   if (!isUuid(id)) notFound();
   const d = await loadReportDetail(supabase, id);
   if (!d) notFound();

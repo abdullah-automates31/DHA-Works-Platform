@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
 import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
 import { Chip, Icon, ICONS } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { ago, buildHref, lastPage, pageNumber, reportKind, reportStatus, REPORT_KIND_KEYS, searchText } from '@/lib/format';
 import { sentence } from '@/lib/format';
 import { isKind, loadReportCounts, loadReports } from './queries';
@@ -11,7 +11,7 @@ type Params = { tab?: string; kind?: string; q?: string; page?: string };
 
 /** Reports and disputes (A07): tabs, type pills, table with unsafe cases first, and four small numbers. */
 export async function ReportsView({ params }: { params: Params }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const tab = params.tab === 'resolved' || params.tab === 'all' ? params.tab : 'open';
   const kind = isKind(params.kind) ? params.kind : null;
   const q = searchText(params.q);

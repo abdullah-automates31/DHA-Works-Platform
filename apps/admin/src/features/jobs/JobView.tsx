@@ -4,7 +4,7 @@ import { ActionForm } from '@/components/FormKit';
 import { PhotoGrid } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { CANCEL_REASON_TEXT, ago, dateOnly, dateTime, jobStatus, phoneText, PROGRESS_STEPS, progressDone, reportKind, reportStatus, rupees, sentence, telHref, timeOnly, underReviewText } from '@/lib/format';
 import { isUuid } from '@/lib/json';
 import { initials } from '../verification/rules';
@@ -20,7 +20,7 @@ function CallLink({ phone, label }: { phone: string | null; label: string }) {
 
 /** One job (A11): description, people, quote, cash, progress, reports and the staff actions. */
 export async function JobView({ id }: { id: string }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   if (!isUuid(id)) notFound();
   const d = await loadJobDetail(supabase, id);
   if (!d) notFound();

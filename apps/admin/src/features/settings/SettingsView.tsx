@@ -2,7 +2,7 @@ import { ActionForm, ButtonForm, PillToggleForm, SwitchForm } from '@/components
 import { LoadError } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { dateOnly } from '@/lib/format';
 import { initials } from '../verification/rules';
 import { addCategoryAction, inviteStaffAction, removeStaffAction, revokeInviteAction, setCategoryAction, setPhaseAction } from './actions';
@@ -11,7 +11,7 @@ import { parseSettings, parseStaff } from './parse';
 
 /** Settings (A14): categories, phases, helpline and windows, and the staff accounts with invites. */
 export async function SettingsView() {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const [s, st] = await Promise.all([supabase.rpc('admin_settings_get'), supabase.rpc('admin_staff_list')]);
   const settings = parseSettings(s.error ? null : s.data);
   const staff = parseStaff(st.error ? null : st.data);

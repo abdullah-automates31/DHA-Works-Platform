@@ -1,6 +1,6 @@
 import { LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { buildHref, lastPage, PAGE_SIZE, pageNumber, searchText } from '@/lib/format';
 import { loadFilterOptions } from '../jobs/queries';
 import { parseReviews } from './parse';
@@ -11,7 +11,7 @@ const STARS = ['5', '4', '3', 'low', 'hidden'] as const;
 
 /** Worker reviews (A15): what residents say about each worker. Staff can hide a review (kept, not counted). */
 export async function ReviewsView({ params }: { params: Params }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const stars = (STARS as readonly string[]).includes(params.stars ?? '') ? (params.stars as string) : 'all';
   const cat = typeof params.cat === 'string' && /^[0-9]{1,4}$/.test(params.cat) ? Number(params.cat) : null;
   const q = searchText(params.q);

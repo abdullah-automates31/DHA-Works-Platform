@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
 import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
 import { Chip } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { ago, buildHref, JOB_FILTERS, jobStatus, lastPage, pageNumber, parseJobFilter, rupees, searchText } from '@/lib/format';
 import { loadFilterOptions, loadJobCounts, loadJobs } from './queries';
 
@@ -14,7 +14,7 @@ function smallInt(v: unknown, max: number): number | null {
 
 /** All jobs (A10): status pills with counts, phase / category / today filters, the table and paging. */
 export async function JobsView({ params }: { params: Params }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const status = parseJobFilter(params.status);
   const phase = smallInt(params.phase, 8);
   const category = smallInt(params.cat, 1000);

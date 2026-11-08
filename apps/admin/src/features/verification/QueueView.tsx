@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { loadCounts, loadFilters, loadQueue } from './queries';
 import { documentsChip, initials, PAGE_SIZE, parsePositiveInt, parseTab, phasesText, phoneText, tabsFor, waitingText, type Role } from './rules';
 
@@ -25,7 +25,7 @@ function href(role: Role, p: { tab: string; q?: string; f?: number | null; page?
 
 /** The queue screen for workers (A03) and residents (A05): tabs, filter pills, search, table, paging. */
 export async function QueueView({ role, params }: { role: Role; params: Params }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const tab = parseTab(role, params.tab);
   const q = (typeof params.q === 'string' ? params.q : '').trim().slice(0, 80);
   const filter = parsePositiveInt(params.f, 0, 1000) || null;

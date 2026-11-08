@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { DecisionForm } from './DecisionForm';
 import { isUuid, type Detail, type DetailDoc } from './parse';
 import { loadDetail, signedUrls } from './queries';
@@ -35,7 +35,7 @@ function submittedText(d: Detail): string {
 
 /** The review screen for one worker (A04) or resident (A06). Opening it is written to the audit log by the database. */
 export async function ReviewView({ role, id }: { role: Role; id: string }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   if (!isUuid(id)) notFound();
   const detail = await loadDetail(supabase, id);
   if (!detail || detail.role !== role) notFound();

@@ -3,7 +3,7 @@ import { ButtonForm } from '@/components/FormKit';
 import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Chip } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { buildHref, dateTime, lastPage, pageNumber, phoneText, searchText, sentence, timeOnly } from '@/lib/format';
 import { PAGE_SIZE } from '@/lib/format';
 import { callbackDoneAction } from './actions';
@@ -21,7 +21,7 @@ function waitText(since: string | null): string | null {
 
 /** Helpline log (A09): three numbers, the call list and the form to log a call. */
 export async function HelplineView({ params }: { params: Params }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const range = params.range === 'week' || params.range === 'all' ? params.range : 'today';
   const cb = params.cb === '1';
   const q = searchText(params.q);

@@ -3,14 +3,14 @@ import { ActionForm } from '@/components/FormKit';
 import { LoadError, PagerBar, PillRow } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Chip } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { ago, buildHref, CANCEL_REASON_TEXT, jobStatus, lastPage, pageNumber, sentence } from '@/lib/format';
 import { decideCancellationAction } from './actions';
 import { loadCancellations } from './queries';
 
 /** Cancellation requests: after a job is accepted neither side cancels alone, staff decide here (Phase 2 of the portal). */
 export async function CancellationsView({ params }: { params: { show?: string; page?: string } }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const show = params.show === 'all' ? 'all' : 'pending';
   const page = pageNumber(params.page);
   const result = await loadCancellations(supabase, show, page);

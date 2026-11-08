@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip } from '@/components/ui';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { buildHref, lastPage, pageNumber, phoneText, searchText } from '@/lib/format';
 import { loadFilterOptions } from '../jobs/queries';
 import { initials, phasesText } from '../verification/rules';
@@ -13,7 +13,7 @@ const STATE_LABEL: Record<UserState, string> = { all: 'All', active: 'Active', s
 
 /** Users (A12): approved workers and residents, with their state. Suspend and reactivate live on the person's page. */
 export async function UsersView({ params }: { params: Params }) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const role = params.role === 'resident' ? 'resident' : 'worker';
   const state = parseUserState(params.state);
   const phase = typeof params.phase === 'string' && /^[1-8]$/.test(params.phase) ? Number(params.phase) : null;

@@ -3,10 +3,10 @@ import { PortalFrame } from '@/components/PortalFrame';
 import { Chip } from '@/components/ui';
 import { parseDashboard } from '@/features/dashboard/parse';
 import { agoText, attentionHref, barPercent, dateLine, KIND_CHIP, maxStage, oldestText, STAGE_ROWS } from '@/features/dashboard/rules';
-import { requireAdmin } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 
 export default async function DashboardPage() {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireSession();
   const { data, error } = await supabase.rpc('admin_dashboard');
   const d = parseDashboard(error ? null : data);
   const max = maxStage(d.stages);

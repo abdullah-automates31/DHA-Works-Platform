@@ -16,7 +16,9 @@ async function SidebarWithCounts() {
   return <Sidebar name={profile.data?.full_name ?? null} workers={workers.pending ?? 0} residents={residents.pending ?? 0} reports={reports.open} />;
 }
 
-export default function PortalLayout({ children }: { children: ReactNode }) {
+export default async function PortalLayout({ children }: { children: ReactNode }) {
+  // Redirects before anything is shown when the session is not a verified admin (the pages load their data meanwhile).
+  await requireAdmin();
   return (
     <div className="app">
       <Suspense fallback={<aside className="nav" />}>
