@@ -40,7 +40,8 @@ const config: ExpoConfig = {
     supportsTablet: false,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
-  extra: { appVariant: variant },
+  owner: 'dha-works',
+  extra: { appVariant: variant, eas: { projectId: 'db709eb6-0b56-40e9-8277-a0c3ca0353f0' } },
 };
 
 export default config;

@@ -10,8 +10,8 @@
     "android": {
       "package": "pk.dhaworks.worker",
       "adaptiveIcon": {
-        "backgroundColor": "#0E5A3A",
-        "foregroundImage": "./assets/images/icon.png"
+        "backgroundColor": "#0F4F31",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "allowBackup": false
