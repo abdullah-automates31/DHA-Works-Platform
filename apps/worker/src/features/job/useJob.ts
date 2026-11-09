@@ -18,7 +18,8 @@ export type JobDetail = {
   phase: number;
   lane: string;
   urgency: string;
-  when: string; // the date and time the CUSTOMER chose (workers cannot change it)
+  when: string; // the date and time the CUSTOMER asked for, as a pill
+  preferred: { date: string | null; from: string | null; to: string | null }; // the same, raw (to start the worker's window there)
   postedAt: string | null;
   photos: string[]; // signed URLs, in the order the resident added them
   hasVoiceNote: boolean;
@@ -72,6 +73,7 @@ async function fetchJob(id: string): Promise<JobState> {
       urgency: feed.data.urgency ?? 'asap',
       when: whenPill({ urgency: feed.data.urgency ?? 'asap', preferredDate: feed.data.preferred_date, windowFrom: feed.data.window_from, windowTo: feed.data.window_to, postedAt: feed.data.posted_at }).text,
       postedAt: feed.data.posted_at,
+      preferred: { date: feed.data.preferred_date ?? null, from: feed.data.window_from ?? null, to: feed.data.window_to ?? null },
       hasVoiceNote: Boolean(voicePath),
       others: feed.data.interest_count ?? 0,
       quotes: feed.data.quote_count ?? 0,
@@ -96,6 +98,7 @@ async function fetchJob(id: string): Promise<JobState> {
       urgency: mine.data.urgency ?? 'asap',
       when: whenPill({ urgency: mine.data.urgency ?? 'asap', preferredDate: mine.data.preferred_date, windowFrom: mine.data.window_from, windowTo: mine.data.window_to, postedAt: mine.data.posted_at }).text,
       postedAt: mine.data.posted_at,
+      preferred: { date: mine.data.preferred_date ?? null, from: mine.data.window_from ?? null, to: mine.data.window_to ?? null },
       hasVoiceNote: Boolean(voicePath),
       others: null,
       quotes: null,

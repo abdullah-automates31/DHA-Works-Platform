@@ -4,12 +4,16 @@ import { test } from 'node:test';
 import { buildSubmitArgs } from './rules.ts';
 import { claimErrorKey, claimJob } from './submit.ts';
 
-const args = buildSubmitArgs('job-1', { labour: '1500', withMaterials: false, items: [] });
+const args = buildSubmitArgs('job-1', { labour: '1500', withMaterials: false, items: [] }, { p_visit_start: '2026-11-10T05:00:00.000Z', p_visit_end: '2026-11-10T07:00:00.000Z' });
 
 test('every database refusal maps to a friendly key', () => {
   const cases: [string, string][] = [
     ['the resident did not accept your quote on this job', 'quote.errors.rejected'],
     ['this job has expired', 'quote.errors.expired'],
+    ['you have already changed this quote once', 'quote.errors.alreadyChanged'],
+    ['the customer already decided on your quote', 'quote.errors.decided'],
+    ['the visit must be in the future', 'quote.errors.visit'],
+    ['choose when you will come', 'quote.errors.visit'],
     ['this job is not available', 'quote.errors.notAvailable'],
     ['your account is not approved yet', 'quote.errors.notAvailable'],
     ['your account is suspended', 'quote.errors.notAvailable'],

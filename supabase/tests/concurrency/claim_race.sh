@@ -47,8 +47,9 @@ SQL
 wait
 
 echo "--- worker 1:"; cat /tmp/claim_a.out; echo "--- worker 2:"; cat /tmp/claim_b.out
-ACCEPTED=$(psql -c "select count(*) from public.quotes where job_id='$JOB' and status='accepted'")
+# Since 0043 a claim leaves the job quoted (one sent quote) until the customer accepts.
+SENT=$(psql -c "select count(*) from public.quotes where job_id='$JOB' and status='sent'")
 STATUS=$(psql -c "select status from public.jobs where id='$JOB'")
-WINNER=$(psql -c "select accepted_worker_id from public.jobs where id='$JOB'")
-echo "accepted quotes=$ACCEPTED job status=$STATUS winner=$WINNER"
-[ "$ACCEPTED" = "1" ] && [ "$STATUS" = "scheduled" ] && [ "$WINNER" = "$U_W1" ] && echo "PASS: exactly one worker holds the job" || { echo "FAIL"; exit 1; }
+WINNER=$(psql -c "select worker_id from public.quotes where job_id='$JOB' and status='sent'")
+echo "sent quotes=$SENT job status=$STATUS winner=$WINNER"
+[ "$SENT" = "1" ] && [ "$STATUS" = "quoted" ] && [ "$WINNER" = "$U_W1" ] && echo "PASS: exactly one worker holds the job" || { echo "FAIL"; exit 1; }

@@ -10,7 +10,8 @@ import { ChevronLeftIcon, ChevronRightIcon, PhoneIcon, UserIcon } from '@/compon
 import { BottomBar, FieldError } from '@/components/onboarding';
 import { formatRupees } from '@/features/home/format';
 import { withdrawCancellation } from '@/features/cancel/rules';
-import { cancelHref, cashHref, jobDetailsHref, quoteHref, reportHref } from '@/features/job/routes';
+import { cancelHref, cashHref, changeQuoteHref, jobDetailsHref, quoteHref, reportHref } from '@/features/job/routes';
+import { visitText } from '@/features/quote/visit';
 import { pickImage } from '@/features/documents/pick';
 import { buildBillPath, completeJob, startJob, type ActionClient, type Bill } from '@/features/myjobs/actions';
 import { canReport, canRequestCancellation, dialable, jobKind, noteFor, primaryAction, timeline, type JobKind } from '@/features/myjobs/rules';
@@ -97,8 +98,10 @@ export default function JobStatusScreen() {
   const ready = state.status === 'ready' ? state : null;
   const job = ready?.job ?? null;
   const kind: JobKind | null = job ? jobKind(job) : null;
-  const action = kind && job ? primaryAction(kind, job.cashRecorded === true) : null;
+  const canChangeQuote = kind === 'quoted' && ready?.extras.quoteStatus === 'sent' && ready.extras.quoteRevision === 0;
+  const action = kind && job ? primaryAction(kind, job.cashRecorded === true, canChangeQuote) : null;
   const now = new Date();
+  const visitLine = ready && (kind === 'quoted' || kind === 'scheduled') ? visitText(ready.extras.visitStart, ready.extras.visitEnd, now) : '';
   const phone = job && ['scheduled', 'in_progress'].includes(kind ?? '') ? dialable(job.residentPhone) : null;
 
   function confirmWithdraw(requestId: string) {
@@ -126,6 +129,9 @@ export default function JobStatusScreen() {
       case 'create_quote':
         router.push(quoteHref(job.id));
         break;
+      case 'change_quote':
+        router.push(changeQuoteHref(job.id));
+        break;
       case 'start':
         confirmStart(job.id);
         break;
@@ -149,6 +155,7 @@ export default function JobStatusScreen() {
   const label =
     action === 'create_quote' ? t('myjobs.createQuote')
     : action === 'waiting' ? t('myjobs.waiting')
+    : action === 'change_quote' ? t('myjobs.changeQuote')
     : action === 'start' ? t('myjobs.startJob')
     : action === 'complete' ? t('myjobs.markComplete')
     : action === 'record_cash' ? t('myjobs.recordCash')
@@ -229,6 +236,7 @@ export default function JobStatusScreen() {
             <View style={[styles.note, (kind === 'cancelled' || kind === 'disputed' || kind === 'expired') && { backgroundColor: colors.chip.declined.bg }]}>
               <Text style={styles.noteHead}>{noteFor(job, kind, now).headline}</Text>
               <Text style={styles.noteBody}>{noteFor(job, kind, now).body}</Text>
+              {visitLine ? <Text style={styles.noteHead}>{t('visit.yours', { when: visitLine })}</Text> : null}
               {kind === 'in_progress' && ready.extras.materials > 0 ? <Text style={styles.noteBody}>{t('myjobs.billNeeded')}</Text> : null}
             </View>
 

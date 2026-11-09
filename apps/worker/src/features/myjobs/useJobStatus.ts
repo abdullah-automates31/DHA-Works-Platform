@@ -15,6 +15,10 @@ export type StatusExtras = {
   cashAmount: number | null; // what the worker recorded, once recorded
   cashDue: number | null; // the agreed amount from the accepted quote
   cancelRequestId: string | null; // this worker's pending cancellation request, if any (to withdraw it)
+  quoteRevision: number; // 0 = the sent quote can still be changed once (0044)
+  quoteStatus: string | null;
+  visitStart: string | null; // the worker's window from their quote (0044); the booking once accepted
+  visitEnd: string | null;
 };
 
 export type JobStatusState =
@@ -33,7 +37,7 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
   // The worker's own interest, quote and cash row (row-level security lets them read only their own).
   const [interest, quote, cash, cancel] = await Promise.all([
     supabase.from('job_interests').select('created_at').eq('job_id', id).maybeSingle(),
-    supabase.from('quotes').select('created_at, total, materials, status').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('quotes').select('created_at, total, materials, status, revision, visit_start, visit_end').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('cash_records').select('worker_amount, agreed_amount').eq('job_id', id).maybeSingle(),
     supabase.from('cancellation_requests').select('id, requester_role').eq('job_id', id).eq('status', 'pending').maybeSingle(),
   ]);
@@ -52,6 +56,11 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
       cashAmount: cash.data?.worker_amount ?? null,
       cashDue: cash.data?.agreed_amount ?? job.myQuoteTotal,
       cancelRequestId: cancel.data?.requester_role === 'worker' ? cancel.data.id : null,
+      quoteRevision: quote.data?.revision ?? 0,
+      quoteStatus: quote.data?.status ?? null,
+      // Once booked the job's own window is the truth; before that the quote's offer.
+      visitStart: job.scheduledStart ?? quote.data?.visit_start ?? null,
+      visitEnd: job.scheduledEnd ?? quote.data?.visit_end ?? null,
     },
   };
 }

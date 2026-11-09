@@ -159,7 +159,7 @@ select lives_ok($$select public.admin_decide_verification('00000000-0000-0000-00
 select tests.back();
 
 -- 5. Suspend and reactivate (0039) ------------------------------------------------------------------------------------
--- A scheduled job for worker b1 (the worker accepts an open job, which schedules it at once).
+-- A scheduled job for worker b1 (the worker claims an open job with a price, the customer accepts it; 0043).
 create function tests.make_job(p_title text) returns uuid language plpgsql as $$
 declare v_job uuid; v_addr uuid;
 begin
@@ -175,6 +175,9 @@ create temp table t as select tests.make_job('Fix a pipe') as job;
 grant select on t to authenticated;
 select tests.act('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$select public.accept_job((select job from t), 3000, 500, 'pipes')$$, 'worker accepts the job (set-up)');
+select tests.back();
+select tests.act('00000000-0000-0000-0000-0000000000c1');
+select lives_ok($$select public.accept_quote((select id from public.resident_quotes where job_id = (select job from t)))$$, 'the customer accepts the quote (set-up)');
 select tests.back();
 insert into public.device_tokens (user_id, push_token, platform) values ('00000000-0000-0000-0000-0000000000b1', 'ExponentPushToken[abcdefghijklmnopqrstuv]', 'android');
 

@@ -110,6 +110,7 @@ Reads are RLS-filtered queries; writes are RPCs. Names are proposals.
 | `list_quotes(job_id)` with worker name, rating, jobs done, years, price, start slot; sort lowest / top rated / soonest | view | C19 |
 | `get_quote(quote_id)` breakdown | read | C12 |
 | `accept_quote`, `reject_quote(reason)` | RPC | C12 |
+| `revise_quote(quote_id, labour, materials, materials_note, note, visit_start, visit_end)` | RPC (worker, once per quote while `sent`; 0044) | W10 change mode |
 | `confirm_cash_resident(job_id, same_or_amount)` | RPC | C20 |
 | `submit_review` | RPC | C15 |
 | `list_addresses`, `upsert_address` | read / RPC | C03, C10, C17 |

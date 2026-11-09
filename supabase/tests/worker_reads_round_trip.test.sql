@@ -85,7 +85,7 @@ select is((select count(*) from pg_attribute where attrelid = 'public.worker_job
              and attname ~ '(amount|cash)' and attname <> 'cash_recorded'),
   0::bigint, 'worker_jobs exposes only the yes/no flag, never a cash amount');
 select is((select attname::text from pg_attribute where attrelid = 'public.worker_jobs'::regclass and attnum > 0 and not attisdropped
-           order by attnum desc limit 1), 'cash_recorded', 'cash_recorded is added at the end; existing columns keep their order');
+           order by attnum desc limit 1 offset 1), 'cash_recorded', 'cash_recorded is added at the end (0044 appends my_quote_revision after it); existing columns keep their order');
 select is((select attname::text from pg_attribute where attrelid = 'public.worker_jobs'::regclass and attnum = 5), 'description', 'worker_jobs column 5 is unchanged');
 
 -- ---------------------------------------------------------------- grants and index
