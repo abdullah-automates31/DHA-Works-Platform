@@ -209,3 +209,7 @@ Unapproved or suspended users can read their own profile and status but cannot p
 - A cash difference no longer disputes the job or files a `cash_price` report; the job closes as `cash_collected`.
 - `submit_review` with a mean score below 3 files a system-generated `poor_work` report.
 - Drafts are not purged (section 7 updated).
+
+### attach_material_bill (0045, 10 Nov)
+
+`attach_material_bill(p_job_id uuid, p_bill_path text)`: worker only. Files or replaces the bill photo (`job-media`, first folder = the worker's id, the file must exist) on the worker's own sent or accepted quote while the job is interested, quoted, scheduled or in progress and the quote has materials above 0. Records `bill_attached` (resident-visible). `complete_job(p_job_id, p_bill_path default null)` uses the attached bill when no path is given and files a given path on the quote too.

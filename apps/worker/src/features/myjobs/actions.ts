@@ -10,6 +10,7 @@ export type ActionErrorKey =
   | 'myjobs.errors.billSize'
   | 'myjobs.errors.billUpload'
   | 'myjobs.errors.billInvalid'
+  | 'myjobs.errors.billNotAllowed'
   | 'myjobs.errors.network'
   | 'myjobs.errors.generic';
 
@@ -21,6 +22,7 @@ export function actionErrorKey(error: Err): ActionErrorKey {
   if (text.includes('this job cannot be completed')) return 'myjobs.errors.cannotComplete';
   if (text.includes('upload the material bill')) return 'myjobs.errors.billRequired';
   if (text.includes('invalid bill path')) return 'myjobs.errors.billInvalid';
+  if (text.includes('cannot take a bill') || text.includes('has no materials')) return 'myjobs.errors.billNotAllowed';
   if (text.includes('network') || text.includes('fetch') || error?.name === 'TypeError') return 'myjobs.errors.network';
   return 'myjobs.errors.generic';
 }
@@ -48,6 +50,7 @@ export function buildBillPath(userId: string, extension: string, now: number, ra
 export type ActionClient = {
   startJob(jobId: string): PromiseLike<{ error: Err }>;
   completeJob(jobId: string, billPath: string | null): PromiseLike<{ error: Err }>;
+  attachBill(jobId: string, billPath: string): PromiseLike<{ error: Err }>;
   uploadBill(bytes: ArrayBuffer, mime: string, extension: string): PromiseLike<{ path: string | null; error: Err }>;
   deleteBill(path: string): PromiseLike<unknown>;
 };
@@ -78,10 +81,14 @@ const DEFINITE_REFUSALS: ActionErrorKey[] = ['myjobs.errors.cannotComplete', 'my
  * Marks the job complete. When the accepted quote had materials, the bill photo is required: it is checked and
  * uploaded first, and removed again if the job could not be completed (so nothing is left behind).
  */
-export function completeJob(client: ActionClient, input: { jobId: string; materials: number; bill: Bill | null }): Promise<ActionResult> {
+export function completeJob(
+  client: ActionClient,
+  input: { jobId: string; materials: number; bill: Bill | null; billAttached?: boolean },
+): Promise<ActionResult> {
   return guarded(async () => {
     let path: string | null = null;
-    if (input.materials > 0 && !input.bill) return { ok: false, key: 'myjobs.errors.billRequired' };
+    // A bill attached earlier (attach_material_bill) counts: the photo is only needed here when none is on file.
+    if (input.materials > 0 && !input.bill && !input.billAttached) return { ok: false, key: 'myjobs.errors.billRequired' };
     if (input.bill) {
       const check = checkBill(input.bill.mime, input.bill.bytes.byteLength);
       if (!check.ok) return { ok: false, key: check.key };
@@ -96,6 +103,28 @@ export function completeJob(client: ActionClient, input: { jobId: string; materi
       // job may really have been completed, and then the bill is the resident's evidence: keep it (a retry reuses
       // a new upload, an orphan file costs nothing).
       if (path && DEFINITE_REFUSALS.includes(key)) await client.deleteBill(path).then(undefined, () => undefined);
+      return { ok: false, key };
+    }
+    return { ok: true };
+  });
+}
+
+/**
+ * Attaches (or replaces) the material bill photo any time until the job is completed; the customer sees it in view
+ * quote. The photo is checked and uploaded first and removed again if the database refused it.
+ */
+export function attachBill(client: ActionClient, input: { jobId: string; bill: Bill }): Promise<ActionResult> {
+  return guarded(async () => {
+    const check = checkBill(input.bill.mime, input.bill.bytes.byteLength);
+    if (!check.ok) return { ok: false, key: check.key };
+    const uploaded = await client.uploadBill(input.bill.bytes, input.bill.mime.toLowerCase(), check.extension);
+    if (uploaded.error || !uploaded.path) return { ok: false, key: 'myjobs.errors.billUpload' };
+    const { error } = await client.attachBill(input.jobId, uploaded.path);
+    if (error) {
+      const key = actionErrorKey(error);
+      if (DEFINITE_REFUSALS.includes(key) || key === 'myjobs.errors.billNotAllowed') {
+        await client.deleteBill(uploaded.path).then(undefined, () => undefined);
+      }
       return { ok: false, key };
     }
     return { ok: true };

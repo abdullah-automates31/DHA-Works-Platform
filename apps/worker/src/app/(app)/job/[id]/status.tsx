@@ -13,7 +13,7 @@ import { withdrawCancellation } from '@/features/cancel/rules';
 import { cancelHref, cashHref, changeQuoteHref, jobDetailsHref, quoteHref, reportHref } from '@/features/job/routes';
 import { visitText } from '@/features/quote/visit';
 import { pickImage } from '@/features/documents/pick';
-import { buildBillPath, completeJob, startJob, type ActionClient, type Bill } from '@/features/myjobs/actions';
+import { attachBill, buildBillPath, completeJob, startJob, type ActionClient, type Bill } from '@/features/myjobs/actions';
 import { canReport, canRequestCancellation, dialable, jobKind, noteFor, primaryAction, timeline, type JobKind } from '@/features/myjobs/rules';
 import { useJobStatus } from '@/features/myjobs/useJobStatus';
 import { t } from '@/i18n';
@@ -39,6 +39,7 @@ export default function JobStatusScreen() {
   const client: ActionClient = {
     startJob: (jobId) => supabase.rpc('start_job', { p_job_id: jobId }),
     completeJob: (jobId, billPath) => supabase.rpc('complete_job', { p_job_id: jobId, p_bill_path: billPath ?? undefined }),
+    attachBill: (jobId, billPath) => supabase.rpc('attach_material_bill', { p_job_id: jobId, p_bill_path: billPath }),
     uploadBill: async (bytes, mime, extension) => {
       const path = buildBillPath(userId, extension, Date.now(), Math.random().toString(16).slice(2, 10));
       const { error: uploadError } = await supabase.storage.from('job-media').upload(path, bytes, { contentType: mime, upsert: false });
@@ -77,10 +78,20 @@ export default function JobStatusScreen() {
     return null;
   }
 
-  function finish(jobId: string, materials: number) {
+  // Attach (or change) the bill photo: allowed any time until the job is completed.
+  function addBill(jobId: string) {
+    const attach = (bill: Bill | null) => bill && void run(() => attachBill(client, { jobId, bill }));
+    Alert.alert(t('myjobs.billTitle'), t('myjobs.billAttachBody'), [
+      { text: t('documents.menu.takePhoto'), onPress: () => void takeBill('camera').then(attach) },
+      { text: t('documents.menu.chooseLibrary'), onPress: () => void takeBill('library').then(attach) },
+      { text: t('documents.menu.cancel'), style: 'cancel' },
+    ]);
+  }
+
+  function finish(jobId: string, materials: number, billAttached: boolean) {
     const complete = (bill: Bill | null) =>
-      void run(() => completeJob(client, { jobId, materials, bill }), () => router.push(cashHref(jobId)));
-    if (materials > 0) {
+      void run(() => completeJob(client, { jobId, materials, bill, billAttached }), () => router.push(cashHref(jobId)));
+    if (materials > 0 && !billAttached) {
       // The accepted quote had materials: the bill photo is required before the job can be completed.
       Alert.alert(t('myjobs.billTitle'), t('myjobs.billBody'), [
         { text: t('documents.menu.takePhoto'), onPress: () => void takeBill('camera').then((bill) => bill && complete(bill)) },
@@ -136,7 +147,7 @@ export default function JobStatusScreen() {
         confirmStart(job.id);
         break;
       case 'complete':
-        finish(job.id, ready.extras.materials);
+        finish(job.id, ready.extras.materials, ready.extras.billAttached);
         break;
       case 'record_cash':
         router.push(cashHref(job.id));
@@ -237,8 +248,19 @@ export default function JobStatusScreen() {
               <Text style={styles.noteHead}>{noteFor(job, kind, now).headline}</Text>
               <Text style={styles.noteBody}>{noteFor(job, kind, now).body}</Text>
               {visitLine ? <Text style={styles.noteHead}>{t('visit.yours', { when: visitLine })}</Text> : null}
-              {kind === 'in_progress' && ready.extras.materials > 0 ? <Text style={styles.noteBody}>{t('myjobs.billNeeded')}</Text> : null}
+              {kind === 'in_progress' && ready.extras.materials > 0 && !ready.extras.billAttached ? <Text style={styles.noteBody}>{t('myjobs.billNeeded')}</Text> : null}
             </View>
+
+            {/* The material bill can be attached any time until the job is completed; the customer sees it in view quote. */}
+            {ready.extras.materials > 0 && (kind === 'quoted' || kind === 'scheduled' || kind === 'in_progress') ? (
+              <View style={styles.billCard}>
+                <Text style={styles.noteHead}>{t(ready.extras.billAttached ? 'myjobs.billAddedTitle' : 'myjobs.billAddTitle')}</Text>
+                <Text style={styles.noteBody}>{t(ready.extras.billAttached ? 'myjobs.billAddedBody' : 'myjobs.billAddBody')}</Text>
+                <Pressable accessibilityRole="button" onPress={() => addBill(job.id)} disabled={busy} style={[styles.reportBtn, styles.outline]}>
+                  <Text style={[styles.reportText, { color: colors.green }]}>{t(ready.extras.billAttached ? 'myjobs.billChange' : 'myjobs.billAdd')}</Text>
+                </Pressable>
+              </View>
+            ) : null}
 
             <TimelineCard
               steps={timeline({
@@ -324,6 +346,7 @@ const styles = StyleSheet.create({
   note: { backgroundColor: colors.mint, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
   noteHead: { fontFamily: fontFamily.extrabold, fontSize: 15, color: colors.ink },
   noteBody: { fontFamily: fontFamily.regular, fontSize: 13, lineHeight: 20, color: colors.ink },
+  billCard: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, gap: 8 },
   reportRow: { flexDirection: 'row', gap: 8 },
   // minHeight, not height: on a large system font "Report a problem" wraps to two lines and must not be clipped.
   reportBtn: { flex: 1, minHeight: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 8 },

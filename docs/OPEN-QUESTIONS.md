@@ -110,3 +110,9 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 15. **Customer-app notice types to build (Shariq):** `worker_replaced_by_staff` (resident), `job_cancelled` and `cancellation_declined` (requester), `report_warning` and `staff_message` (both). The worker app already shows warning, message and declined.
 16. **Staff messages** go out as notifications (3 to 300 characters) to active people only.
 17. **Customer app Home: area (location pin) button hidden (8 Nov).** The pin next to the bell had no screen (App.kt wired it to nothing). It is hidden behind `AREA_PICKER_BUILT = false` in the customer app `HomeScreen.kt`. Shariq to design and say what it does. Proposal: a bottom sheet of DHA phases 1 to 8 that changes the default address phase (`addresses.phase`, `is_default`), which drives the "pros nearby" counts and which workers see new jobs. Search (`OpenSearch`) is also unwired and has no button.
+
+## 10 Nov: material bill any time until completion (Shariq)
+
+- Built: `attach_material_bill(job, path)` (migration 0045, local until pushed): the worker files or replaces the bill photo while the job is quoted, scheduled or in progress; `complete_job` accepts the attached bill. pgTAP `attach_bill_anytime` (49 assertions). Worker app: a "Material bill" card on Job status (Add / Change bill photo), the Complete Job prompt only asks for a photo when none is attached.
+- **For Shariq (customer app):** show the bill in view quote: `resident_quotes.material_bill_path` (a `job-media` path; the customer may read it, sign it like the job photos). The column is empty until the worker attaches a bill. No push is sent when a bill is attached (the screen shows it on its next load); say if a "bill added" notification is wanted.
+- Pending Shariq: is the bill still required at Complete Job (today: yes, when the quote has materials above 0)?

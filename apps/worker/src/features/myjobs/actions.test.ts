@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { actionErrorKey, buildBillPath, checkBill, completeJob, startJob, type ActionClient } from './actions.ts';
+import { actionErrorKey, attachBill, buildBillPath, checkBill, completeJob, startJob, type ActionClient } from './actions.ts';
 
 const bytes = (n: number) => new ArrayBuffer(n);
 
@@ -14,6 +14,10 @@ function fake(overrides: Partial<ActionClient> = {}) {
     },
     async completeJob(id, path) {
       calls.push(`complete:${id}:${path}`);
+      return { error: null };
+    },
+    async attachBill(id, path) {
+      calls.push(`attach:${id}:${path}`);
       return { error: null };
     },
     async uploadBill(_b, mime, ext) {
@@ -115,4 +119,50 @@ test('a lost connection is a network message, not a crash', async () => {
     },
   });
   assert.deepEqual(await startJob(down.client, 'j1'), { ok: false, key: 'myjobs.errors.network' });
+});
+
+test('a bill attached earlier lets the job complete without a new photo', async () => {
+  const { client, calls } = fake();
+  assert.deepEqual(await completeJob(client, { jobId: 'j1', materials: 1450, bill: null, billAttached: true }), { ok: true });
+  assert.deepEqual(calls, ['complete:j1:null']);
+  const none = fake();
+  assert.deepEqual(await completeJob(none.client, { jobId: 'j1', materials: 1450, bill: null, billAttached: false }), { ok: false, key: 'myjobs.errors.billRequired' });
+});
+
+test('attaching a bill uploads the photo, then files it on the quote', async () => {
+  const { client, calls } = fake();
+  assert.deepEqual(await attachBill(client, { jobId: 'j1', bill: { bytes: bytes(2000), mime: 'image/jpeg' } }), { ok: true });
+  assert.deepEqual(calls, ['upload:image/jpeg:jpg', 'attach:j1:u/bill-1-aa.jpg']);
+});
+
+test('a bill that is not a photo, or is too large, is refused before any upload', async () => {
+  const { client, calls } = fake();
+  assert.deepEqual(await attachBill(client, { jobId: 'j1', bill: { bytes: bytes(10), mime: 'application/pdf' } }), { ok: false, key: 'myjobs.errors.billType' });
+  assert.deepEqual(await attachBill(client, { jobId: 'j1', bill: { bytes: bytes(6 * 1024 * 1024), mime: 'image/png' } }), { ok: false, key: 'myjobs.errors.billSize' });
+  assert.deepEqual(calls, []);
+});
+
+test('when the database refuses the bill the uploaded photo is removed again', async () => {
+  const { client, calls } = fake({
+    async attachBill() {
+      return { error: { message: 'this job cannot take a bill' } };
+    },
+  });
+  assert.deepEqual(await attachBill(client, { jobId: 'j1', bill: { bytes: bytes(2000), mime: 'image/png' } }), { ok: false, key: 'myjobs.errors.billNotAllowed' });
+  assert.ok(calls.includes('delete:u/bill-1-aa.png'));
+});
+
+test('a network failure keeps the photo (the bill may have been filed)', async () => {
+  const { client, calls } = fake({
+    async attachBill() {
+      throw new TypeError('Network request failed');
+    },
+  });
+  assert.deepEqual(await attachBill(client, { jobId: 'j1', bill: { bytes: bytes(2000), mime: 'image/png' } }), { ok: false, key: 'myjobs.errors.network' });
+  assert.ok(!calls.some((c) => c.startsWith('delete:')));
+});
+
+test('attach refusals map to friendly messages', () => {
+  assert.equal(actionErrorKey({ message: 'this quote has no materials' }), 'myjobs.errors.billNotAllowed');
+  assert.equal(actionErrorKey({ message: 'this job cannot take a bill' }), 'myjobs.errors.billNotAllowed');
 });

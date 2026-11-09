@@ -12,6 +12,7 @@ export type StatusExtras = {
   quoteAt: string | null;
   quoteTotal: number | null;
   materials: number; // materials in this worker's quote (a bill is needed to complete when above zero)
+  billAttached: boolean; // the bill photo is already on the quote (the customer sees it in view quote)
   cashAmount: number | null; // what the worker recorded, once recorded
   cashDue: number | null; // the agreed amount from the accepted quote
   cancelRequestId: string | null; // this worker's pending cancellation request, if any (to withdraw it)
@@ -37,7 +38,7 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
   // The worker's own interest, quote and cash row (row-level security lets them read only their own).
   const [interest, quote, cash, cancel] = await Promise.all([
     supabase.from('job_interests').select('created_at').eq('job_id', id).maybeSingle(),
-    supabase.from('quotes').select('created_at, total, materials, status, revision, visit_start, visit_end').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('quotes').select('created_at, total, materials, status, revision, visit_start, visit_end, material_bill_path').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('cash_records').select('worker_amount, agreed_amount').eq('job_id', id).maybeSingle(),
     supabase.from('cancellation_requests').select('id, requester_role').eq('job_id', id).eq('status', 'pending').maybeSingle(),
   ]);
@@ -53,6 +54,7 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
       quoteAt: quote.data?.created_at ?? null,
       quoteTotal: quote.data?.total ?? null,
       materials: quote.data?.materials ?? 0,
+      billAttached: Boolean(quote.data?.material_bill_path),
       cashAmount: cash.data?.worker_amount ?? null,
       cashDue: cash.data?.agreed_amount ?? job.myQuoteTotal,
       cancelRequestId: cancel.data?.requester_role === 'worker' ? cancel.data.id : null,
