@@ -317,9 +317,10 @@ const styles = StyleSheet.create({
   noteHead: { fontFamily: fontFamily.extrabold, fontSize: 15, color: colors.ink },
   noteBody: { fontFamily: fontFamily.regular, fontSize: 13, lineHeight: 20, color: colors.ink },
   reportRow: { flexDirection: 'row', gap: 8 },
-  reportBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  // minHeight, not height: on a large system font "Report a problem" wraps to two lines and must not be clipped.
+  reportBtn: { flex: 1, minHeight: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 8 },
   outline: { borderWidth: 2, borderColor: colors.green },
-  reportText: { fontFamily: fontFamily.extrabold, fontSize: 13 },
+  reportText: { fontFamily: fontFamily.extrabold, fontSize: 13, textAlign: 'center' },
   withdraw: { alignSelf: 'flex-start', height: 44, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   withdrawText: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.greenDark },
   cancelBtn: { height: 48, borderRadius: 14, borderWidth: 1.5, borderColor: colors.chip.declined.fg, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },

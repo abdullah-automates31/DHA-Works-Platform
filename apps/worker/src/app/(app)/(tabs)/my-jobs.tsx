@@ -103,7 +103,7 @@ export default function MyJobsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  top: { paddingHorizontal: 20, paddingBottom: 4 },
+  top: { paddingHorizontal: 20, paddingBottom: 10 },
   title: { fontFamily: fontFamily.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.28, color: colors.ink },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 12 },
   seg: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 4, gap: 4 },

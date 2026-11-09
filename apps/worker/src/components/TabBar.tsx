@@ -19,7 +19,9 @@ type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tab
 export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bar, { height: 78 + Math.max(0, insets.bottom - 8) }]}>
+    // The bar reaches under the system navigation bar (Android 15 draws edge to edge), so the labels sit in the
+    // designed 70 high area above it: the inset is added to both the height and the bottom padding.
+    <View style={[styles.bar, { height: 78 + insets.bottom, paddingBottom: 8 + insets.bottom }]}>
       {state.routes.map((route, index) => {
         const key = route.name as keyof typeof ICONS;
         const Icon = ICONS[key];
