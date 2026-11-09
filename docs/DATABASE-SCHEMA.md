@@ -119,7 +119,7 @@ Job statuses: `draft`, `open`, `interested`, `quoted`, `accepted` (kept but **un
 5. **Interest and quotes.** A matching worker marks interest (`express_interest`), then sends a quote (`submit_quote`). The job moves to `interested`, then `quoted`. A sent quote cannot be edited; the worker can withdraw it and send a new one. A worker the resident rejected cannot quote that job again.
 6. **Acceptance.** `accept_quote` does everything at once: accepts the chosen quote, marks the others `not_selected`, moves the job to `scheduled`, creates the `cash_records` row, and releases the phone and plot to that one worker. It can only happen once per job. Before acceptance a resident can also `reject_quote` or `cancel_job`.
 7. **The work.** The worker calls `start_job` (`in_progress`), then `complete_job` (`completed`). If the accepted quote included materials, the worker must attach the actual material bill when completing (0013, 0026).
-8. **Cash.** Both sides enter the amount (`record_cash_worker`, `confirm_cash_resident`); each amount is write-once. When both are in, the job becomes `cash_collected` and the worker's `jobs_done` goes up. **A price difference no longer creates a dispute** (0013): it is kept on `cash_records` (`matched = false`, `quote_difference`) for staff. A worker who charges a different amount from the quote must give a reason.
+8. **Cash.** Worker-only (Shariq, 9 Nov, `20261109130000_worker_only_cash`): `record_cash_worker` stores the write-once amount and the job becomes `cash_collected` at once, the worker's `jobs_done` goes up and the resident gets `rate_worker`. `confirm_cash_resident` is kept only to refuse old clients. **A price difference never creates a dispute** (0013): it is kept on `cash_records` (`quote_difference`) for staff. A worker who charges a different amount from the quote must give a reason.
 9. **Review.** Within 7 days of completion the resident calls `submit_review`. The job becomes `reviewed` and the worker's average is recalculated. A rating whose average of the three scores is **below 3** automatically files a `poor_work` report for staff (0013).
 10. **Reports.** Either side can `file_report` from `scheduled` until 7 days after completion. Safety and price reports also flag the job for staff without changing its status.
 11. **Cancelling after acceptance.** `request_cancellation` (while scheduled or in progress) creates a request for staff to decide; neither side can cancel alone.
@@ -185,7 +185,7 @@ These views deliberately run with the database owner's rights so they can join d
 |---|---|
 | Account | `register_profile`, `update_my_profile`, `upsert_address`, `add_verification_document`, `set_my_references`, `submit_for_review` |
 | Worker setup | `set_my_areas`, `set_my_categories`, `set_available_today`, `update_worker_details` (experience, fee, voice path, about text since 0021) |
-| Resident jobs | `save_job_draft`, `delete_draft`, `post_job`, `update_job`, `cancel_job`, `accept_quote`, `reject_quote`, `confirm_cash_resident`, `submit_review` |
+| Resident jobs | `save_job_draft`, `delete_draft`, `post_job`, `update_job`, `cancel_job`, `accept_quote`, `reject_quote`, `confirm_cash_resident` (retired: refuses), `submit_review` |
 | Worker jobs | `record_job_view`, `express_interest`, `withdraw_interest`, `submit_quote`, `withdraw_quote`, `start_job`, `complete_job`, `record_cash_worker`, `get_my_earnings` |
 | Both | `file_report`, `request_cancellation`, `withdraw_cancellation_request`, `register_device_token`, `mark_notifications_read` |
 
@@ -243,7 +243,7 @@ Two further files, `supabase/proposals/20261029000018` and `...019` (lock identi
 - Phone OTP for the customer app, chat, direct booking, commission, refunds and quote revisions are out of MVP 1 by decision. The worker app uses phone + WhatsApp OTP.
 
 **Awaiting Shariq (from `docs/OPEN-QUESTIONS.md`; the database currently follows the assumption in bold):**
-- Cash may become worker-only: **both sides still enter the amount.** If yes, a new migration will change it.
+- Cash is worker-only (decided 9 Nov, `20261109130000_worker_only_cash`).
 - Material bill: **required only when the quote has materials.**
 - "Rated below 3": **built as the average of the three scores below 3.**
 - Price difference: **job closes as `cash_collected`**, both amounts kept for staff.

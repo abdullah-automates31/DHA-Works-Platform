@@ -30,7 +30,7 @@ draft -> open -> interested -> quoted -> accepted -> scheduled -> in_progress ->
 | (withdraw) | `withdraw_quote`, `withdraw_interest` | worker | before accepted | recompute stage |
 | scheduled -> in_progress | `start_job` | accepted worker | | |
 | in_progress -> completed | `complete_job(job, bill_path)` | accepted worker | | material bill photo required when the accepted quote has materials above 0 (confirmed by Shariq, 3 Nov; the quote itself carries only the itemised list and estimate); prompts both for cash |
-| (cash) | `record_cash_worker`, `confirm_cash_resident` | worker / resident | job completed; either side may go first | when both present -> `cash_collected` always. Worker/resident gap and gap against the quote stay on `cash_records`. A price difference never disputes a job (Shariq, 27 Oct) |
+| completed -> cash_collected | `record_cash_worker` | worker | job completed; write-once | closes the job at once (worker-only cash, Shariq 9 Nov). The gap against the quote stays on `cash_records`. `confirm_cash_resident` is retired and refuses. A price difference never disputes a job (Shariq, 27 Oct) |
 | cash_collected -> reviewed | `submit_review` | resident | one per job | updates worker rating; mean score below 3 also files a system-generated `poor_work` report |
 | -> cancelled | `cancel_job` | resident before accept; staff later (admin phase) | reason | notify workers who quoted |
 | -> disputed | no longer set by cash mismatch; `disputed` stays in the enum, unused for now. `file_report` flags the job (`under_review_reason`) without changing status | either party | job from scheduled onward | staff alert |
@@ -111,7 +111,7 @@ Reads are RLS-filtered queries; writes are RPCs. Names are proposals.
 | `get_quote(quote_id)` breakdown | read | C12 |
 | `accept_quote`, `reject_quote(reason)` | RPC | C12 |
 | `revise_quote(quote_id, labour, materials, materials_note, note, visit_start, visit_end)` | RPC (worker, once per quote while `sent`; 0044) | W10 change mode |
-| `confirm_cash_resident(job_id, same_or_amount)` | RPC | C20 |
+| ~~`confirm_cash_resident(job_id, same_or_amount)`~~ | RPC, retired 9 Nov (refuses) | ~~C20~~ |
 | `submit_review` | RPC | C15 |
 | `list_addresses`, `upsert_address` | read / RPC | C03, C10, C17 |
 

@@ -132,11 +132,14 @@ select lives_ok($$select public.complete_job((select id from t_job), '00000000-0
 select throws_ok($$select public.record_cash_worker((select id from t_job), 4000)$$, null, null,
   'a different amount needs a reason');
 select lives_ok($$select public.record_cash_worker((select id from t_job), 3500)$$, 'worker records the quoted amount');
+select is((select status from public.jobs), 'cash_collected'::public.job_status, 'the worker''s cash entry closes the job');
 select throws_ok($$select public.record_cash_worker((select id from t_job), 3500)$$, null, null, 'cash entry is write-once');
 
 select tests.act('00000000-0000-0000-0000-0000000000a1');
-select lives_ok($$select public.confirm_cash_resident((select id from t_job), 3500)$$, 'resident confirms the same amount');
-select is((select status from public.jobs), 'cash_collected'::public.job_status, 'matching amounts close the job');
+select throws_ok($$select public.confirm_cash_resident((select id from t_job), 3500)$$, null,
+  'the worker confirms the cash; you can rate the worker once they do', 'the resident no longer confirms cash');
+select is((select count(*) from public.notifications where type = 'rate_worker' and job_id = (select id from t_job)), 1::bigint,
+  'the resident is asked to rate the worker');
 
 -- ---------------------------------------------------------------- review is anonymous
 select lives_ok($$select public.submit_review((select id from t_job), 5::smallint, 4::smallint, 5::smallint, true, 'great')$$,
@@ -147,7 +150,7 @@ select is((select count(*) from public.reviews), 0::bigint, 'worker cannot read 
 select is((select rating_count from public.worker_details), 1, 'aggregate rating is updated');
 select is((select jobs_done from public.worker_details), 1, 'jobs done counted once cash is collected');
 
--- ---------------------------------------------------------------- cash mismatch -> disputed
+-- ---------------------------------------------------------------- cash different from the quote
 select tests.act('00000000-0000-0000-0000-0000000000a1');
 select public.save_job_draft(null, 1::smallint, (select id from public.addresses limit 1), 'Second leak', 'Pipe leaking in the bathroom',
   'asap', null, null, null, null, array['00000000-0000-0000-0000-0000000000a1/p2.jpg']);
@@ -167,12 +170,13 @@ select public.start_job((select id from t_job2));
 select public.complete_job((select id from t_job2));
 select public.record_cash_worker((select id from t_job2), 2500, 'extra pipe fitting');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
-select public.confirm_cash_resident((select id from t_job2), 2000);
 select is((select status from public.jobs where id = (select id from t_job2)), 'cash_collected'::public.job_status,
-  'different amounts still close the job (never disputed by itself)');
+  'an amount different from the quote still closes the job (never disputed by itself)');
 select tests.back();
-select is((select count(*) from public.cash_records where job_id = (select id from t_job2) and not matched), 1::bigint,
-  'the mismatch is kept on cash_records');
+select is((select quote_difference from public.cash_records where job_id = (select id from t_job2)), 500,
+  'the gap against the quote is kept on cash_records');
+select is((select matched from public.cash_records where job_id = (select id from t_job2)), true,
+  'a worker-only entry counts as matched (worker earnings)');
 select is((select count(*) from public.reports where job_id = (select id from t_job2)), 0::bigint,
   'a price difference files no report');
 

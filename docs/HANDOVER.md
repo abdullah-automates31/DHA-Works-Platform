@@ -73,7 +73,7 @@ Verified: `npm run db:local -- db reset` applies all 28 locally; `npm run db:loc
 
 **New tables and views get no app-role privileges by default (since 0015).** Each new migration must grant exactly what is needed.
 
-Worker-only cash remains **unbuilt and pending Shariq**; it is not 0016.
+Worker-only cash was decided on 9 Nov and built in `20261109130000_worker_only_cash`.
 
 ## 4. Tests (run locally; last full run 5 Nov 2026 on all 27 local migrations)
 
@@ -97,7 +97,7 @@ Worker-only cash remains **unbuilt and pending Shariq**; it is not 0016.
 | Rated below 3 means poor work, added inside reports | **Built.** **Assumed:** mean of the three scores below 3. Confirm. |
 | A price difference is never disputed by itself; complaints are separate or by rating below 3 | **Built.** Job closes as `cash_collected`, `cash_records.matched = false`. |
 | "Cash collected by worker (status should be shown on C13)" and a standalone "Review pending" instead of "Cash paid and review" | **UI only so far.** Written into UI-UX.md section 10. |
-| Possible meaning: cash becomes **worker-only** (customer does not confirm cash; no C20) | **NOT built. Pending Shariq.** If yes: a new migration makes `record_cash_worker` close the job directly and retires `confirm_cash_resident`; update tests and docs. |
+| Possible meaning: cash becomes **worker-only** (customer does not confirm cash; no C20) | **Built 9 Nov** (`20261109130000_worker_only_cash`): `record_cash_worker` closes the job as `cash_collected`; `confirm_cash_resident` refuses; jobs waiting on the resident were settled. |
 | Customer status-variation screen like the worker app | UI task (design owner). Not drawn. |
 | Remove W11 My jobs action buttons; remove the Direct requests screen | UI tasks (design owner). |
 | "v2 need expiry" | **Not understood.** Do not guess; ask Shariq and record the answer in DECISIONS.md. |

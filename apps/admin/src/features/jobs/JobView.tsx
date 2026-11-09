@@ -109,9 +109,9 @@ export async function JobView({ id }: { id: string }) {
                 <>
                   <div className="row sb"><span className="mut b">Agreed</span><b>{rupees(c.agreed)}</b></div>
                   <div className="row sb"><span className="mut b">Recorded by worker</span>{c.workerAmount === null ? <Chip tone="gray">Not yet</Chip> : <b>{rupees(c.workerAmount)}</b>}</div>
-                  <div className="row sb"><span className="mut b">Confirmed by resident</span>{c.residentAmount === null ? <Chip tone="gray">Not yet</Chip> : <b>{rupees(c.residentAmount)}</b>}</div>
+                  {c.residentAmount !== null ? <div className="row sb"><span className="mut b">Confirmed by resident</span><b>{rupees(c.residentAmount)}</b></div> : null}
                   {c.workerReason ? <div className="mut" style={{ fontSize: 13 }}>Worker note: {c.workerReason}</div> : null}
-                  <div className="mut" style={{ fontSize: 13 }}>{c.matched === true ? `Both amounts match${c.quoteDifference ? ` (${c.quoteDifference > 0 ? '+' : ''}${rupees(c.quoteDifference)} from the quote)` : ''}.` : c.matched === false ? 'The two amounts differ. The job is flagged.' : 'If the two amounts differ, the job is flagged here.'}</div>
+                  <div className="mut" style={{ fontSize: 13 }}>{c.workerAmount !== null && c.residentAmount === null ? `Recorded by the worker (cash is worker-only)${c.quoteDifference ? ` (${c.quoteDifference > 0 ? '+' : ''}${rupees(c.quoteDifference)} from the quote)` : ''}.` : c.matched === true ? `Both amounts match${c.quoteDifference ? ` (${c.quoteDifference > 0 ? '+' : ''}${rupees(c.quoteDifference)} from the quote)` : ''}.` : c.matched === false ? 'The two amounts differ. The job is flagged.' : 'If the two amounts differ, the job is flagged here.'}</div>
                 </>
               ) : <span className="mut">Cash is recorded once a quote is accepted.</span>}
             </div>
