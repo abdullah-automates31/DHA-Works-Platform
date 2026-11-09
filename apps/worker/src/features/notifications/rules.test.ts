@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { describe, groupNotices, unreadIds, type Notice } from './rules.ts';
+import { describe, groupNotices, opensDetail, unreadIds, type Notice } from './rules.ts';
 
 const now = new Date(2026, 9, 30, 15, 0);
 const at = (h: number, day = 30) => new Date(2026, 9, day, h, 0).toISOString();
@@ -71,4 +71,13 @@ test('a worker taken off a job is told neutrally, with no reason and no customer
   const v = describe(n({ type: 'quote_rejected' }), now);
   assert.equal(v.body, "You are no longer on this job. Do not travel to the customer's address.");
   assert.doesNotMatch(v.body, /Bathroom|customer rejected|reason/i);
+});
+
+test('a new job notification opens the job detail where the worker can accept it', () => {
+  const v = describe(n({ type: 'new_job', payload: { title: 'Tap leak', phase: 6 } }), now);
+  assert.equal(v.title, 'New job');
+  assert.match(v.body, /Phase 6: Tap leak/);
+  assert.equal(v.opensJob, true);
+  assert.equal(opensDetail(n({ type: 'new_job' })), true);
+  assert.equal(opensDetail(n({ type: 'quote_accepted' })), false);
 });

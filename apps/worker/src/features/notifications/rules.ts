@@ -29,6 +29,16 @@ function jobName(n: Notice): string {
 export function describe(n: Notice, now: Date = new Date()): NoticeView {
   const job = jobName(n);
   switch (n.type) {
+    case 'new_job': {
+      // A job the worker has not accepted yet: it opens the job detail with "Accept this job" (see opensDetail).
+      const phase = typeof n.payload?.phase === 'number' ? String(n.payload.phase) : '';
+      return {
+        title: t('notices.newJobTitle'),
+        body: phase ? t('notices.newJobBody', { phase, job }) : t('notices.newJobBody', { phase: '-', job }),
+        icon: 'job',
+        opensJob: n.jobId !== null,
+      };
+    }
     case 'quote_accepted': {
       const start = text(n.payload?.start);
       const when = start ? t('notices.quoteAcceptedWhen', { day: dayWord(start, now), window: windowText(start, null) }) : '';
@@ -70,6 +80,11 @@ export function describe(n: Notice, now: Date = new Date()): NoticeView {
     default:
       return { title: t('notices.updateTitle'), body: n.jobId ? t('notices.updateBody', { job }) : t('notices.updateGeneric'), icon: 'job', opensJob: n.jobId !== null };
   }
+}
+
+/** A new job is not the worker's yet, so it opens the job detail (with "Accept this job"), not the status screen. */
+export function opensDetail(n: Notice): boolean {
+  return n.type === 'new_job';
 }
 
 function capitalize(value: string): string {

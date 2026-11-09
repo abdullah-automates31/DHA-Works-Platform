@@ -292,7 +292,7 @@ export const en = {
     phaseOnly: 'Phase {phase}',
     customerPhase: 'Customer · Phase {phase}',
     jobDetails: 'Job details',
-    createQuote: 'Create quote',
+    createQuote: 'Accept this job',
     startJob: 'Start job',
     markComplete: 'Mark complete',
     recordCash: 'Record cash',
@@ -516,6 +516,8 @@ export const en = {
     errorBody: 'Check your internet connection and try again.',
     // Used by features/notifications/rules.ts: what each notification type says
     yourJob: 'your job',
+    newJobTitle: 'New job',
+    newJobBody: 'A new job in Phase {phase}: {job}. Open it and tap Accept this job.',
     quoteAcceptedTitle: 'Quote accepted',
     quoteAcceptedBody: 'Your quote for {job} was accepted.{when}',
     quoteAcceptedWhen: ' Visit {day}, {window}.',

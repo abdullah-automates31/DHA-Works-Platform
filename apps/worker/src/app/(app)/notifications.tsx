@@ -7,8 +7,8 @@ import { PrimaryButton } from '@/components/AuthForm';
 import { LoadMoreFooter } from '@/components/LoadMoreFooter';
 import { NoticeListSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { BellIcon, CheckIcon, ChevronLeftIcon } from '@/components/icons';
-import { statusHref } from '@/features/job/routes';
-import { ago, describe, groupNotices, unreadIds, type Notice, type NoticeIcon } from '@/features/notifications/rules';
+import { jobHref, statusHref } from '@/features/job/routes';
+import { ago, describe, groupNotices, opensDetail, unreadIds, type Notice, type NoticeIcon } from '@/features/notifications/rules';
 import { useNotifications } from '@/features/notifications/useNotifications';
 import { t } from '@/i18n';
 import { nearEnd } from '@/lib/paging';
@@ -52,7 +52,7 @@ export default function NotificationsScreen() {
 
   function open(n: Notice) {
     if (n.readAt === null) void markRead([n.id]);
-    if (n.jobId && describe(n, now).opensJob) router.push(statusHref(n.jobId));
+    if (n.jobId && describe(n, now).opensJob) router.push(opensDetail(n) ? jobHref(n.jobId) : statusHref(n.jobId));
   }
 
   return (
