@@ -129,7 +129,7 @@ Short, friendly, plain English. Say what happens next. Show money as "Rs 3,000".
 Screens are in `DHA-Works-UI/` (outside this repo); these are the corrections the design owner must make. Nothing here has been drawn yet.
 
 - **Customer status variations:** make a status-variation screen for the customer app, like the worker app has, one frame per job status.
-- **C13 Job status timeline:** the last step "Cash paid and review" is replaced by **"Review pending"** as a single standalone step. Cash collected by the worker shows as its own status on C13. The button "Work finished? Confirm cash paid" is **pending Shariq**: if cash becomes worker-only, it goes away and C20 is removed.
+- **C13 Job status timeline:** the last step "Cash paid and review" is replaced by **"Review pending"** as a single standalone step. Cash collected by the worker shows as its own status on C13. The button "Work finished? Confirm cash paid" and C20 are removed: cash is worker-only (9 Nov).
 - **W11 My jobs:** remove all action buttons.
 - **Direct requests screen:** remove it (direct booking is out of MVP 1).
 - **Worker complete-job screen (W12):** add a mandatory **material bill photo** upload (needed when the quote has materials; the quote form no longer asks for a bill, 3 Nov). Typing a list of materials stays optional.

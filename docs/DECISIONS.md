@@ -26,7 +26,7 @@ Most recent first within each group. "Confirmed" means agreed with Shariq Bhai; 
 | The customer controls the job schedule; workers cannot set or change it; a worker told late must call the customer | Shariq, 3 Nov (the mentor's improvement document) |
 | Rejected (including "customer chose another worker") and cancelled jobs disappear from the worker; a rejected job shows as one bare "Rejected" card; cancel notice: "This job has been cancelled. Do not travel to the customer's address." | Shariq, 3 Nov |
 | Safety: "Report a problem" and "I feel unsafe" in both apps; helpline 1092; staff see both phone numbers | Per UI design; helpline wording to confirm |
-| **MVP 2 (not MVP 1, per Shariq 26 Oct):** quote revisions: max 2 per job; allowed before work starts; after start only for unexpected extra work with explanation and itemised prices; resident must approve explicitly; all versions kept | Decided by user, 26 Oct |
+| **MVP 2 (not MVP 1, per Shariq 26 Oct):** quote revisions: max 2 per job; allowed before work starts; after start only for unexpected extra work with explanation and itemised prices; resident must approve explicitly; all versions kept | Decided by user, 26 Oct; **superseded 9 Nov: cash is worker-only, the worker's amount closes the job** |
 | ~~Discussion timeout is 24 hours~~ | Superseded by the competition model |
 | ~~Rejected quote: job returns to Open; same worker cannot reclaim~~ | Superseded: a rejection does not reopen anything (other quotes stay live); see the no re-quote row below |
 | Complaints allowed during the job and up to 7 days after; outcomes no action / warning / suspend | Decided |
@@ -63,11 +63,11 @@ Most recent first within each group. "Confirmed" means agreed with Shariq Bhai; 
 | --- | --- |
 | Distance (km) filter and "Nearest" sort are out of the MVP; matching stays category + phase, no GPS | Confirmed (user, 26 Oct) |
 | No re-quote after a rejected quote on the same job (other workers can still quote) | Decided by user, 26 Oct; design copy to be updated |
-| Residents can save draft jobs (private, no notifications, no expiry until posted) | Decided by user, 26 Oct |
-| Reports allowed from Scheduled until 7 days after completion; existing reports stay reviewable after that | Decided by user, 26 Oct |
-| Categories (all apps): Plumbing, Electrical, AC & Refrigeration, Carpentry, Painting, Cleaning, Welding & Ironwork, General Handyman; stored in the database, admin-managed | Decided by user, 26 Oct |
-| Cash: both sides enter the amount (either order, immutable once submitted); equal closes the job and records any difference from the quote; unequal flags disputed for staff | Decided by user, 26 Oct |
-| Report outcomes: no action / warning / suspend; staff can cancel a job as a separate audited action; no refunds (cash, off-platform) | Decided by user, 26 Oct |
+| Residents can save draft jobs (private, no notifications, no expiry until posted) | Decided by user, 26 Oct; **superseded 9 Nov: cash is worker-only, the worker's amount closes the job** |
+| Reports allowed from Scheduled until 7 days after completion; existing reports stay reviewable after that | Decided by user, 26 Oct; **superseded 9 Nov: cash is worker-only, the worker's amount closes the job** |
+| Categories (all apps): Plumbing, Electrical, AC & Refrigeration, Carpentry, Painting, Cleaning, Welding & Ironwork, General Handyman; stored in the database, admin-managed | Decided by user, 26 Oct; **superseded 9 Nov: cash is worker-only, the worker's amount closes the job** |
+| Cash: both sides enter the amount (either order, immutable once submitted); equal closes the job and records any difference from the quote; unequal flags disputed for staff | Decided by user, 26 Oct; **superseded 9 Nov: cash is worker-only, the worker's amount closes the job** |
+| Report outcomes: no action / warning / suspend; staff can cancel a job as a separate audited action; no refunds (cash, off-platform) | Decided by user, 26 Oct; **superseded 9 Nov: cash is worker-only, the worker's amount closes the job** |
 | No chat in the MVP; workers and residents communicate by phone | Confirmed by Shariq (WhatsApp, 26 Oct, 11:18 PM: "Just call and figure out everything.") |
 | Stuck job = same stage too long: Scheduled 24h past start time; In progress 48h; Completed with cash not recorded 48h. Flag for staff review and notify; never auto-cancel; open jobs just expire | Decided by user, 27 Oct |
 | Suspended worker with an active job: job flagged under review, staff decide (resume, replace, cancel); nothing auto-cancelled | Proposed default (user, 27 Oct); confirm with Shariq |

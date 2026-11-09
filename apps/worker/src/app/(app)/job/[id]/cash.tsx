@@ -19,8 +19,8 @@ import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
 // W13 Record cash (worker/screens/w-cash.dc.html): the amount agreed in the quote, then the amount the worker
-// actually collected. Different from the quote needs a reason. record_cash_worker stores it; the job closes once the
-// customer confirms their side too.
+// actually collected. Different from the quote needs a reason. record_cash_worker stores it and closes the job as
+// cash_collected (worker-only cash, 9 Nov); the customer is then asked to rate.
 export default function RecordCashScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();

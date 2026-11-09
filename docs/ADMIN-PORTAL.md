@@ -36,7 +36,7 @@ Email + password, then a six-digit code emailed by the Edge Function `admin-2fa`
 
 ## Run it locally
 
-1. Docker + `npm run db:local -- start` (fake people, jobs, reports, reviews and calls for the new screens: also run `supabase/dev/seed_local_operations.sql`; `supabase/dev/confirm_cash_as_resident.sql` stands in for the customer confirming cash), then `docker exec -i supabase_db_dha-works psql -U postgres -d postgres < supabase/dev/seed_local_admin.sql` (fake staff `admin@dha-local.test`, fake queue).
+1. Docker + `npm run db:local -- start` (fake people, jobs, reports, reviews and calls for the new screens: also run `supabase/dev/seed_local_operations.sql`;), then `docker exec -i supabase_db_dha-works psql -U postgres -d postgres < supabase/dev/seed_local_admin.sql` (fake staff `admin@dha-local.test`, fake queue).
 2. `supabase functions serve --env-file <file with ADMIN_MAIL_MODE=dev-log>`: the code appears in that log (the mode is refused for any hosted address).
 3. `apps/admin/.env.local` (git-ignored): `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321` and the local anon key. `npm run admin` and open http://localhost:3000.
 4. Checks: `npm run admin:typecheck`, `admin:lint`, `admin:test`, `admin:build`; database `npm run db:local -- test db`; `deno test` in `supabase/functions/admin-2fa`; attack drill `FN_LOG=<function log> node scripts/challenge-admin-local.mjs` (about 70 seconds).

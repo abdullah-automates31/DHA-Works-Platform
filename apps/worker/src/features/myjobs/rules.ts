@@ -22,7 +22,7 @@ export type MyJob = {
   plotNo: string | null;
   floor: string | null;
   cancellationPending: boolean;
-  cashRecorded?: boolean; // the worker has already entered the cash amount (the job waits for the customer)
+  cashRecorded?: boolean; // the worker has already entered the cash amount (since worker-only cash the job is then cash_collected; kept as a guard)
 };
 
 export type JobKind =

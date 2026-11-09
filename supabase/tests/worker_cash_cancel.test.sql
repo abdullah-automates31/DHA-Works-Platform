@@ -57,12 +57,12 @@ select tests.act('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$select public.record_cash_worker('00000000-0000-0000-0000-00000000c001', 3000, 'I gave a discount')$$, 'w1 records Rs 3,000 with a reason');
 select is((select worker_amount from public.cash_records where job_id = '00000000-0000-0000-0000-00000000c001'), 3000, 'the amount is stored');
 select is((select worker_reason from public.cash_records where job_id = '00000000-0000-0000-0000-00000000c001'), 'I gave a discount', 'with the reason');
-select is((select status::text from public.worker_jobs where id = '00000000-0000-0000-0000-00000000c001'), 'completed', 'the job waits for the customer (still completed)');
-select throws_ok($$select public.record_cash_worker('00000000-0000-0000-0000-00000000c001', 3200)$$, null, 'you have already recorded the amount', 'the amount is write-once');
+select is((select status::text from public.worker_jobs where id = '00000000-0000-0000-0000-00000000c001'), 'cash_collected', 'the job closes as cash collected (worker-only cash)');
+select throws_ok($$select public.record_cash_worker('00000000-0000-0000-0000-00000000c001', 3200)$$, null, null, 'the amount is write-once');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
-select lives_ok($$select public.confirm_cash_resident('00000000-0000-0000-0000-00000000c001', 3000)$$, 'the customer confirms Rs 3,000');
+select throws_ok($$select public.confirm_cash_resident('00000000-0000-0000-0000-00000000c001', 3000)$$, null,
+  'the worker confirms the cash; you can rate the worker once they do', 'the customer does not confirm cash');
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select is((select status::text from public.worker_jobs where id = '00000000-0000-0000-0000-00000000c001'), 'cash_collected', 'the job closes as cash collected');
 
 -- ---------------------------------------------------------------- request cancellation
 select throws_ok($$select public.request_cancellation('00000000-0000-0000-0000-00000000c001', 'other', 'x')$$, null, 'cancellation can be requested while the job is scheduled or in progress', 'a finished job cannot be cancelled');
