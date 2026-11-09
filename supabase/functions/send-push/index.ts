@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     const t of (tokens.data ?? []).filter((t) => !EXPO_TOKEN.test(t.push_token))
   ) tokensOf.set(t.user_id, [...(tokensOf.get(t.user_id) ?? []), t.push_token]);
 
-  // Worker names: the quote's worker for quote_received, otherwise the job's accepted worker.
+  // Worker names: the quote's worker for quote_received / quote_revised, otherwise the job's accepted worker.
   const workerIdFor = (r: NotificationRow): string | null => {
     const quoteId = text(r.payload?.quote_id);
     const quote = quoteId ? quoteOf.get(quoteId) : undefined;

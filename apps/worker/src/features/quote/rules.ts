@@ -71,14 +71,19 @@ export type AcceptJobArgs = {
   p_materials: number;
   p_materials_note: string | undefined;
   p_note: undefined;
+  p_visit_start: string;
+  p_visit_end: string;
 };
+
+/** revise_quote (0044): the same amounts and window, for the worker's one change before the customer accepts. */
+export type ReviseQuoteArgs = Omit<AcceptJobArgs, 'p_job_id'> & { p_quote_id: string };
 
 /**
  * accept_job (claim-and-lock): the worker states a price and the job is theirs. The materials amount is the sum of the item prices and the list goes in the note ("Pipe Rs 500; Tape Rs 50").
- * There is no "Other" charge. No total is ever sent, and no visit date or
- * time either (the customer chooses the schedule), and no bill: the actual bill is uploaded when the job is completed.
+ * There is no "Other" charge. No total is ever sent (the database computes it), and no bill: the actual bill is
+ * uploaded when the job is completed. The visit window is the worker's offer (0044).
  */
-export function buildSubmitArgs(jobId: string, input: QuoteInput): AcceptJobArgs {
+export function buildSubmitArgs(jobId: string, input: QuoteInput, visit: { p_visit_start: string; p_visit_end: string }): AcceptJobArgs {
   const materials = materialsTotal(input);
   const collapse = (text: string) => text.replace(/\s+/g, ' ').trim();
   const list = usedItems(input)
@@ -90,5 +95,28 @@ export function buildSubmitArgs(jobId: string, input: QuoteInput): AcceptJobArgs
     p_materials: materials,
     p_materials_note: materials > 0 && list !== '' ? list : undefined,
     p_note: undefined,
+    ...visit,
   };
+}
+
+export function buildReviseArgs(quoteId: string, input: QuoteInput, visit: { p_visit_start: string; p_visit_end: string }): ReviseQuoteArgs {
+  const { p_job_id: _unused, ...rest } = buildSubmitArgs('', input, visit);
+  return { p_quote_id: quoteId, ...rest };
+}
+
+/**
+ * The form's input back from a sent quote, to change it: the materials note ("Pipe Rs 500; Tape Rs 50") becomes the
+ * item list again. A note that does not parse becomes one "Materials" item with the stored amount.
+ */
+export function inputFromQuote(quote: { labour: number; materials: number; materialsNote: string | null }): QuoteInput {
+  const labour = quote.labour > 0 ? String(quote.labour) : '';
+  if (quote.materials <= 0) return { labour, withMaterials: false, items: [{ name: '', price: '' }] };
+  const parsed = (quote.materialsNote ?? '')
+    .split(';')
+    .map((part) => /^\s*(.+?)\s+Rs\s+(\d+)\s*$/.exec(part))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => ({ name: (m[1] ?? '').slice(0, ITEM_NAME_MAX), price: m[2] ?? '0' }));
+  const sum = parsed.reduce((n, item) => n + Number(item.price), 0);
+  const items = parsed.length > 0 && sum === quote.materials ? parsed.slice(0, MAX_ITEMS) : [{ name: 'Materials', price: String(quote.materials) }];
+  return { labour, withMaterials: true, items };
 }

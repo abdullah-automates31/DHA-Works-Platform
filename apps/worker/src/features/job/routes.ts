@@ -14,6 +14,8 @@ export const jobHref = (id: string): Href => safe(id, (i) => `/job/${i}`);
 export const jobDetailsHref = (id: string): Href => safe(id, (i) => `/job/${i}?from=status`);
 /** W10 Create quote. */
 export const quoteHref = (id: string): Href => safe(id, (i) => `/job/${i}/quote`);
+/** W10 in change mode: the worker changes their sent quote once, before the customer accepts (0044). */
+export const changeQuoteHref = (id: string): Href => safe(id, (i) => `/job/${i}/quote?change=1`);
 /** W12 Job status (the worker's own job). */
 export const statusHref = (id: string): Href => safe(id, (i) => `/job/${i}/status`);
 /** W13 Record cash. */

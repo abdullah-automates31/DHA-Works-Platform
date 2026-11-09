@@ -157,15 +157,16 @@ export function chipFor(kind: JobKind): ChipStyle {
 }
 
 // ---------------------------------------------------------------- what the main button does
-export type ActionKind = 'create_quote' | 'waiting' | 'start' | 'complete' | 'record_cash' | 'back' | 'find_jobs' | 'help';
+export type ActionKind = 'create_quote' | 'waiting' | 'change_quote' | 'start' | 'complete' | 'record_cash' | 'back' | 'find_jobs' | 'help';
 
 /** The main action of a job in each state (the bottom button on W12; the call-to-action on a W11 card). */
-export function primaryAction(kind: JobKind, cashRecorded = false): ActionKind {
+export function primaryAction(kind: JobKind, cashRecorded = false, canChangeQuote = false): ActionKind {
   switch (kind) {
     case 'interested':
       return 'create_quote';
     case 'quoted':
-      return 'waiting';
+      // 0044: until the customer decides, the worker may change their quote once (after the customer's call).
+      return canChangeQuote ? 'change_quote' : 'waiting';
     case 'scheduled':
       return 'start';
     case 'in_progress':

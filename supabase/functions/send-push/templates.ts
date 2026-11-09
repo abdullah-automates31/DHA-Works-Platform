@@ -34,6 +34,12 @@ const resident: Record<string, Template> = {
       ? `${c.worker} quoted ${rupees(c.total)}`
       : `${c.worker} sent a quote for ${c.job}`,
   }),
+  quote_revised: (c) => ({
+    title: `${c.worker} updated the quote`,
+    body: c.total != null
+      ? `New price ${rupees(c.total)}. Check the price and visit time for ${c.job}.`
+      : `Check the new price and visit time for ${c.job}.`,
+  }),
   new_interest: (c) => ({ title: "A worker is interested", body: c.job }),
   job_started: (c) => ({
     title: `Work started by ${c.worker}`,

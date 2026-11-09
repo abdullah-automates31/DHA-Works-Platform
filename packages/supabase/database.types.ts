@@ -1079,6 +1079,8 @@ export type Database = {
           other_amount: number
           other_note: string | null
           reject_reason: string | null
+          revised_at: string | null
+          revision: number
           status: Database["public"]["Enums"]["quote_status"]
           total: number | null
           visit_end: string | null
@@ -1098,6 +1100,8 @@ export type Database = {
           other_amount?: number
           other_note?: string | null
           reject_reason?: string | null
+          revised_at?: string | null
+          revision?: number
           status?: Database["public"]["Enums"]["quote_status"]
           total?: number | null
           visit_end?: string | null
@@ -1117,6 +1121,8 @@ export type Database = {
           other_amount?: number
           other_note?: string | null
           reject_reason?: string | null
+          revised_at?: string | null
+          revision?: number
           status?: Database["public"]["Enums"]["quote_status"]
           total?: number | null
           visit_end?: string | null
@@ -1929,6 +1935,7 @@ export type Database = {
           other_note: string | null
           rating_avg: number | null
           rating_count: number | null
+          revision: number | null
           status: Database["public"]["Enums"]["quote_status"] | null
           total: number | null
           visit_end: string | null
@@ -2041,6 +2048,7 @@ export type Database = {
           is_mine: boolean | null
           lane: string | null
           my_quote_id: string | null
+          my_quote_revision: number | null
           my_quote_status: Database["public"]["Enums"]["quote_status"] | null
           my_quote_total: number | null
           phase: number | null
@@ -2094,10 +2102,15 @@ export type Database = {
           p_materials?: number
           p_materials_note?: string
           p_note?: string
+          p_visit_end?: string
+          p_visit_start?: string
         }
         Returns: string
       }
-      accept_quote: { Args: { p_quote_id: string }; Returns: undefined }
+      accept_quote: {
+        Args: { p_quote_id: string; p_revision?: number }
+        Returns: undefined
+      }
       accept_staff_invite: {
         Args: { p_email: string; p_full_name: string; p_token: string }
         Returns: undefined
@@ -2390,6 +2403,18 @@ export type Database = {
       resident_may_see_worker_media: {
         Args: { p_folder: string }
         Returns: boolean
+      }
+      revise_quote: {
+        Args: {
+          p_labour: number
+          p_materials?: number
+          p_materials_note?: string
+          p_note?: string
+          p_quote_id: string
+          p_visit_end?: string
+          p_visit_start?: string
+        }
+        Returns: undefined
       }
       revoke_staff_invite: { Args: { p_invite: string }; Returns: undefined }
       save_job_draft: {

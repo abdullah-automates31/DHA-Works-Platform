@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ArrivalPicker } from '@/components/ArrivalPicker';
 import { PrimaryButton } from '@/components/AuthForm';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { ChevronLeftIcon } from '@/components/icons';
@@ -12,7 +13,9 @@ import { jobHref, statusHref } from '@/features/job/routes';
 import { useJob } from '@/features/job/useJob';
 import {
   amountDigits,
+  buildReviseArgs,
   buildSubmitArgs,
+  inputFromQuote,
   ITEM_NAME_MAX,
   MAX_ITEMS,
   computeTotal,
@@ -23,19 +26,22 @@ import {
   type MaterialItem,
   type QuoteInput,
 } from '@/features/quote/rules';
-import { claimJob } from '@/features/quote/submit';
-import { t } from '@/i18n';
+import { claimJob, reviseQuote } from '@/features/quote/submit';
+import { choiceFromRange, defaultVisit, visitArgs, visitError, visitText, type VisitChoice } from '@/features/quote/visit';
+import { t, type TranslationKey } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
 // W10 Accept job (was Create quote; worker/screens/w-quote.dc.html). The worker enters labour and materials (list
-// optional); the visit time is the customer's. The total shown is a preview: the database computes the real total and
-// re-checks every rule in accept_job. Sending it locks the job to this worker (claim-and-lock, migration 0031), so
-// the worker confirms first. The price is final (revisions are MVP 2).
+// optional) and when they will come (0044: the worker's window is the offer; the customer's day is only a request).
+// The total shown is a preview: the database computes the real total and re-checks every rule in accept_job. Sending
+// it locks the job to this worker (claim-and-lock, migration 0031), so the worker confirms first. With ?change=1 the
+// same form changes a sent quote once, before the customer accepts (revise_quote).
 export default function QuoteScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, change } = useLocalSearchParams<{ id: string; change?: string }>();
+  const changing = change === '1';
   const { state, reload } = useJob(id ?? '');
   const job = state.status === 'ready' ? state.job : null;
 
@@ -69,7 +75,11 @@ export default function QuoteScreen() {
         </Notice>
       ) : null}
 
-      {job && job.standing === 'quoted' ? (
+      {job && job.standing === 'quoted' && changing ? (
+        <ChangeQuote jobId={job.id} preferred={job.preferred} when={job.when} onDone={() => router.replace(statusHref(job.id))} />
+      ) : null}
+
+      {job && job.standing === 'quoted' && !changing ? (
         <Notice title={t('quote.alreadyTitle')} body={t('quote.alreadyBody')}>
           <PrimaryButton label={t('quote.backToJob')} onPress={() => router.replace(jobHref(job.id))} showArrow={false} />
         </Notice>
@@ -82,14 +92,67 @@ export default function QuoteScreen() {
       ) : null}
 
       {job && (job.standing === 'none' || job.standing === 'interested') ? (
-        <QuoteForm jobId={job.id} when={job.when} onAccepted={() => router.replace(statusHref(job.id))} />
+        <QuoteForm jobId={job.id} preferred={job.preferred} when={job.when} onAccepted={() => router.replace(statusHref(job.id))} />
       ) : null}
     </View>
   );
 }
 
-function QuoteForm({ jobId, when, onAccepted }: { jobId: string; when: string; onAccepted: () => void }) {
-  const [input, setInput] = useState<QuoteInput>({ labour: '', withMaterials: false, items: [{ name: '', price: '' }] });
+type Preferred = { date: string | null; from: string | null; to: string | null };
+type Revise = { quoteId: string; input: QuoteInput; visit: VisitChoice };
+
+// Loads this worker's sent quote so it can be changed once; anything else (already changed, or the customer has
+// decided) shows why it cannot be.
+function ChangeQuote({ jobId, preferred, when, onDone }: { jobId: string; preferred: Preferred; when: string; onDone: () => void }) {
+  const [state, setState] = useState<{ status: 'loading' } | { status: 'blocked'; key: TranslationKey } | { status: 'ready'; revise: Revise }>({ status: 'loading' });
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, status, labour, materials, materials_note, visit_start, visit_end, revision')
+        .eq('job_id', jobId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!live) return;
+      if (error || !data) return setState({ status: 'blocked', key: 'quote.errors.generic' });
+      if (data.status !== 'sent') return setState({ status: 'blocked', key: 'quote.errors.decided' });
+      if ((data.revision ?? 0) >= 1) return setState({ status: 'blocked', key: 'quote.errors.alreadyChanged' });
+      setState({
+        status: 'ready',
+        revise: {
+          quoteId: data.id,
+          input: inputFromQuote({ labour: data.labour ?? 0, materials: data.materials ?? 0, materialsNote: data.materials_note }),
+          visit: choiceFromRange(data.visit_start, data.visit_end) ?? defaultVisit(preferred),
+        },
+      });
+    })();
+    return () => {
+      live = false;
+    };
+  }, [jobId, preferred]);
+
+  if (state.status === 'loading') {
+    return (
+      <SkeletonGroup>
+        <DetailSkeleton />
+      </SkeletonGroup>
+    );
+  }
+  if (state.status === 'blocked') {
+    return (
+      <Notice title={t('quote.changeTitle')} body={t(state.key)}>
+        <PrimaryButton label={t('quote.backToJob')} onPress={onDone} showArrow={false} />
+      </Notice>
+    );
+  }
+  return <QuoteForm jobId={jobId} preferred={preferred} when={when} onAccepted={onDone} revise={state.revise} />;
+}
+
+function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: string; preferred: Preferred; when: string; onAccepted: () => void; revise?: Revise }) {
+  const [input, setInput] = useState<QuoteInput>(revise?.input ?? { labour: '', withMaterials: false, items: [{ name: '', price: '' }] });
+  const [visit, setVisit] = useState<VisitChoice>(() => revise?.visit ?? defaultVisit(preferred));
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +163,8 @@ function QuoteForm({ jobId, when, onAccepted }: { jobId: string; when: string; o
   };
 
   const errors = validateQuote(input);
-  const valid = isQuoteValid(input);
+  const visitProblem = visitError(visit);
+  const valid = isQuoteValid(input) && visitProblem === null;
   const labour = parseAmount(input.labour);
   const materials = materialsTotal(input);
   const total = computeTotal(input);
@@ -116,10 +180,12 @@ function QuoteForm({ jobId, when, onAccepted }: { jobId: string; when: string; o
   async function accept() {
     setError(null);
     setSending(true);
-    const result = await claimJob({ acceptJob: (args) => supabase.rpc('accept_job', args) }, buildSubmitArgs(jobId, input));
+    const result = revise
+      ? await reviseQuote({ reviseQuote: (args) => supabase.rpc('revise_quote', args) }, buildReviseArgs(revise.quoteId, input, visitArgs(visit)))
+      : await claimJob({ acceptJob: (args) => supabase.rpc('accept_job', args) }, buildSubmitArgs(jobId, input, visitArgs(visit)));
     setSending(false);
     if (result.ok) {
-      onAccepted(); // the job is locked to this worker; the status screen shows it as Scheduled
+      onAccepted(); // claimed: locked to this worker until the customer decides (0043); changed: the customer is told (0044)
       return;
     }
     setError(t(result.key));
@@ -130,9 +196,12 @@ function QuoteForm({ jobId, when, onAccepted }: { jobId: string; when: string; o
     setTouched(true);
     if (!valid) return;
     // Accepting locks the job to this worker, so ask first.
-    Alert.alert(t('quote.confirmTitle'), t('quote.confirmBody', { total: formatRupees(total) }), [
+    const ask = revise
+      ? { title: t('quote.changeConfirmTitle'), body: t('quote.changeConfirmBody', { total: formatRupees(total) }), yes: t('quote.changeConfirmYes') }
+      : { title: t('quote.confirmTitle'), body: t('quote.confirmBody', { total: formatRupees(total) }), yes: t('quote.confirmYes') };
+    Alert.alert(ask.title, ask.body, [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('quote.confirmYes'), onPress: () => void accept() },
+      { text: ask.yes, onPress: () => void accept() },
     ]);
   }
 
@@ -205,12 +274,11 @@ function QuoteForm({ jobId, when, onAccepted }: { jobId: string; when: string; o
             </View>
           ) : null}
 
-          {when ? (
-            <View style={styles.visitBox}>
-              <Text style={styles.visitFixed}>{t('quote.visitFixed', { when })}</Text>
-              <Text style={styles.billHint}>{t('quote.visitFixedHint')}</Text>
-            </View>
-          ) : null}
+          {revise ? <Text style={styles.warning}>{t('quote.changeWarning')}</Text> : null}
+          <ArrivalPicker value={visit} onChange={setVisit} />
+          {when ? <Text style={styles.billHint}>{t('quote.visitAsked', { when })}</Text> : null}
+          <Text style={styles.billHint}>{t('quote.visitHint')}</Text>
+          {touched && visitProblem ? <FieldError>{t(`quote.visitErrors.${visitProblem}`)}</FieldError> : null}
 
           <View style={styles.preview} accessibilityLabel={t('quote.preview')}>
             <Text style={styles.previewTitle}>{t('quote.preview')}</Text>
@@ -221,14 +289,14 @@ function QuoteForm({ jobId, when, onAccepted }: { jobId: string; when: string; o
               <Text style={styles.totalLabel}>{t('quote.total')}</Text>
               <Text style={styles.totalValue}>{formatRupees(total)}</Text>
             </View>
-            {when ? <Text style={styles.visit}>{t('quote.visitFixed', { when })}</Text> : null}
+            <Text style={styles.visit}>{t('quote.visitFixed', { when: visitTextFor(visit) })}</Text>
           </View>
 
           <Text style={styles.fine}>{t('quote.fine')}</Text>
           {touched && errors.total ? <FieldError>{t('quote.errors.totalHint')}</FieldError> : null}
           {error ? <FieldError>{error}</FieldError> : null}
         </ScrollView>
-        <BottomBar hideArrow label={t('quote.send')} onPress={onSend} loading={sending} disabled={!valid} />
+        <BottomBar hideArrow label={revise ? t('quote.changeSend') : t('quote.send')} onPress={onSend} loading={sending} disabled={!valid} />
       </KeyboardAvoidingView>
     </>
   );
@@ -284,8 +352,7 @@ const styles = StyleSheet.create({
   removeText: { fontFamily: fontFamily.extrabold, fontSize: 22, color: colors.muted },
   addItem: { height: 44, borderRadius: 20, borderWidth: 1.5, borderColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   addItemText: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.greenDark },
-  visitBox: { backgroundColor: colors.mint, borderRadius: 14, padding: 12, gap: 4 },
-  visitFixed: { fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.greenDark },
+  warning: { fontFamily: fontFamily.bold, fontSize: 13, lineHeight: 18, color: colors.greenDark },
   billHint: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   itemsTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   itemsTotalValue: { fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.ink },
@@ -308,3 +375,9 @@ const styles = StyleSheet.create({
   noticeTitle: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.greenDark },
   noticeBody: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.muted },
 });
+
+/** The preview line for the window being picked: "Tomorrow, 10 AM to 12 PM". */
+function visitTextFor(choice: VisitChoice): string {
+  const { p_visit_start, p_visit_end } = visitArgs(choice);
+  return visitText(p_visit_start, p_visit_end);
+}

@@ -12,6 +12,11 @@ Deno.test("customer trail uses the agreed wording", () => {
     title: "Ahmed Khan quoted",
     body: "Ahmed Khan quoted 2,500 Rs",
   });
+  assertEquals(render("quote_revised", "resident", ctx), {
+    title: "Ahmed Khan updated the quote",
+    body: "New price 2,500 Rs. Check the price and visit time for Fix AC.",
+  });
+  assertEquals(render("quote_revised", "worker", ctx), null);
   assertEquals(render("job_started", "resident", ctx), {
     title: "Work started by Ahmed Khan",
     body: "Fix AC is started by Ahmed Khan",

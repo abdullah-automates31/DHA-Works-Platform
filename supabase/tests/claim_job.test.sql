@@ -1,4 +1,5 @@
--- Migration 0031: accept_job (claim-and-lock). A worker accepts an open job with a price; it is scheduled at once.
+-- Migrations 0031 + 0043: accept_job (claim-and-lock). A worker claims an open job with a price; the job is quoted and
+-- locked to them, and is scheduled only when the customer accepts the quote (0043).
 begin;
 select no_plan();
 
@@ -60,26 +61,66 @@ select tests.act('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$ select public.accept_job((select a from t), 3000, 500, 'pipes') $$, 'an approved matching worker can accept an open job');
 select tests.back();
 
-select is((select status::text from public.jobs where id = (select a from t)), 'scheduled', 'the job is scheduled at once');
+select is((select status::text from public.jobs where id = (select a from t)), 'quoted', 'the job is quoted, waiting for the customer');
+select is((select accepted_worker_id from public.jobs where id = (select a from t)), null::uuid, 'no accepted worker before the customer accepts');
+select is((select count(*)::int from public.quotes where job_id = (select a from t) and status = 'sent'), 1, 'one sent quote exists');
+select is((select total from public.quotes where job_id = (select a from t)), 3500, 'quote total = labour + materials');
+select is((select count(*)::int from public.cash_records where job_id = (select a from t)), 0, 'no cash amount before the customer accepts');
+select is((select count(*)::int from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'quote_received' and job_id = (select a from t)), 1, 'the resident is told a quote arrived');
+select is((select count(*)::int from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'job_accepted' and job_id = (select a from t)), 0, 'the resident is not told the job was accepted');
+
+-- before the customer accepts, the worker sees their quote but not the resident
+select tests.act('00000000-0000-0000-0000-0000000000b1');
+select is((select my_quote_status::text from public.worker_jobs where id = (select a from t)), 'sent', 'worker_jobs shows the sent quote');
+select is((select resident_name from public.worker_jobs where id = (select a from t)), null, 'resident details stay hidden before the customer accepts');
+select tests.back();
+
+-- the customer sees it and accepts
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select is((select status::text from public.resident_quotes where job_id = (select a from t)), 'sent', 'resident_quotes shows the open quote');
+select lives_ok($$ select public.accept_quote((select id from public.resident_quotes where job_id = (select a from t))) $$, 'the customer accepts the quote');
+select tests.back();
+select is((select status::text from public.jobs where id = (select a from t)), 'scheduled', 'accepting schedules the job');
 select is((select accepted_worker_id from public.jobs where id = (select a from t)), '00000000-0000-0000-0000-0000000000b1'::uuid, 'it is locked to the worker');
-select is((select count(*)::int from public.quotes where job_id = (select a from t) and status = 'accepted'), 1, 'one accepted quote exists');
 select is((select agreed_amount from public.cash_records where job_id = (select a from t)), 3500, 'agreed amount = labour + materials');
 select is((select accepted_quote_id from public.jobs where id = (select a from t)), (select id from public.quotes where job_id = (select a from t) and status = 'accepted'), 'accepted_quote_id points at the quote');
-select is((select count(*)::int from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'job_accepted' and job_id = (select a from t)), 1, 'the resident is notified');
-select is((select payload ->> 'title' from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'job_accepted' and job_id = (select a from t)), 'Job A', 'the notification carries the title only');
-select ok(not exists (select 1 from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'job_accepted' and payload::text ilike '%Usman%'), 'the notification does not name the worker');
+select is((select count(*)::int from public.notifications where user_id = '00000000-0000-0000-0000-0000000000b1' and type = 'quote_accepted' and job_id = (select a from t)), 1, 'the worker is told');
 
--- the worker sees it as theirs with the resident details unlocked
 select tests.act('00000000-0000-0000-0000-0000000000b1');
 select is((select is_mine from public.worker_jobs where id = (select a from t)), true, 'worker_jobs shows it as mine');
-select is((select resident_name from public.worker_jobs where id = (select a from t)), 'Rida One', 'resident details unlock after accepting');
+select is((select resident_name from public.worker_jobs where id = (select a from t)), 'Rida One', 'resident details unlock after the customer accepts');
 select tests.back();
 
 -- ---------------------------------------------------------------- second worker loses
+create temp table tq as select tests.make_job('Job Q', '6') as q;
+grant select on tq to authenticated;
+select tests.act('00000000-0000-0000-0000-0000000000b1');
+select public.accept_job((select q from tq), 1200);
 select tests.act('00000000-0000-0000-0000-0000000000b2');
-select throws_ok($$ select public.accept_job((select a from t), 100) $$, 'this job is not available', 'a second worker cannot take a locked job');
-select is((select count(*)::int from public.worker_feed where id = (select a from t)), 0, 'a locked job leaves the feed');
+select throws_ok($$ select public.accept_job((select q from tq), 100) $$, 'this job is not available', 'a second worker cannot claim a quoted job');
+select is((select count(*)::int from public.worker_feed where id = (select q from tq)), 0, 'a quoted job leaves the feed');
+select throws_ok($$ select public.accept_job((select a from t), 100) $$, 'this job is not available', 'a second worker cannot take a scheduled job');
+select is((select count(*)::int from public.worker_feed where id = (select a from t)), 0, 'a scheduled job is not in the feed');
 select tests.back();
+
+-- the customer replaces the worker before accepting (reject_quote): the job reopens and that worker is excluded
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select lives_ok($$ select public.reject_quote((select id from public.quotes where job_id = (select q from tq)), 'too expensive') $$, 'the customer can replace a quoting worker');
+select tests.back();
+select is((select status::text from public.jobs where id = (select q from tq)), 'open', 'the job reopens');
+select is((select count(*)::int from public.notifications where user_id = '00000000-0000-0000-0000-0000000000b1' and type = 'quote_rejected' and job_id = (select q from tq)), 1, 'the replaced worker is told');
+select tests.act('00000000-0000-0000-0000-0000000000b1');
+select throws_ok($$ select public.accept_job((select q from tq), 100) $$, 'the resident did not accept your quote on this job', 'the replaced worker cannot claim it again');
+select tests.act('00000000-0000-0000-0000-0000000000b2');
+select lives_ok($$ select public.accept_job((select q from tq), 1100) $$, 'another worker can claim the reopened job');
+select tests.back();
+
+-- the customer cancels a quoted job: it closes
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select lives_ok($$ select public.cancel_job((select q from tq), 'changed my mind') $$, 'the customer can cancel a quoted job');
+select tests.back();
+select is((select status::text from public.jobs where id = (select q from tq)), 'cancelled', 'the job is cancelled');
+select is((select status::text from public.quotes where job_id = (select q from tq) and worker_id = '00000000-0000-0000-0000-0000000000b2'), 'expired', 'the open quote is closed');
 
 -- ---------------------------------------------------------------- who may not accept
 select tests.act('00000000-0000-0000-0000-0000000000b3');
@@ -116,6 +157,7 @@ grant select on t2 to authenticated;
 select tests.act('00000000-0000-0000-0000-0000000000b1');
 select public.accept_job((select d from t2), 2000);
 select tests.act('00000000-0000-0000-0000-0000000000a1');
+select public.accept_quote((select id from public.resident_quotes where job_id = (select d from t2)));
 select public.replace_worker((select d from t2), 'too expensive');
 select tests.back();
 select is((select status::text from public.jobs where id = (select d from t2)), 'open', 'replace_worker reopens the job');
@@ -125,21 +167,22 @@ select tests.act('00000000-0000-0000-0000-0000000000b1');
 select throws_ok($$ select public.accept_job((select d from t2), 100) $$, 'the resident did not accept your quote on this job', 'the replaced worker cannot take it again');
 select tests.act('00000000-0000-0000-0000-0000000000b2');
 select lives_ok($$ select public.accept_job((select d from t2), 2500) $$, 'another worker can take the reopened job');
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select lives_ok($$ select public.accept_quote((select id from public.resident_quotes where job_id = (select d from t2) and status = 'sent')) $$, 'the customer accepts the new worker (the old cash row does not block it)');
 select tests.back();
 select is((select agreed_amount from public.cash_records where job_id = (select d from t2)), 2500, 'agreed amount follows the new worker (stale cash row replaced)');
 select is((select accepted_worker_id from public.jobs where id = (select d from t2)), '00000000-0000-0000-0000-0000000000b2'::uuid, 'locked to the new worker');
 
--- ---------------------------------------------------------------- an old-style quote loses when someone accepts
+-- ---------------------------------------------------------------- an old-style sent quote also locks the job
 create temp table t3 as select tests.make_job('Job E', '5') as e;
 grant select on t3 to authenticated;
 select tests.act('00000000-0000-0000-0000-0000000000b2');
 select public.express_interest((select e from t3));
 select public.submit_quote((select e from t3), 1500);
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select public.accept_job((select e from t3), 1800);
+select throws_ok($$ select public.accept_job((select e from t3), 1800) $$, 'this job is not available', 'a job with a sent quote cannot be claimed');
 select tests.back();
-select is((select status::text from public.quotes where job_id = (select e from t3) and worker_id = '00000000-0000-0000-0000-0000000000b2'), 'not_selected', 'an earlier sent quote becomes not_selected');
-select is((select count(*)::int from public.notifications where user_id = '00000000-0000-0000-0000-0000000000b2' and type = 'quote_not_selected' and job_id = (select e from t3)), 1, 'that worker is told');
+select is((select status::text from public.quotes where job_id = (select e from t3) and worker_id = '00000000-0000-0000-0000-0000000000b2'), 'sent', 'the earlier quote is untouched');
 
 select * from finish();
 rollback;
