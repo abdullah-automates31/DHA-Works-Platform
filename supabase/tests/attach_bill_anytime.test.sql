@@ -86,7 +86,9 @@ select tests.back();
 
 -- ------------------------------------------------------------------ attach, replace, customer sees it
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select lives_ok($$select public.attach_material_bill((select a from t), '00000000-0000-0000-0000-0000000000b1/bill-1.jpg')$$, 'the worker attaches the bill');
+select throws_ok($$select public.attach_material_bill((select a from t), '00000000-0000-0000-0000-0000000000b1/bill-1.jpg')$$, null, null, 'before the job is started no bill can be attached');
+select lives_ok($$select public.start_job((select a from t))$$, 'the worker starts job A');
+select lives_ok($$select public.attach_material_bill((select a from t), '00000000-0000-0000-0000-0000000000b1/bill-1.jpg')$$, 'the worker attaches the bill while the job is in progress');
 select tests.back();
 select is((select material_bill_path from public.quotes where job_id = (select a from t) and status = 'accepted'),
           '00000000-0000-0000-0000-0000000000b1/bill-1.jpg', 'the bill is filed on the quote');
@@ -110,7 +112,6 @@ select is((select material_bill_path from public.quotes where job_id = (select a
 
 -- ------------------------------------------------------------------ complete with the attached bill
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select lives_ok($$select public.start_job((select a from t))$$, 'the worker starts the job');
 select lives_ok($$select public.complete_job((select a from t))$$, 'completing without a new photo works when a bill was attached');
 select tests.back();
 select is((select material_bill_path from public.jobs where id = (select a from t)),
@@ -126,13 +127,9 @@ select lives_ok($$select public.start_job((select b from t))$$, 'start the job w
 select lives_ok($$select public.complete_job((select b from t))$$, 'a job without materials completes without a bill');
 select tests.back();
 
--- ------------------------------------------------------------------ attach while the customer has not decided yet
+-- ------------------------------------------------------------------ not while the customer has not decided yet
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select lives_ok($$select public.attach_material_bill((select c from t), '00000000-0000-0000-0000-0000000000b1/bill-1.jpg')$$, 'the bill can be attached while the job is only quoted');
-select tests.back();
-select tests.act('00000000-0000-0000-0000-0000000000a1');
-select is((select material_bill_path from public.resident_quotes where job_id = (select c from t)),
-          '00000000-0000-0000-0000-0000000000b1/bill-1.jpg', 'the customer sees it before accepting');
+select throws_ok($$select public.attach_material_bill((select c from t), '00000000-0000-0000-0000-0000000000b1/bill-1.jpg')$$, null, null, 'a quoted job (customer undecided) takes no bill');
 select tests.back();
 
 select * from finish();

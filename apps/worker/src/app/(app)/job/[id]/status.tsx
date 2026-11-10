@@ -78,7 +78,7 @@ export default function JobStatusScreen() {
     return null;
   }
 
-  // Attach (or change) the bill photo: allowed any time until the job is completed.
+  // Attach (or change) the bill photo: allowed any time while the job is in progress.
   function addBill(jobId: string) {
     const attach = (bill: Bill | null) => bill && void run(() => attachBill(client, { jobId, bill }));
     Alert.alert(t('myjobs.billTitle'), t('myjobs.billAttachBody'), [
@@ -251,8 +251,8 @@ export default function JobStatusScreen() {
               {kind === 'in_progress' && ready.extras.materials > 0 && !ready.extras.billAttached ? <Text style={styles.noteBody}>{t('myjobs.billNeeded')}</Text> : null}
             </View>
 
-            {/* The material bill can be attached any time until the job is completed; the customer sees it in view quote. */}
-            {ready.extras.materials > 0 && (kind === 'quoted' || kind === 'scheduled' || kind === 'in_progress') ? (
+            {/* The material bill is attached any time between Start job and Mark complete, and is required when the quote has materials. */}
+            {ready.extras.materials > 0 && kind === 'in_progress' ? (
               <View style={styles.billCard}>
                 <Text style={styles.noteHead}>{t(ready.extras.billAttached ? 'myjobs.billAddedTitle' : 'myjobs.billAddTitle')}</Text>
                 <Text style={styles.noteBody}>{t(ready.extras.billAttached ? 'myjobs.billAddedBody' : 'myjobs.billAddBody')}</Text>
