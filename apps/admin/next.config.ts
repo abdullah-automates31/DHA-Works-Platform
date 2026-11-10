@@ -6,8 +6,10 @@ const config: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
   reactStrictMode: true,
+  productionBrowserSourceMaps: false,
+  // The Content-Security-Policy (with a per-request nonce) is added by src/proxy.ts.
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', process.env.NODE_ENV !== 'production') }];
+    return [{ source: '/:path*', headers: securityHeaders() }];
   },
 };
 

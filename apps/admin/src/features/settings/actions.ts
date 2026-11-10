@@ -118,6 +118,9 @@ export async function acceptInviteAction(_prev: ActionState, formData: FormData)
   if (!pw.ok) return { error: pw.hint };
 
   const supabase = await createClient();
+  // Check the invitation first, so a stranger cannot create accounts by calling this public page.
+  const valid = await supabase.rpc('check_staff_invite', { p_email: email, p_token: token });
+  if (valid.error || valid.data !== true) return generic;
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error || !data.session) {
     return { error: 'The account could not be created here. If you already have an account with this email, sign in is not enough: ask for help from the person who invited you.' };

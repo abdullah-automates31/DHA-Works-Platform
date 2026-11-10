@@ -2315,6 +2315,10 @@ export type Database = {
         Args: { p_bill_path: string; p_job_id: string }
         Returns: undefined
       }
+      check_staff_invite: {
+        Args: { p_email: string; p_token: string }
+        Returns: boolean
+      }
       can_upload_media: { Args: { p_bucket: string }; Returns: boolean }
       can_view_job: { Args: { p_job: string }; Returns: boolean }
       cancel_job: {
