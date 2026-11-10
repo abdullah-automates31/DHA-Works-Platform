@@ -1,3 +1,4 @@
+import { Select } from '@/components/Select';
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
 import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
@@ -46,14 +47,8 @@ export async function JobsView({ params }: { params: Params }) {
       <form action="/jobs" method="get" className="row wrap g8" style={{ alignItems: 'center' }}>
         {status ? <input type="hidden" name="status" value={status} /> : null}
         {q ? <input type="hidden" name="q" value={q} /> : null}
-        <select className="inp" name="phase" defaultValue={phase ?? ''} aria-label="Phase" style={{ width: 150, height: 36, borderRadius: 18 }}>
-          <option value="">All phases</option>
-          {options.phases.map((p) => <option key={p} value={p}>Phase {p}</option>)}
-        </select>
-        <select className="inp" name="cat" defaultValue={category ?? ''} aria-label="Category" style={{ width: 190, height: 36, borderRadius: 18 }}>
-          <option value="">All categories</option>
-          {options.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <Select compact width={150} name="phase" ariaLabel="Phase" placeholder="All phases" allLabel="All phases" defaultValue={String(phase ?? '')} options={options.phases.map((p) => ({ value: String(p), label: `Phase ${p}` }))} />
+        <Select compact width={190} name="cat" ariaLabel="Category" placeholder="All categories" allLabel="All categories" defaultValue={String(category ?? '')} options={options.categories.map((c) => ({ value: String(c.id), label: c.name }))} />
         <label className="row g8 b" style={{ fontSize: 13 }}><input type="checkbox" name="today" value="1" defaultChecked={today} /> Posted today</label>
         <button className="btn soft sm" type="submit">Apply</button>
         <span className="fx" />

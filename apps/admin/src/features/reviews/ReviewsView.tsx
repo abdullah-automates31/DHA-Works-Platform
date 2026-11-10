@@ -1,3 +1,4 @@
+import { Select } from '@/components/Select';
 import { LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { requireSession } from '@/lib/auth';
@@ -41,10 +42,7 @@ export async function ReviewsView({ params }: { params: Params }) {
           <form action="/reviews" method="get" className="row g8">
             {stars !== 'all' ? <input type="hidden" name="stars" value={stars} /> : null}
             {q ? <input type="hidden" name="q" value={q} /> : null}
-            <select className="inp" name="cat" defaultValue={cat ?? ''} aria-label="Category" style={{ width: 190, height: 36, borderRadius: 18 }}>
-              <option value="">All categories</option>
-              {options.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <Select compact width={190} name="cat" ariaLabel="Category" placeholder="All categories" allLabel="All categories" defaultValue={String(cat ?? '')} options={options.categories.map((c) => ({ value: String(c.id), label: c.name }))} />
             <button className="btn soft sm" type="submit">Apply</button>
           </form>
         }
