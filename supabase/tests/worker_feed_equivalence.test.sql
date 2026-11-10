@@ -17,7 +17,8 @@ begin
 end $$;
 grant execute on function tests.act(uuid), tests.back() to authenticated;
 
--- the 0027 definition, verbatim apart from its name
+-- the 0027 definition, verbatim apart from its name and one change: a quoted job is locked to one worker and leaves the
+-- feed since 0043 (customer accepts the quote), so 'quoted' is no longer in the status list
 create view public.worker_feed_v27 with (security_invoker = false) as
 select j.id, j.code, j.status, j.title, j.description, j.category_id, c.name as category_name,
   j.phase, j.lane, j.urgency, j.preferred_date, j.window_from, j.window_to, j.voice_note_path, j.posted_at,
@@ -31,7 +32,7 @@ select j.id, j.code, j.status, j.title, j.description, j.category_id, c.name as 
      from (select p.storage_path, p.sort from public.job_photos p where p.job_id = j.id order by p.sort limit 2) t) as thumb_paths
 from public.jobs j
 join public.categories c on c.id = j.category_id
-where j.status in ('open', 'interested', 'quoted')
+where j.status in ('open', 'interested')
   and j.posted_at + make_interval(hours => private.setting_int('job_expiry_hours', 24)) > now()
   and public.worker_matches_job(j.category_id, j.phase)
   and not public.worker_has_stake(j.id);
@@ -109,7 +110,7 @@ end $$;
 
 -- ---------------------------------------------------------------- same jobs as before, and the expected number of them
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c1'), 'approved worker (trade 1, phase 6): same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c1'), 4::bigint, '... open, interested, quoted and the 23h59m job: 4');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c1'), 3::bigint, '... open, interested and the 23h59m job: 3 (the quoted job is locked and gone, 0043)');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c2'), 'pending worker: same jobs as before');
 select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c2'), 0::bigint, '... none');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c3'), 'suspended worker: same jobs as before');
@@ -119,23 +120,23 @@ select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c4'), 0::bigint, '... 
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c5'), 'trade 2 worker: same jobs as before');
 select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c5'), 1::bigint, '... only the trade 2 job in phase 6');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c6'), 'two trades and two phases: same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c6'), 7::bigint, '... 7 jobs across both trades and phases');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c6'), 6::bigint, '... 6 jobs across both trades and phases');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c7'), 'worker with an interest: same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c7'), 3::bigint, '... the job they are interested in is gone');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c7'), 2::bigint, '... the job they are interested in is gone');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c8'), 'worker who withdrew an interest: same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c8'), 3::bigint, '... a withdrawn interest still hides the job');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c8'), 2::bigint, '... a withdrawn interest still hides the job');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c9'), 'worker with a quote: same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c9'), 3::bigint, '... the quoted job is gone');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c9'), 2::bigint, '... the quoted job is gone');
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000a1'), 'a resident (not a worker): same as before');
 select is(pg_temp.seen('00000000-0000-0000-0000-0000000000a1'), 0::bigint, '... sees no worker feed');
 
 -- ---------------------------------------------------------------- the expiry setting is still honoured
 update public.app_settings set value = '48'::jsonb where key = 'job_expiry_hours';
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c1'), 'expiry set to 48 hours: same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c1'), 5::bigint, '... the 24h01m job is visible now');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c1'), 4::bigint, '... the 24h01m job is visible now');
 update public.app_settings set value = '12'::jsonb where key = 'job_expiry_hours';
 select ok(pg_temp.same('00000000-0000-0000-0000-0000000000c1'), 'expiry set to 12 hours: same jobs as before');
-select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c1'), 3::bigint, '... the 23h59m job is gone, the 1 to 3 hour jobs stay');
+select is(pg_temp.seen('00000000-0000-0000-0000-0000000000c1'), 2::bigint, '... the 23h59m job is gone, the 1 to 3 hour jobs stay');
 
 -- ---------------------------------------------------------------- shape and privacy unchanged
 select is((select attname::text from pg_attribute where attrelid = 'public.worker_feed'::regclass and attnum > 0 and not attisdropped order by attnum desc limit 1),

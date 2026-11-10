@@ -87,7 +87,7 @@ select is((select count(*) from public.notifications where user_id = '00000000-0
 select is((select (payload ->> 'title') from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'quote_received'), 'W10 main', 'which carries only the job title');
 
 select tests.act('00000000-0000-0000-0000-0000000000b3');
-select is((select quote_count from public.worker_feed where id = '00000000-0000-0000-0000-00000000c001'), 1::bigint, 'another worker sees that one quote was sent (a count, nothing more)');
+select is((select count(*) from public.worker_feed where id = '00000000-0000-0000-0000-00000000c001'), 0::bigint, 'a quoted job leaves another worker''s feed (0043)');
 select is((select count(*) from public.quotes where job_id = '00000000-0000-0000-0000-00000000c001'), 0::bigint, 'but cannot read anyone else''s quote');
 select is((select count(*) from information_schema.columns where table_name = 'worker_feed' and column_name ~ '(total|labour|amount|price)'), 0::bigint, 'and the feed exposes no amounts');
 

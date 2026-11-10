@@ -149,8 +149,8 @@ select lives_ok($$
 
 -- b6 (still has a feed view) sees the counts; b1 no longer does (their own stake hides the job).
 select tests.act('00000000-0000-0000-0000-0000000000b6');
-select is((select quote_count from public.worker_feed where title = 'Kitchen tap leaking'), 1::bigint, 'another worker sees quote_count 1');
-select is((select interest_count from public.worker_feed where title = 'Kitchen tap leaking'), 1::bigint, 'interest_count is preserved');
+select is((select count(*) from public.worker_feed where title = 'Kitchen tap leaking'), 0::bigint, 'once b1 has quoted, the job is locked to b1 and leaves another worker''s feed (0043)');
+select is((select count(*) from public.worker_feed where title = 'Kitchen tap leaking'), 0::bigint, 'and stays out of the feed, whatever the interest count was');
 
 -- A second quote raises it; a withdrawn quote does not count.
 select tests.act('00000000-0000-0000-0000-0000000000b5');
@@ -159,14 +159,14 @@ select lives_ok($$
   select public.submit_quote((select id from t_job), 2500, now() + interval '1 day', now() + interval '1 day 2 hours',
     0, null, 0, null, null)$$, 'b5 sends a quote');
 select tests.act('00000000-0000-0000-0000-0000000000b6');
-select is((select quote_count from public.worker_feed where title = 'Kitchen tap leaking'), 2::bigint, 'two sent quotes count as 2');
-select is((select interest_count from public.worker_feed where title = 'Kitchen tap leaking'), 2::bigint, 'interest_count follows the two interested workers');
+select is((select count(*) from public.worker_feed where title = 'Kitchen tap leaking'), 0::bigint, 'a quoted job takes no second claim and stays out of the feed');
+select is((select count(*) from public.worker_feed where title = 'Kitchen tap leaking'), 0::bigint, 'still out of the feed');
 
 select tests.act('00000000-0000-0000-0000-0000000000b5');
 select lives_ok($$select public.withdraw_quote((select id from public.quotes where worker_id = '00000000-0000-0000-0000-0000000000b5'))$$,
   'b5 withdraws the quote');
 select tests.act('00000000-0000-0000-0000-0000000000b6');
-select is((select quote_count from public.worker_feed where title = 'Kitchen tap leaking'), 1::bigint, 'a withdrawn quote no longer counts');
+select is((select count(*) from public.worker_feed where title = 'Kitchen tap leaking'), 0::bigint, 'the job is still quoted to b1, so it stays out of the feed');
 
 -- Shape and privacy of the view.
 select tests.back();

@@ -119,8 +119,8 @@ select tests.act('00000000-0000-0000-0000-0000000000b2');
 select lives_ok($$select public.express_interest('00000000-0000-0000-0000-00000000e001')$$, 'w2 shows interest');
 select lives_ok($$select public.submit_quote('00000000-0000-0000-0000-00000000e001', 2800, now() + interval '1 day', now() + interval '1 day 2 hours', 0, null, 0, null, null)$$, 'w2 sends a quote');
 select tests.act('00000000-0000-0000-0000-0000000000b3');
-select is((select interest_count from public.worker_feed where id = '00000000-0000-0000-0000-00000000e001'), 2::bigint, 'w3 sees 2 other workers interested');
-select is((select quote_count from public.worker_feed where id = '00000000-0000-0000-0000-00000000e001'), 2::bigint, 'and that both already sent a quote');
+select is((select count(*) from public.worker_feed where id = '00000000-0000-0000-0000-00000000e001'), 0::bigint, 'a quoted job is locked to one worker and no longer in w3''s feed (0043)');
+select is((select count(*) from public.worker_feed where id = '00000000-0000-0000-0000-00000000e001'), 0::bigint, 'and stays out of the feed');
 
 -- the resident accepts w2: w1 is closed out, and only w2 learns the resident name
 select tests.act('00000000-0000-0000-0000-0000000000a1');
