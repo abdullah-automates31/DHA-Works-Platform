@@ -122,3 +122,11 @@ These were found while assembling these docs. Until resolved, the resolution bel
 - Destructive admin actions need a code typed in the last 15 minutes; a verified session alone is not enough. A verified session lasts 4 hours; 30 minutes without activity signs the staff member out.
 - The bot check on the admin password step is Cloudflare Turnstile, verified by the portal's server. Supabase's project-wide CAPTCHA stays off because it would block the worker and customer apps.
 - Worker app: no certificate pinning, no root detection; Android hardening (cleartext off, shrinking on, unneeded permissions blocked) is on.
+
+## 12 Nov 2026: the job lock rule (user), verified end to end
+
+- A posted job is **open**. When a worker quotes it, the job becomes **quoted**: no other worker can see it in the feed or quote it, and it cannot be read directly.
+- If the customer **rejects** the quote, the job returns to **open** at once: every matching worker except the rejected one sees it again, and the rejected worker cannot quote it again (they keep only a bare Rejected card with the title and status).
+- If the customer **accepts** the quote, the job is **scheduled** and locked to that worker; every other worker, including the rejected one, cannot see it or quote it.
+- This is the claim-and-quote model of migrations 0043/0044 (`accept_job`, `accept_quote`, `reject_quote`). Pinned by `supabase/tests/quote_lock_flow.test.sql` (35 assertions). An unanswered quote keeps the job quoted until the customer rejects it or the posting expires (no timeout yet).
+- Known gap, deliberately not changed: the older competing-quote functions `express_interest` and `submit_quote` are not used by any app but can still be called through the API, and they still allow a second quote on a quoted job. Retiring them means rewriting six older pgTAP files (`job_lifecycle`, `schedule_and_hidden_jobs`, `worker_app_prep`, `worker_job_detail`, `worker_my_jobs`, `worker_reads_round_trip`). Recommended as a separate task.

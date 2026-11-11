@@ -61,10 +61,10 @@ Run once with Resident 1 and Workers A and B competing; keep the log of what eac
 ## 5. Edge cases and negative tests
 
 **Customer / worker flow**
-- N1 Resident rejects a quote, then another worker claims: only the new worker can proceed; the rejected worker cannot re-claim.
+- N1 Lock rule (docs/DECISIONS.md, 12 Nov): worker A quotes, the job shows **Quoted** to the customer and disappears from workers B and C (they cannot quote it). The customer rejects: the job is **Open** again at once, B and C see it, A does not and cannot re-quote (A keeps a bare Rejected card). B quotes, the customer accepts: the job is **Scheduled**, only B sees it; A and C cannot.
 - N2 Resident taps Replace worker on a Scheduled job: job goes back to Open, old worker is excluded and told neutrally, a new push goes out.
 - N3 Resident cancels an Open job; resident requests cancellation on a Scheduled job; admin decides it.
-- N4 Quote unanswered: the job stays locked to that worker until the posting expires (known gap, section 9).
+- N4 Quote unanswered: the job stays Quoted (invisible to other workers) until the customer rejects it or the posting expires (known gap, section 9).
 - N5 Worker cannot complete a job with materials without a bill; cannot attach a bill before the job is started; cannot change the cash amount after it is recorded.
 - N6 Resident files "Report a problem" and "I feel unsafe"; admin sees both in Reports, unsafe first.
 - N7 A rating below 3 files a poor-work report automatically.
