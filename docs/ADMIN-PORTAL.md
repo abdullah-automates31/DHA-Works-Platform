@@ -47,3 +47,6 @@ Email + password, then a six-digit code emailed by the Edge Function `admin-2fa`
 - Every page and action starts with `requireAdmin()`; the proxy (`src/proxy.ts`) only refreshes cookies and redirects the signed-out.
 - New admin database functions: `is_admin()` first, plain-English refusals (`P0001`), audit row, explicit grants, pgTAP for the wrong callers (password-only admin, resident, worker, anon).
 - No `select('*')`, paged lists, short-lived signed URLs only, nothing sensitive in URLs.
+- Step-up (11 Nov, migration 0048): destructive functions also call `private.admin_fresh()` and raise `confirm with a new code` (P0001). In the portal every action returns `await refusal(error)`, which turns that refusal into a redirect to `/confirm?next=<same-site path>`. New destructive functions must add the freshness check and be listed in `supabase/tests/admin_step_up.test.sql`.
+- Idle logout: `src/proxy.ts` signs out after 30 minutes without a request (cookie `dha_active`). `IDLE_LIMIT_SECONDS` (5 to 1800) exists only for tests.
+- Sign-in bot check: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public) and `TURNSTILE_SECRET_KEY` (server only, Vercel). A production build without the secret refuses every sign-in. Cloudflare's published test keys (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`) always pass and are for local runs only.

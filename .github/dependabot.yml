@@ -1,0 +1,30 @@
+# Weekly dependency updates for the platform repo (worker app, admin portal, shared packages) and the CI actions.
+# Minor and patch updates arrive as one grouped pull request; major updates arrive on their own so they get a real look.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: dev
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    # The Expo SDK pins its own versions; these move only with an SDK upgrade (docs/WORKER-APP.md).
+    ignore:
+      - dependency-name: expo
+      - dependency-name: "expo-*"
+      - dependency-name: react
+      - dependency-name: react-dom
+      - dependency-name: react-native
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: dev
+    groups:
+      actions:
+        patterns: ["*"]

@@ -116,3 +116,9 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 - Built: `attach_material_bill(job, path)` (migration 0045, local until pushed): the worker files or replaces the bill photo while the job is quoted, scheduled or in progress; `complete_job` accepts the attached bill. pgTAP `attach_bill_anytime` (49 assertions). Worker app: a "Material bill" card on Job status (Add / Change bill photo), the Complete Job prompt only asks for a photo when none is attached.
 - **For Shariq (customer app):** show the bill in view quote: `resident_quotes.material_bill_path` (a `job-media` path; the customer may read it, sign it like the job photos). The column is empty until the worker attaches a bill. No push is sent when a bill is attached (the screen shows it on its next load); say if a "bill added" notification is wanted.
 - Pending Shariq: is the bill still required at Complete Job (today: yes, when the quote has materials above 0)?
+
+## 11 Nov: security hardening follow-ups (docs/SECURITY.md section 18)
+
+- Not built, needs a design decision: a **fresh SMS code before a worker records cash** (cash is write-once, so a stolen worker session could record a wrong amount). It needs a server-side "fresh login" rule for workers similar to the admin step-up. Recommended before real users.
+- Optional, needs a new native build: **app lock** (phone PIN or fingerprint after 2 minutes in the background, `expo-local-authentication`) and **screenshot blocking** on ID-photo and bill screens (`expo-screen-capture`) in the worker app.
+- Owner actions: rotate the Brevo key and Expo token; delete `apps/admin/.env.local-backup`; create the Turnstile keys and set them in Vercel; apply migration 0048 to DEV.

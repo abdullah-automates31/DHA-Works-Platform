@@ -102,6 +102,11 @@ CI is read-only (no secrets, no deploys). It does not replace sections 4 and 5.
 - A resident cannot read another resident's job or quote; a worker cannot read a quote that is not theirs (covered by pgTAP; spot-check in the apps).
 - No service-role key, Brevo key, FCM key or Expo token appears in any app bundle, repo file or chat.
 - Credentials exposed earlier (Brevo key, Expo token) must be **rotated before the admin portal is deployed**.
+- Step-up: with a session whose last code is older than 15 minutes, flip a category switch in Settings: you land on "Confirm it is you", get a code, and return to Settings; the next change saves without asking. Same for invite staff, suspend, cancel a job.
+- Idle logout: leave the portal untouched for 30 minutes (or run with `IDLE_LIMIT_SECONDS=60`): the next click returns to the sign-in page with the idle message.
+- Turnstile: the sign-in page shows the check; with the secret set, a sign-in without a passed check is refused; with Cloudflare unreachable it is refused (fails closed).
+- Worker build: `expo prebuild` manifest has no `SYSTEM_ALERT_WINDOW` and no `WRITE_EXTERNAL_STORAGE`, `usesCleartextTraffic=false`, `allowBackup=false`; sign-in, photo pick, voice note, push and bill upload still work on the release-style build.
+- CI: the gitleaks job is green; no secret appears in the history.
 
 ## 8. Rehearsal log and exit criteria
 

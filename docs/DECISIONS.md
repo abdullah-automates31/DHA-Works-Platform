@@ -116,3 +116,9 @@ These were found while assembling these docs. Until resolved, the resolution bel
 | MVP Plan lists "Worker verification checks" as out of scope | **Superseded**: manual verification is in the MVP |
 | Product Brief says rejected workers "cannot claim again"; consistent everywhere | No conflict |
 | Who sets the visit time (3 Nov: "the customer controls the schedule") | **Superseded 9 Nov (Shariq):** the worker proposes the arrival window (day, from, to) when claiming, for ASAP and dated jobs; the customer's day is a request. The worker may change price and/or window **once**, before the customer accepts; accepting books the worker's window, and an accept of a quote changed since the customer loaded it is refused (`quotes.revision`). Migration 20261109140000 |
+
+## 11 Nov 2026: admin step-up and idle logout (user, security hardening)
+
+- Destructive admin actions need a code typed in the last 15 minutes; a verified session alone is not enough. A verified session lasts 4 hours; 30 minutes without activity signs the staff member out.
+- The bot check on the admin password step is Cloudflare Turnstile, verified by the portal's server. Supabase's project-wide CAPTCHA stays off because it would block the worker and customer apps.
+- Worker app: no certificate pinning, no root detection; Android hardening (cleartext off, shrinking on, unneeded permissions blocked) is on.

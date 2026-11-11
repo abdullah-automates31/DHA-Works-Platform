@@ -1,0 +1,19 @@
+# Secret scanning (CI job "secrets"). Starts from gitleaks' default rules and only allows what is deliberately public:
+# placeholders in .env.example files and the Supabase local-development demo keys.
+title = "DHA Works gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "documented placeholders and public local-development values"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\.(dev|local)\.example$''',
+]
+regexes = [
+  # The Supabase CLI's published local-development JWTs (identical on every machine, only work on 127.0.0.1).
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIi''',
+  # Cloudflare's published Turnstile test keys.
+  '''1x0{20,32}A{2}''',
+]
