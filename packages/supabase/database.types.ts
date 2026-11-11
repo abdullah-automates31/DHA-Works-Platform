@@ -2258,6 +2258,7 @@ export type Database = {
         Returns: undefined
       }
       admin_session_status: { Args: never; Returns: string }
+      admin_step_up_status: { Args: never; Returns: string }
       admin_set_account_status: {
         Args: { p_profile: string; p_reason: string; p_suspend: boolean }
         Returns: undefined
