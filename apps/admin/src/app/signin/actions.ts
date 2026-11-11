@@ -1,10 +1,13 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cleanCode, cleanEmail, codeMessage, GENERIC_SIGN_IN_ERROR, sendMessage, validPassword } from '@/features/auth/messages';
 import { parseStatus } from '@/lib/status';
 import { publicEnv } from '@/lib/env';
+import { safeNext } from '@/lib/stepup';
 import { createClient } from '@/lib/supabase/server';
+import { verifyTurnstile } from '@/lib/turnstile';
 
 export type FormState = { error?: string; info?: string };
 
@@ -33,6 +36,12 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   const email = cleanEmail(formData.get('email'));
   const password = formData.get('password');
   if (!email || !validPassword(password)) return { error: GENERIC_SIGN_IN_ERROR };
+
+  // Bot check first (Cloudflare Turnstile, verified here on the server). It never says which of the two checks failed.
+  const h = await headers();
+  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip');
+  const human = await verifyTurnstile({ fetch, secret: process.env.TURNSTILE_SECRET_KEY, nodeEnv: process.env.NODE_ENV }, formData.get('cf-turnstile-response'), ip ?? null);
+  if (!human) return { error: 'Complete the security check and try again.' };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -75,3 +84,30 @@ export async function signOutAction(): Promise<void> {
   await supabase.auth.signOut();
   redirect('/signin');
 }
+
+/** Step-up: asks for a new code for an already verified session (sensitive actions, migration 0048). */
+export async function stepUpResendAction(): Promise<FormState> {
+  const supabase = await createClient();
+  const { data: status } = await supabase.rpc('admin_session_status');
+  const st = parseStatus(status);
+  if (st === 'needs_code') redirect('/signin/code');
+  if (st !== 'verified') redirect('/signin');
+  const failure = await requestCode();
+  return failure ? { error: failure } : { info: 'A new code is on its way. It works for 10 minutes.' };
+}
+
+/** Step-up: checks the code and returns to the page the person came from (only a path inside the portal). */
+export async function stepUpVerifyAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const code = cleanCode(formData.get('code'));
+  if (!code) return { error: 'Enter the six-digit code from the email.' };
+  const supabase = await createClient();
+  const { data: status } = await supabase.rpc('admin_session_status');
+  const st = parseStatus(status);
+  if (st === 'needs_code') redirect('/signin/code');
+  if (st !== 'verified') redirect('/signin');
+  const { data, error } = await supabase.rpc('admin_verify_code', { p_code: code });
+  if (error) redirect('/signin');
+  if (data === 'ok') redirect(safeNext(formData.get('next')));
+  return { error: codeMessage(data) };
+}
+

@@ -10,7 +10,9 @@ test('production policy forbids framing, plugins, inline scripts and foreign ori
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /base-uri 'none'/);
   assert.match(csp, /form-action 'self'/);
-  assert.match(csp, /connect-src 'self' https:\/\/abc\.supabase\.co/);
+  assert.match(csp, /connect-src 'self' https:\/\/abc\.supabase\.co https:\/\/challenges\.cloudflare\.com/);
+  assert.match(csp, /frame-src https:\/\/challenges\.cloudflare\.com(;|$)/);
+  assert.doesNotMatch(csp, /script-src[^;]*challenges/); // the widget script is allowed by the nonce, not by origin
   assert.match(csp, /script-src 'self' 'nonce-N0nce' 'strict-dynamic'/);
   assert.match(csp, /upgrade-insecure-requests/);
   const script = csp.split('; ').find((d) => d.startsWith('script-src')) ?? '';
@@ -24,7 +26,7 @@ test('the other headers are set and the CSP is not duplicated here', () => {
   assert.equal(get(h, 'Content-Security-Policy'), '');
   assert.equal(get(h, 'X-Frame-Options'), 'DENY');
   assert.equal(get(h, 'X-Content-Type-Options'), 'nosniff');
-  assert.equal(get(h, 'Referrer-Policy'), 'no-referrer');
+  assert.equal(get(h, 'Referrer-Policy'), 'same-origin');
   assert.equal(get(h, 'Cross-Origin-Resource-Policy'), 'same-origin');
   assert.match(get(h, 'Strict-Transport-Security'), /max-age=\d{8,}/);
   assert.equal(get(h, 'Cache-Control'), 'no-store');

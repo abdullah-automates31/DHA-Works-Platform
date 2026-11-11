@@ -1,11 +1,12 @@
 'use client';
 
+import Script from 'next/script';
 import { useActionState } from 'react';
 import { signInAction, type FormState } from './actions';
 
 const initial: FormState = {};
 
-export function SignInForm({ notAdmin }: { notAdmin: boolean }) {
+export function SignInForm({ notAdmin, siteKey, nonce }: { notAdmin: boolean; siteKey: string | null; nonce?: string }) {
   const [state, action, pending] = useActionState(signInAction, initial);
   return (
     <form className="si-form" action={action} noValidate>
@@ -27,6 +28,12 @@ export function SignInForm({ notAdmin }: { notAdmin: boolean }) {
         Password
         <input className="inp" type="password" name="password" placeholder="Enter your password" autoComplete="current-password" maxLength={200} required />
       </label>
+      {siteKey ? (
+        <>
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" nonce={nonce} />
+          <div className="cf-turnstile" data-sitekey={siteKey} data-theme="light" />
+        </>
+      ) : null}
       <button className="btn" type="submit" disabled={pending}>
         {pending ? 'Signing in...' : 'Sign in'}
       </button>

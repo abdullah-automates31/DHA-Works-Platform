@@ -2,12 +2,14 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@dha/supabase';
 import { sessionCookie } from './lib/cookies';
+import { ACTIVE_COOKIE, idleExpired, idleLimitMs, parseActive, shouldTouch, touchIntervalMs } from './lib/idle';
 import { contentSecurityPolicy, makeNonce } from './lib/security-headers';
 
-// Runs before every page. Three jobs:
+// Runs before every page. Four jobs:
 //  1. Give the page a fresh CSP nonce, so only Next.js's own scripts run (no inline script can be injected).
 //  2. Keep the Supabase session cookie fresh (a Server Component cannot write cookies, so the refresh happens here).
-//  3. Send anyone who is not signed in to the sign-in page. This is only the first, cheap gate: every page and action
+//  3. Sign out anyone who has done nothing for 30 minutes (an HttpOnly activity cookie; Supabase's own session timebox needs a paid plan).
+//  4. Send anyone who is not signed in to the sign-in page. This is only the first, cheap gate: every page and action
 //     also calls requireSession() (layout and actions: requireAdmin()), and the database decides what an account may read or change (migration 0037).
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -39,6 +41,17 @@ export async function proxy(request: NextRequest) {
 
   // Verifies the token locally and refreshes it when it is about to expire; only a refresh calls the auth server.
   const { data } = await supabase.auth.getClaims();
+  const now = Date.now();
+  const last = parseActive(request.cookies.get(ACTIVE_COOKIE)?.value);
+  const signedIn = !!data?.claims?.sub;
+  const limit = idleLimitMs(process.env.IDLE_LIMIT_SECONDS);
+  if (signedIn && idleExpired(last, now, limit)) {
+    await supabase.auth.signOut(); // ends the session on the server and clears the session cookies through setAll
+    const redirect = withCsp(NextResponse.redirect(new URL('/signin?e=idle', request.url)));
+    for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+    redirect.cookies.set(ACTIVE_COOKIE, '', { ...sessionCookie(undefined), maxAge: 0 });
+    return redirect;
+  }
   // Public pages: sign-in, and the invitation page (the invited person has no account yet).
   const path = request.nextUrl.pathname;
   const isPublic = path === '/signin' || path.startsWith('/signin/') || path === '/accept-invite';
@@ -47,6 +60,7 @@ export async function proxy(request: NextRequest) {
     for (const c of response.cookies.getAll()) redirect.cookies.set(c);
     return redirect;
   }
+  if (signedIn && shouldTouch(last, now, touchIntervalMs(limit))) response.cookies.set(ACTIVE_COOKIE, String(now), { ...sessionCookie(undefined), maxAge: 30 * 24 * 60 * 60 });
   return response;
 }
 

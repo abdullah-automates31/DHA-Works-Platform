@@ -24,7 +24,7 @@ export async function cancelJobAction(_prev: ActionState, formData: FormData): P
   const bad = needReason(reason);
   if (bad) return bad;
   const { error } = await supabase.rpc('admin_cancel_job', { p_job: jobId, p_reason: reason });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh(jobId);
   return { ok: 'The job is cancelled and both people have been told.' };
 }
@@ -37,7 +37,7 @@ export async function resumeJobAction(_prev: ActionState, formData: FormData): P
   const bad = needReason(note);
   if (bad) return bad;
   const { error } = await supabase.rpc('admin_job_resume', { p_job: jobId, p_note: note });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh(jobId);
   return { ok: 'The job is no longer under review.' };
 }
@@ -50,7 +50,7 @@ export async function replaceWorkerAction(_prev: ActionState, formData: FormData
   const bad = needReason(reason);
   if (bad) return bad;
   const { error } = await supabase.rpc('admin_job_replace_worker', { p_job: jobId, p_reason: reason });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh(jobId);
   return { ok: 'The worker is replaced. The job is open again for other workers.' };
 }
@@ -67,7 +67,7 @@ export async function decideCancellationAction(_prev: ActionState, formData: For
     if (bad) return { error: 'Write a note the requester will see (at least 3 characters).' };
   }
   const { error } = await supabase.rpc('admin_decide_cancellation', { p_request: requestId, p_approve: decision === 'approve', p_note: note });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh(isUuid(jobId) ? jobId : null);
   return { ok: decision === 'approve' ? 'Approved. The job is cancelled and both people have been told.' : 'Declined. The requester has been told why.' };
 }

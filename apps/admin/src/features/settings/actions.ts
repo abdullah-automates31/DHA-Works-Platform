@@ -24,7 +24,7 @@ export async function saveSettingsAction(_prev: ActionState, formData: FormData)
   const ok = checkSettings(v);
   if (!ok.ok) return { error: ok.hint };
   const { error } = await supabase.rpc('admin_save_settings', { p_helpline_number: v.number, p_helpline_enabled: v.enabled, p_report_window_days: v.reportDays, p_review_window_days: v.reviewDays });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh();
   return { ok: 'Settings saved.' };
 }
@@ -37,7 +37,7 @@ export async function setCategoryAction(_prev: ActionState, formData: FormData):
   const subtitle = field(formData, 'subtitle', 80);
   if (!Number.isInteger(id) || id < 1) return BAD_REQUEST;
   const { error } = await supabase.rpc('admin_update_category', { p_id: id, p_name: name, p_subtitle: subtitle, p_active: active });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh();
   return { ok: 'Saved.' };
 }
@@ -48,7 +48,7 @@ export async function addCategoryAction(_prev: ActionState, formData: FormData):
   const subtitle = field(formData, 'subtitle', 80);
   if (name.length < 2) return { error: 'The category name must be 2 to 40 characters.' };
   const { error } = await supabase.rpc('admin_add_category', { p_name: name, p_subtitle: subtitle });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh();
   return { ok: `${name} is added. Workers and residents see it in the apps.` };
 }
@@ -59,7 +59,7 @@ export async function setPhaseAction(_prev: ActionState, formData: FormData): Pr
   const active = formData.get('active') === '1';
   if (!Number.isInteger(phase) || phase < 1 || phase > 8) return BAD_REQUEST;
   const { error } = await supabase.rpc('admin_set_phase_active', { p_phase: phase, p_active: active });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh();
   return { ok: 'Saved.' };
 }
@@ -70,7 +70,7 @@ export async function inviteStaffAction(_prev: ActionState, formData: FormData):
   const ok = checkInviteEmail(email);
   if (!ok.ok) return { error: ok.hint };
   const { data, error } = await supabase.rpc('invite_staff', { p_email: email });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
@@ -84,7 +84,7 @@ export async function revokeInviteAction(_prev: ActionState, formData: FormData)
   const id = formData.get('inviteId');
   if (!isUuid(id)) return BAD_REQUEST;
   const { error } = await supabase.rpc('revoke_staff_invite', { p_invite: id });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh();
   return { ok: 'Invite cancelled.' };
 }
@@ -96,7 +96,7 @@ export async function removeStaffAction(_prev: ActionState, formData: FormData):
   if (!isUuid(id)) return BAD_REQUEST;
   if (reason.length < 3) return { error: 'Write a reason (at least 3 characters).' };
   const { error } = await supabase.rpc('admin_remove_staff', { p_profile: id, p_reason: reason });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   refresh();
   return { ok: 'Removed. They are signed out everywhere.' };
 }

@@ -5,6 +5,9 @@
 // because React writes style attributes; styles cannot run code. Everything else is locked down: no framing, no
 // foreign scripts, forms and requests only to this site and the Supabase project.
 
+/** Cloudflare Turnstile (the bot check on the password step): its challenge runs in an iframe and talks to this origin only. */
+const TURNSTILE = 'https://challenges.cloudflare.com';
+
 function originOf(supabaseUrl: string): string {
   try {
     return supabaseUrl ? new URL(supabaseUrl).origin : '';
@@ -27,7 +30,8 @@ export function contentSecurityPolicy(supabaseUrl: string, dev: boolean, nonce: 
     `img-src 'self' data: blob:${origin ? ` ${origin}` : ''}`,
     `media-src 'self' blob:${origin ? ` ${origin}` : ''}`,
     "font-src 'self'",
-    `connect-src 'self'${origin ? ` ${origin}` : ''}${dev ? ' ws:' : ''}`,
+    `connect-src 'self'${origin ? ` ${origin}` : ''} ${TURNSTILE}${dev ? ' ws:' : ''}`,
+    `frame-src ${TURNSTILE}`,
     "frame-ancestors 'none'",
     "base-uri 'none'",
     "form-action 'self'",
@@ -41,7 +45,8 @@ export function securityHeaders(): { key: string; value: string }[] {
   return [
     { key: 'X-Frame-Options', value: 'DENY' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
-    { key: 'Referrer-Policy', value: 'no-referrer' },
+    // same-origin: the portal's own pages see where a form was submitted from (the step-up page returns there); other sites get nothing.
+    { key: 'Referrer-Policy', value: 'same-origin' },
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), interest-cohort=()' },
     { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
     { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },

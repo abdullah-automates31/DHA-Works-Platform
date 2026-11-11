@@ -13,7 +13,7 @@ export async function setReviewHiddenAction(_prev: ActionState, formData: FormDa
   if (!isUuid(id)) return BAD_REQUEST;
   if (reason.length < 3) return { error: 'Write a reason (at least 3 characters).' };
   const { error } = await supabase.rpc('admin_set_review_hidden', { p_review: id, p_hidden: hide, p_reason: reason });
-  if (error) return refusal(error)!;
+  if (error) return (await refusal(error))!;
   revalidatePath('/reviews');
   revalidatePath('/users');
   return { ok: hide ? 'Hidden. It no longer counts in the average.' : 'Shown again.' };
