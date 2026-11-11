@@ -1,0 +1,73 @@
+# Checks that run on every push to dev and on every pull request (docs/TEST-PLAN.md section 6).
+# Read-only: no secrets, no deploys, no hosted Supabase. The database job uses a throwaway local stack inside the runner.
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apps:
+    name: Worker app, admin portal and scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Config guard (no test OTPs or placeholder credentials in committed config)
+        run: |
+          npm run safety:supabase
+          npm run safety:test
+      - name: Worker app
+        run: |
+          npm run worker:typecheck
+          npm run worker:lint
+          npm run worker:test
+      - name: Admin portal
+        run: |
+          npm run admin:typecheck
+          npm run admin:lint
+          npm run admin:test
+
+  database:
+    name: Database tests (pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - name: Start a local Supabase stack and apply every migration
+        run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime
+      - name: Run all pgTAP tests
+        run: supabase test db
+
+  functions:
+    name: Edge Function tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: admin-2fa
+        working-directory: supabase/functions/admin-2fa
+        run: deno test
+      - name: send-push
+        working-directory: supabase/functions/send-push
+        run: deno test
