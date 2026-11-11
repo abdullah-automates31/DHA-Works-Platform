@@ -89,6 +89,7 @@ Run once with Resident 1 and Workers A and B competing; keep the log of what eac
 | Worker typecheck, lint, 251 unit tests | `npm run worker:typecheck`, `worker:lint`, `worker:test` | green |
 | Admin typecheck, lint, 55 unit tests | `npm run admin:typecheck`, `admin:lint`, `admin:test` | green |
 | Database, 34 files, 1339 assertions | `npm run db:local -- test db` (CI: `supabase test db`) | green |
+| Concurrency, local only (3 workers claim one job; resident accepts two quotes) | `bash supabase/tests/concurrency/claim_race.sh`, `accept_race.sh` | green (11 Nov: exactly 1 of 3 wins, different winners on repeat) |
 | Edge Functions | `deno test` in `supabase/functions/admin-2fa` (15) and `send-push` | green |
 | Customer app (its own repo) | `./gradlew jvmTest` | run before every customer PR |
 
