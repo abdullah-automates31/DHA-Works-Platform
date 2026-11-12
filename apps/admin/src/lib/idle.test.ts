@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { idleExpired, idleLimitMs, IDLE_LIMIT_MS, parseActive, shouldTouch, touchIntervalMs } from './idle.ts';
+import { idleExpired, idleLimitMs, IDLE_LIMIT_MS, parseActive, shouldTouch, staleActive, touchIntervalMs } from './idle.ts';
 
 const NOW = 1_800_000_000_000;
 
@@ -38,4 +38,11 @@ test('the cookie is rewritten at most once a minute', () => {
   assert.equal(shouldTouch(null, NOW), true);
   assert.equal(shouldTouch(NOW - 30_000, NOW), false);
   assert.equal(shouldTouch(NOW - 61_000, NOW), true);
+});
+
+test('a leftover activity time is cleared when nobody is signed in (so the next sign-in is not signed straight out)', () => {
+  assert.equal(staleActive(false, NOW - 5 * 60 * 60 * 1000), true);
+  assert.equal(staleActive(false, null), false);
+  assert.equal(staleActive(true, NOW - 5 * 60 * 60 * 1000), false);
+  assert.equal(staleActive(true, null), false);
 });

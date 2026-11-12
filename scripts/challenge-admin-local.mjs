@@ -42,9 +42,9 @@ const newCode = async (before) => {
 
 // A fake non-admin account with a password (local only).
 sql(`insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at, encrypted_password, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change_token_new, email_change, email_change_token_current, reauthentication_token, phone_change, phone_change_token)
- values ('cccccccc-0000-4000-8000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','${NONADMIN.email}', now(), extensions.crypt('${NONADMIN.password}', extensions.gen_salt('bf')), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '', '', '', '', '') on conflict (id) do nothing`);
-sql(`insert into public.profiles (id, role, full_name, email, phone, cnic, verification_status) values ('cccccccc-0000-4000-8000-000000000001','resident','Pw Resident [FAKE]','${NONADMIN.email}','03001230099','42101-9990099-9','approved') on conflict (id) do nothing`);
-sql(`delete from auth.sessions where user_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1','cccccccc-0000-4000-8000-000000000001')`);
+ values ('cccccccc-0000-4000-8000-0000000000f1','00000000-0000-0000-0000-000000000000','authenticated','authenticated','${NONADMIN.email}', now(), extensions.crypt('${NONADMIN.password}', extensions.gen_salt('bf')), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '', '', '', '', '') on conflict (id) do nothing`);
+sql(`insert into public.profiles (id, role, full_name, email, phone, cnic, verification_status) values ('cccccccc-0000-4000-8000-0000000000f1','resident','Pw Resident [FAKE]','${NONADMIN.email}','03001230099','42101-9990099-9','approved') on conflict (id) do nothing`);
+sql(`delete from auth.sessions where user_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1','cccccccc-0000-4000-8000-0000000000f1')`);
 sql(`delete from public.admin_factor_challenges`);
 const WORKER = 'bbbbbbbb-0000-4000-8000-000000000002';
 sql(`update public.profiles set verification_status = 'pending' where id = '${WORKER}'`);
@@ -80,7 +80,7 @@ check('password only: cannot mark the session verified by hand', selfPromote.sta
 // 2. The email-code function --------------------------------------------------------------------------------------
 check('code function: no token is refused', (await call('POST', '/functions/v1/admin-2fa', { body: {} })).status === 401);
 check('code function: the anon key is not a user', (await call('POST', '/functions/v1/admin-2fa', { token: anon, body: {} })).status === 401);
-const named = await call('POST', '/functions/v1/admin-2fa', { token: pwOnly, body: { email: 'evil@example.com', user_id: 'cccccccc-0000-4000-8000-000000000001' } });
+const named = await call('POST', '/functions/v1/admin-2fa', { token: pwOnly, body: { email: 'evil@example.com', user_id: 'cccccccc-0000-4000-8000-0000000000f1' } });
 check('code function: a body naming another address or user is refused', named.status === 400 || named.status === 413, `status ${named.status}`);
 const nonAdmin = await signIn(NONADMIN);
 const na = await call('POST', '/functions/v1/admin-2fa', { token: nonAdmin, body: {} });
@@ -89,7 +89,7 @@ check('non-admin: the database says "not_admin"', (await rpc('admin_session_stat
 check('non-admin: the queue is refused', (await rpc('admin_verification_queue', { p_role: 'worker', p_status: 'pending' }, nonAdmin)).status >= 400);
 check('non-admin: invite_staff is refused', (await rpc('invite_staff', { p_email: 'evil@example.com' }, nonAdmin)).status >= 400);
 const makeAdmin = await rpc('accept_staff_invite', { p_email: NONADMIN.email, p_token: 'guess', p_full_name: 'Evil' }, nonAdmin);
-check('non-admin: cannot claim an admin account without an invite token', makeAdmin.status >= 400 && sql(`select role from public.profiles where id = 'cccccccc-0000-4000-8000-000000000001'`) === 'resident');
+check('non-admin: cannot claim an admin account without an invite token', makeAdmin.status >= 400 && sql(`select role from public.profiles where id = 'cccccccc-0000-4000-8000-0000000000f1'`) === 'resident');
 
 // 3. Brute force the code ---------------------------------------------------------------------------------------------
 const seen1 = allCodes();

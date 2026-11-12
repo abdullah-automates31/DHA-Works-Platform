@@ -24,6 +24,11 @@ export function parseActive(value: string | undefined): number | null {
   return Number(value);
 }
 
+/** True when a leftover activity cookie belongs to a session that is already over (manual sign-out, expired session): it must be cleared, or the next sign-in would read the old time and be signed straight out. */
+export function staleActive(signedIn: boolean, lastMs: number | null): boolean {
+  return !signedIn && lastMs !== null;
+}
+
 /** How often the activity cookie is rewritten: once a minute, or a third of a shorter limit (so a short test limit still works). */
 export function touchIntervalMs(limitMs: number): number {
   return Math.min(IDLE_TOUCH_MS, Math.floor(limitMs / 3));

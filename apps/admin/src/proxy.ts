@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@dha/supabase';
 import { sessionCookie } from './lib/cookies';
-import { ACTIVE_COOKIE, idleExpired, idleLimitMs, parseActive, shouldTouch, touchIntervalMs } from './lib/idle';
+import { ACTIVE_COOKIE, idleExpired, idleLimitMs, parseActive, shouldTouch, staleActive, touchIntervalMs } from './lib/idle';
 import { contentSecurityPolicy, makeNonce } from './lib/security-headers';
 
 // Runs before every page. Four jobs:
@@ -55,11 +55,14 @@ export async function proxy(request: NextRequest) {
   // Public pages: sign-in, and the invitation page (the invited person has no account yet).
   const path = request.nextUrl.pathname;
   const isPublic = path === '/signin' || path.startsWith('/signin/') || path === '/accept-invite';
+  const clearActive = staleActive(signedIn, last);
   if (!data?.claims?.sub && !isPublic) {
     const redirect = withCsp(NextResponse.redirect(new URL('/signin', request.url)));
     for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+    if (clearActive) redirect.cookies.set(ACTIVE_COOKIE, '', { ...sessionCookie(undefined), maxAge: 0 });
     return redirect;
   }
+  if (clearActive) response.cookies.set(ACTIVE_COOKIE, '', { ...sessionCookie(undefined), maxAge: 0 });
   if (signedIn && shouldTouch(last, now, touchIntervalMs(limit))) response.cookies.set(ACTIVE_COOKIE, String(now), { ...sessionCookie(undefined), maxAge: 30 * 24 * 60 * 60 });
   return response;
 }
