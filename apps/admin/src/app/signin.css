@@ -19,6 +19,9 @@
 .si-chips{position:relative;display:flex;gap:10px;flex-wrap:wrap}
 .si-chips .chip{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);height:34px;padding:0 14px}
 .si-right{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:48px}
+.si-col{width:100%;max-width:400px;display:flex;flex-direction:column}
+.si-col>.si-form{max-width:none}
+.si-col>.h2{margin:0 0 18px!important;font-size:30px;font-weight:800;letter-spacing:-.02em;color:#0A3D28}
 .si-form{width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px}
 .si-form h2{margin:0;font-size:30px;font-weight:800;letter-spacing:-.02em;color:#0A3D28}
 .si-form p{margin:8px 0 0;font-size:14.5px;color:var(--mut)}

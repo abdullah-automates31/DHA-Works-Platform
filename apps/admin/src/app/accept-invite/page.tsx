@@ -7,7 +7,7 @@ export default async function AcceptInvitePage({ searchParams }: { searchParams:
   const ok = typeof email === 'string' && typeof token === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && /^[0-9a-f]{20,100}$/i.test(token);
   return (
     <SignInShell>
-      <h1 className="h2" style={{ marginBottom: 8 }}>Create your staff account</h1>
+      <h2 className="h2" style={{ marginBottom: 8 }}>Create your staff account</h2>
       {ok ? (
         <AcceptForm email={email} token={token} />
       ) : (

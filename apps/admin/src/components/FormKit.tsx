@@ -53,7 +53,7 @@ export function ActionForm({ action, hidden, fields, submit, tone = 'green', inl
           {f.kind === 'textarea' ? (
             <textarea className="inp" name={f.name} placeholder={f.placeholder} maxLength={f.maxLength ?? 500} required={f.required} defaultValue={f.defaultValue} style={f.rows ? { height: f.rows * 24 + 24 } : undefined} />
           ) : f.kind === 'select' ? (
-            <Select name={f.name} required={f.required} defaultValue={f.defaultValue ?? ''} placeholder={f.placeholder ?? 'Choose'} allLabel={f.placeholder ? '' : undefined} options={f.options ?? []} />
+            <Select name={f.name} ariaLabel={f.label} required={f.required} defaultValue={f.defaultValue ?? ''} placeholder={f.placeholder ?? 'Choose'} allLabel={f.placeholder ? '' : undefined} options={f.options ?? []} />
           ) : (
             <input className="inp" type={f.kind} name={f.name} placeholder={f.placeholder} maxLength={f.maxLength ?? 200} required={f.required} defaultValue={f.defaultValue} />
           )}

@@ -79,7 +79,7 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
           </div>
 
           <div className="grid4">
-            {stats.map((s) => <div key={s.label} className="card stat"><span>{s.label}</span><b>{s.value}</b></div>)}
+            {stats.map((s) => <div key={s.label} className="card stat"><span>{s.label}</span><b className={/^[0-9.\-]+$/.test(s.value) ? undefined : 'txt'}>{s.value}</b></div>)}
           </div>
 
           {isWorker ? (
@@ -102,7 +102,7 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
             <>
               <div className="tw">
                 <div className="row sb" style={{ padding: '16px 20px 8px' }}><h2 className="h2">Recent jobs</h2><Link href={`/jobs?q=${encodeURIComponent(d.name)}`} className="mut b" style={{ fontSize: 13, textDecoration: 'none' }}>See all jobs</Link></div>
-                <table className="tbl">
+                <table className="tbl compact">
                   <thead><tr><th>Job</th><th>Service</th><th>{isWorker ? 'Resident' : 'Worker'}</th><th>Quote</th><th>Status</th></tr></thead>
                   <tbody>
                     {d.recentJobs.length === 0 ? <tr><td colSpan={5} className="mut" style={{ textAlign: 'center', padding: 24 }}>No jobs yet.</td></tr> : null}

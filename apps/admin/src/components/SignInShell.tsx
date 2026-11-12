@@ -51,7 +51,9 @@ export function SignInShell({ children }: { children: React.ReactNode }) {
           <span className="chip">Helpline 1092</span>
         </div>
       </div>
-      <div className="si-right">{children}</div>
+      <div className="si-right">
+        <div className="si-col">{children}</div>
+      </div>
     </div>
   );
 }

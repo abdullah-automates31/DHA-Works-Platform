@@ -60,7 +60,7 @@ export async function HelplineView({ params }: { params: Params }) {
           />
           {listRes.error ? <LoadError /> : null}
           <div className="tw">
-            <table className="tbl">
+            <table className="tbl compact">
               <thead><tr><th>Time</th><th>Caller</th><th>Reason</th><th>Linked</th><th>Outcome</th></tr></thead>
               <tbody>
                 {rows.length === 0 ? <EmptyRow cols={5} text={q || cb ? 'No call matches.' : 'No calls logged in this period.'} /> : null}
