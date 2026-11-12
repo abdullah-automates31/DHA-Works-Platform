@@ -130,3 +130,15 @@ These were found while assembling these docs. Until resolved, the resolution bel
 - If the customer **accepts** the quote, the job is **scheduled** and locked to that worker; every other worker, including the rejected one, cannot see it or quote it.
 - This is the claim-and-quote model of migrations 0043/0044 (`accept_job`, `accept_quote`, `reject_quote`). Pinned by `supabase/tests/quote_lock_flow.test.sql` (35 assertions). An unanswered quote keeps the job quoted until the customer rejects it or the posting expires (no timeout yet).
 - Known gap, deliberately not changed: the older competing-quote functions `express_interest` and `submit_quote` are not used by any app but can still be called through the API, and they still allow a second quote on a quoted job. Retiring them means rewriting six older pgTAP files (`job_lifecycle`, `schedule_and_hidden_jobs`, `worker_app_prep`, `worker_job_detail`, `worker_my_jobs`, `worker_reads_round_trip`). Recommended as a separate task.
+
+## 13 Nov 2026: releases are tracked by tags, not by per-app branches (user)
+
+- One repository holds the worker app, the admin portal, the database and the docs. Each app gets its own **release tags**: `admin-vX.Y.Z` and `worker-vX.Y.Z` (0.9.x = release candidate, 1.0.0 = first live). A tag is never moved. Shariq Bhai finds them at the repository's Tags page and in `docs/RELEASES.md`.
+- A branch holding only one app's code is not used: the apps share `packages/supabase`, the root files, CI and `supabase/`, so such a branch would not build and would be painful to merge.
+- Current tags: `admin-v0.9.0` (commit 5d2b4a1) and `worker-v0.9.0` (commit b6ff619). After launch: short-lived feature branches with pull requests into `dev`, CI path filters per app, protected `main` and `dev`, CODEOWNERS. The customer app (Shariq's repository) already works by branch and pull request only.
+
+## 13 Nov 2026: admin portal behaviour decisions
+
+- The idle-logout activity cookie is cleared whenever nobody is signed in, so a new sign-in is never signed out by an old timestamp.
+- A failed session check (database or network trouble) shows a "try again" page; only a rejected or expired token goes to sign-in, and only a real "not an admin" answer shows "That account cannot use the portal".
+- Forms keep what was typed after a refusal or the trip to the new-code page (kept in this browser tab for 15 minutes; a save clears it).

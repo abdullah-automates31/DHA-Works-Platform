@@ -121,4 +121,16 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 
 - Not built, needs a design decision: a **fresh SMS code before a worker records cash** (cash is write-once, so a stolen worker session could record a wrong amount). It needs a server-side "fresh login" rule for workers similar to the admin step-up. Recommended before real users.
 - Optional, needs a new native build: **app lock** (phone PIN or fingerprint after 2 minutes in the background, `expo-local-authentication`) and **screenshot blocking** on ID-photo and bill screens (`expo-screen-capture`) in the worker app.
-- Owner actions: rotate the Brevo key and Expo token; delete `apps/admin/.env.local-backup`; create the Turnstile keys and set them in Vercel; apply migration 0048 to DEV.
+- Owner actions: rotate the Brevo key and Expo token; delete `apps/admin/.env.local-backup`; create the Turnstile keys and set them in Vercel (migration 0048 was applied to DEV on 11 Nov).
+
+## 13 Nov: admin portal go-live (decisions and owner items)
+
+- **Decision (user): should the portal email staff invites?** Today `invite_staff` shows a one-time link once on screen and the admin sends it by hand. Emailing it needs the mail provider (same as the sign-in code).
+- **Decision (user): step-up for verification decisions.** `admin_decide_verification` (approve, reject or visit HQ for a worker or resident) does not call `private.admin_fresh()`. Approving a worker gives access to residents' details, so a stale or unattended session can still do it. Same for `admin_set_review_hidden`, `admin_job_resume` and `admin_send_message`. If yes: a new migration plus `refusal()` in `apps/admin/src/features/verification/actions.ts` plus pgTAP in `supabase/tests/admin_step_up.test.sql`. (Suspending through a report case is already covered.)
+- **Decision (user): is the GitHub repository meant to be public?** It is public today and holds architecture, security notes and test plans. An exposed Brevo key and Expo token were found earlier. Scan the history for secrets before deciding; switching to private is a one-click change in GitHub settings. Creating GitHub Release pages also needs the user's explicit OK while it is public.
+- **Decision (user): delete the extra branches `admin-portal` and `worker-app`?** Releases are tracked by tags (docs/RELEASES.md); the two branches (both at 5d2b4a1) were created on request and are not needed.
+- **Owner actions blocking the live check:** Vercel project (root `apps/admin`) and its environment variables; Cloudflare Turnstile site key (public) and secret key (Vercel only); a new mail provider key set as a Supabase function secret (rotate the exposed Brevo key); a DEV admin email that can receive codes; rotate the Expo token; delete `apps/admin/.env.local-backup`.
+- **Not proven yet:** real emailed sign-in code, Turnstile on a live site, documents and voice notes from real uploads on hosted DEV, screens narrower than about 1000 px.
+- **Customer app (Shariq):** PR #14 (show the material bill photo) and PR #15 (no flash of the sign-in screen for a signed-in user) are open for review; PRs #9 to #12 are still unmerged.
+- **Push:** a closed-app push from a job posted in the customer app still has to be re-proven on the phone (a test push worked; the first real one went to an old device token).
+- **Admin audit findings left (low):** every detail-page view writes an audit row (duplicates on reload); the portal's own database calls have no timeout; the jobs list search has no trigram index (fine below about 50,000 jobs).

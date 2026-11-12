@@ -2,13 +2,13 @@
 
 Staff-only web app: Next.js 16 (App Router, TypeScript strict) in the npm workspace, one Supabase backend. UI source of truth: the Claude Design canvas "DHA Works - Admin portal" (screens A01 to A15, one shared stylesheet; `apps/admin/src/app/admin.css` is that stylesheet unchanged apart from the font variable). Business rules live in the database; the portal prepares requests and shows refusals.
 
-## Status (7 Nov 2026)
+## Status (updated 13 Nov 2026)
 
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Sign-in with emailed code (A01), worker queue and review (A03, A04), resident queue and review (A05, A06); database 0037 to 0039; Edge Function `admin-2fa` | **Built and tested locally.** Migrations 0037 to 0039 are on hosted DEV (7 Nov, verified). The `admin-2fa` function is deployed on DEV (7 Nov) with its Brevo secrets; DEV has no admin account yet. |
-| 2 | Reports and case detail (A07, A08), jobs and job detail with staff cancel (A10, A11), cancellation requests, helpline log (A09) | **Built and tested locally (8 Nov):** migration 0041. Not on hosted DEV yet. |
-| 3 | Dashboard (A02, migration 0040), users and person page (A12, A13), reviews (A15), settings with categories, phases, helpline, windows and staff invites (A14), invite acceptance page | **Built and tested locally (8 Nov):** migrations 0040 and 0042. Not on hosted DEV yet. |
+| 2 | Reports and case detail (A07, A08), jobs and job detail with staff cancel (A10, A11), cancellation requests, helpline log (A09) | **Built and tested locally (8 Nov):** migration 0041. On hosted DEV (applied 7 Nov). |
+| 3 | Dashboard (A02, migration 0040), users and person page (A12, A13), reviews (A15), settings with categories, phases, helpline, windows and staff invites (A14), invite acceptance page | **Built and tested locally (8 Nov):** migrations 0040 and 0042. On hosted DEV (applied 7 Nov). |
 
 ## Sign-in (docs/SECURITY.md section 16)
 
@@ -50,3 +50,26 @@ Email + password, then a six-digit code emailed by the Edge Function `admin-2fa`
 - Step-up (11 Nov, migration 0048): destructive functions also call `private.admin_fresh()` and raise `confirm with a new code` (P0001). In the portal every action returns `await refusal(error)`, which turns that refusal into a redirect to `/confirm?next=<same-site path>`. New destructive functions must add the freshness check and be listed in `supabase/tests/admin_step_up.test.sql`.
 - Idle logout: `src/proxy.ts` signs out after 30 minutes without a request (cookie `dha_active`). `IDLE_LIMIT_SECONDS` (5 to 1800) exists only for tests.
 - Sign-in bot check: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public) and `TURNSTILE_SECRET_KEY` (server only, Vercel). A production build without the secret refuses every sign-in. Cloudflare's published test keys (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`) always pass and are for local runs only.
+
+## State on 13 Nov 2026 (release candidate `admin-v0.9.0`; see docs/RELEASES.md and docs/ADMIN-QA.md)
+
+- **All screens A01 to A15 work on the local stack and are click-tested in a real browser** (fake data). Migrations 0037 to 0048 are on hosted DEV; `admin-2fa` is deployed there. The portal is **not deployed** (no Vercel project yet). Real emailed codes, the Turnstile bot check and the deployed site are **not yet proven**. Local checks: typecheck, lint, 76 unit tests, production build (17 routes), attack drill 39/39.
+- An independent audit (13 Nov) found no critical problems; its fixes are in. Findings still open are listed in docs/ADMIN-QA.md.
+- **Owner items before going live:** Vercel project (root `apps/admin`), Turnstile site key and secret, a mail provider key for `admin-2fa` (rotate the exposed Brevo key first), a DEV admin email, rotate the Expo token, delete `apps/admin/.env.local-backup`.
+- **Open decisions:** (1) the invite link is shown once on screen and is **not emailed**; should the portal email it? (2) approving or rejecting a worker or resident (`admin_decide_verification`), hiding a review, resuming a job and sending a message do **not** ask for a fresh code; add step-up to them? (see docs/OPEN-QUESTIONS.md).
+
+## Behaviour added after the first build (11 to 13 Nov)
+
+- **Idle logout cookie:** `dha_active` is cleared by `src/proxy.ts` whenever nobody is signed in (`staleActive` in `src/lib/idle.ts`), otherwise the next sign-in read an old time and was signed straight out ("signed out after 30 minutes").
+- **Forms keep what was typed:** `ActionForm` (`src/components/FormKit.tsx`) keeps the text in memory after a refusal and in `sessionStorage` (this tab, 15 minutes) for the trip to `/confirm` and back; a save clears it. The report decision form does the same for its choice and reason. A form that bypasses `ActionForm` must do this itself.
+- **A failed session check is not "not an admin":** `requireAdmin()` shows the "Something went wrong, try again" page on a database or network fault (`statusFailure` in `src/lib/status.ts`) and redirects to sign-in only for a rejected or expired token.
+- **Error and not-found pages:** `src/app/error.tsx` (friendly text, Try again, no error details, a short reference) and `src/app/not-found.tsx`.
+- **Accessibility and layout:** `<main id="main">` landmark and a skip link in the portal layout; every select has an accessible name (`FormKit` passes the field label); visible keyboard focus and a `prefers-reduced-motion` rule in `admin.css`; Sign out stays reachable below 1000 px; `.tbl.compact` for tables beside a side column; the sign-in shell stacks notices above the form (`.si-col`).
+- **Speed:** `/_next/static/*` keeps Next's long cache (pages and data stay `no-store`, see `next.config.ts`); the crest image is 128 px; each page has its own title ("Workers | DHA Works Admin").
+
+## Local testing notes
+
+- `apps/admin/.env.local` points at **hosted DEV**. For local tests start the portal with the local URL and anon key as environment variables (the file's values are overridden), or you will click through hosted DEV data.
+- Emailed codes in `ADMIN_MAIL_MODE=dev-log`: if the `supabase functions serve` log file is stale, read the newest code from `docker logs supabase_edge_runtime_dha-works`.
+- Codes are limited to 1 a minute and 5 an hour per account. Local reset: `delete from public.admin_factor_challenges;`. To force the step-up prompt: `update public.admin_verified_sessions set fresh_at = now() - interval '30 minutes';`.
+- Production-build check without disturbing the dev server: `NEXT_DIST_DIR=.next-prod` plus the local env variables, `npx next build`, then delete `.next-prod` and `git checkout apps/admin/tsconfig.json` (the build rewrites it).

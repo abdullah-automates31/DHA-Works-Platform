@@ -2,7 +2,7 @@
 
 A home-services marketplace for DHA Karachi. A verified resident posts a repair job with photos, several **verified** workers send **itemised quotes**, the resident accepts one, the work is done, and the customer pays **cash**. DHA staff verify every worker and resident and handle reports.
 
-> Status: **database and mobile API built; Worker app screens built on the local stack (see [docs/WORKER-APP.md](docs/WORKER-APP.md)); customer app and admin portal not started.** 31 migrations in `supabase/migrations` (0001 to 0017, 0020 to 0033; 0001 to 0032 on hosted DEV, 0033 authentication hardening on 6 Nov); 839 pgTAP assertions pass. The 5 Nov worker-app speed work (skeletons, image caching and compression, paging, indexes) is in [docs/PERFORMANCE.md](docs/PERFORMANCE.md). The customer app is Shariq's; the admin portal starts next week or the week after. A push-notification Edge Function is built and tested locally but not deployed. Shariq Bhai approved Supabase (free tier) and the order: database and mobile APIs, then mobile apps, then the admin portal. Start new sessions with [docs/HANDOVER.md](docs/HANDOVER.md). The DB and API design is in [docs/DB-API-DESIGN.md](docs/DB-API-DESIGN.md).
+> Status (13 Nov 2026): **database and mobile API built and live on the hosted DEV project (migrations through 0048); the Worker app and the admin portal (screens A01 to A15) are built and tested; the customer app is Shariq Bhai's separate repository.** The admin portal is not deployed yet. Start with [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and find release versions in [docs/RELEASES.md](docs/RELEASES.md).
 
 ## The three products
 
@@ -36,6 +36,11 @@ Read in this order if you are new.
 | 12 | [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md) | Everything still pending, including questions for Shariq Bhai |
 | 13 | [docs/SETUP.md](docs/SETUP.md) | Planned developer setup (Windows, no Mac) |
 | 14 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | Terms used across the docs |
+| 15 | [docs/WORKER-APP.md](docs/WORKER-APP.md) | Worker app: screen-to-backend map and how to run it |
+| 16 | [docs/ADMIN-PORTAL.md](docs/ADMIN-PORTAL.md) | Admin portal: screens, security, how to run and test it, state on 13 Nov |
+| 17 | [docs/ADMIN-QA.md](docs/ADMIN-QA.md) | Admin portal QA record: what was clicked, bugs found and fixed, audit, what is still open |
+| 18 | [docs/TEST-PLAN.md](docs/TEST-PLAN.md) | The end-to-end rehearsal with real phones, edge cases and security checks |
+| 19 | [docs/RELEASES.md](docs/RELEASES.md) | **Release tags** (`admin-vX.Y.Z`, `worker-vX.Y.Z`): how to find and fetch the exact code of each release |
 
 ## Source of truth
 

@@ -6,9 +6,9 @@ DHA Works is a home-services marketplace for DHA Karachi. Backend first: Supabas
 
 ## State and layout
 
-- Minimal npm workspace at the root (`npm install`); npm only, no pnpm/Turborepo/CI. `apps/worker`, `apps/admin`, `packages/supabase`. `packages/shared` and `ui-native` are planned, not created.
+- Minimal npm workspace at the root (`npm install`); npm only, no pnpm/Turborepo; CI runs in `.github/workflows/ci.yml` (apps, pgTAP, Edge tests, gitleaks). `apps/worker`, `apps/admin`, `packages/supabase`. `packages/shared` and `ui-native` are planned, not created.
 - `packages/supabase/database.types.ts` is generated (`supabase gen types typescript --local`/`--linked`); regenerate after schema changes, never hand-edit.
-- 40 migrations in `supabase/migrations` (timestamp names `2026...`, numbered 0001-0017 and 0020-0042); all applied locally and on linked DEV (`xiozwoocisesgmegewww`). 0018/0019 are unapplied proposals in `supabase/proposals/`; do not move them.
+- 50 migration files in `supabase/migrations` (timestamp names `2026...`, numbered 0001-0017 and 0020-0048); all applied locally and on linked DEV (`xiozwoocisesgmegewww`). 0018/0019 are unapplied proposals in `supabase/proposals/`; do not move them.
 - `supabase/dev/` is LOCAL-ONLY, except `hosted_dev_fake_open_jobs.sql` (DEV dashboard SQL Editor only; adds `[FAKE]` jobs, never users/auth). Never run the other seed/approve scripts on a hosted project. There is no `seed.sql`; pgTAP expects an empty database.
 - Edge Functions: `send-push` (FCM push for both apps, deployed on DEV 7 Nov; see its README) is called by the database (notifications insert trigger + 10-minute retry cron, migration 20261107100229) and gated by `x-push-secret` checked against Vault, with `verify_jwt = false` on purpose, so do not "harden" it. `admin-2fa` is deployed on DEV with `verify_jwt = true`; it sends via Brevo (`ADMIN_MAIL_API_KEY`, `ADMIN_MAIL_FROM`; the key is a v3 API key, not SMTP). Local `ADMIN_MAIL_MODE=dev-log` prints the code and is refused for hosted addresses.
 - Realtime is published only for `public.notifications` (0020). Worker screens refresh on a notification (`apps/worker/src/features/live/useLiveRefresh.ts`); do not publish job tables.
@@ -19,7 +19,7 @@ DHA Works is a home-services marketplace for DHA Karachi. Backend first: Supabas
 ```powershell
 npm run db:local -- start | stop | status
 npm run db:local -- db reset          # applies all migrations
-npm run db:local -- test db           # 31 pgTAP files, 1228 assertions
+npm run db:local -- test db           # 36 pgTAP files, 1406 assertions
 npm run db:local -- test db supabase/tests/claim_job.test.sql   # one file
 npm run db:local -- db lint --local
 npm run safety:supabase               # config guard
@@ -28,8 +28,8 @@ npm run safety:prod-ready             # 4 blockers; ADMIN_2FA_EMAIL etc.
 ```
 
 - Use `npm run db:local --` for local Supabase commands. It copies `supabase/` to git-ignored `.supabase-local/` and adds the five static test OTPs; plain `supabase start` has no test OTPs. The wrapper blocks `--linked`, `--project-ref`, `--db-url`, `--workdir`; use the plain CLI for hosted read-only checks.
-- Worker (`apps/worker`): `npm run worker:typecheck`, `worker:lint`, `worker:test` (225 node:test tests); bundle check `npx expo export --platform ios` (or android) from `apps/worker`.
-- Admin (`apps/admin`): `npm run admin:typecheck`, `admin:lint`, `admin:test` (53), `admin:build`.
+- Worker (`apps/worker`): `npm run worker:typecheck`, `worker:lint`, `worker:test` (256 node:test tests); bundle check `npx expo export --platform ios` (or android) from `apps/worker`.
+- Admin (`apps/admin`): `npm run admin:typecheck`, `admin:lint`, `admin:test` (76), `admin:build`; attack drill `FN_LOG=<function log> node scripts/challenge-admin-local.mjs` (39 checks); QA record `docs/ADMIN-QA.md`; releases are tags (`docs/RELEASES.md`).
 - Functions: in `send-push`, `deno test` (4), `deno lint` and `deno fmt --check`; in `admin-2fa`, `deno test` (15) and `deno lint`.
 - Single app test: `node --test apps/worker/src/features/quote/rules.test.ts` (same pattern for admin).
 - `.sh` scripts need Git Bash: `& "C:\Program Files\Git\bin\bash.exe" <script>`. Concurrency: `supabase/tests/concurrency/{accept,claim,register}_race.sh` against local only, then `db reset`. Proposal tests: `supabase/proposals/run_proposal_test.sh`.

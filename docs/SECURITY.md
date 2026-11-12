@@ -204,3 +204,13 @@ Added after a code-level review of both apps. Everything below is built and test
 **Deliberately not done, and why:** certificate pinning (breaks the app whenever Supabase rotates a certificate); root/jailbreak detection (easy to bypass, blocks honest users); Supabase CAPTCHA (would lock out both mobile apps); a fresh SMS code before a worker records cash (needs a server-side fresh-login rule, kept in OPEN-QUESTIONS); app lock and screenshot blocking in the worker app (need two new native modules and a new build; offered as an optional next step).
 
 **Owner actions (cannot be done in code):** rotate the Brevo API key and the Expo token; delete `apps/admin/.env.local-backup` (git-ignored but holds secrets); create a free Turnstile site and set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in Vercel (a production build refuses every sign-in until the secret exists); set `IDLE_LIMIT_SECONDS` only for tests (never above 1800); apply migration 0048 to DEV when ready; keep the Supabase dashboard settings from section 15 (OTP expiry, rate limits); TOTP and session limits need a paid plan.
+
+### 18.9 Admin portal: 13 Nov follow-ups
+
+- **Idle-logout cookie:** `dha_active` is now cleared whenever nobody is signed in. Before, an old timestamp from an earlier session signed the next sign-in straight out. The idle limit stays 30 minutes.
+- **A failed session check is not "not an admin":** a database or network fault shows a "try again" page; only a rejected or expired token goes to sign-in. The check still fails closed (nothing is shown).
+- **Error pages never show internals:** `app/error.tsx` prints only a short reference (the digest); `app/not-found.tsx` shows no record details.
+- **Independent audit (13 Nov, local stack, production build):** no critical findings. Checked and passed: nonce CSP with no inline script, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, HSTS, same-origin referrer policy, HttpOnly + SameSite cookies, no service-role key or JWT in the browser bundle, `requireAdmin()` on every server action except the intentionally public invite acceptance, `/confirm?next=` rejects off-site addresses, bad ids and odd query strings return a plain page.
+- **Open, needs a decision:** `admin_decide_verification` (approve or reject a worker or resident), `admin_set_review_hidden`, `admin_job_resume` and `admin_send_message` do not require a fresh code. Approving a worker gives access to residents' details (docs/OPEN-QUESTIONS.md, 13 Nov).
+- **Open, low:** every detail-page view writes an audit row (duplicates on reload); the portal's own database calls have no timeout.
+- **Not yet proven on a live site:** real emailed codes, Turnstile, the deployed headers and cookie flags over HTTPS.

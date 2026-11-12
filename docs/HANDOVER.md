@@ -1,6 +1,20 @@
 # Session handover
 
-Read this first in a new session. It is the detailed record of where the work stands as of **5 Nov 2026**, so nothing from earlier sessions is lost. The product rules are in [DECISIONS.md](DECISIONS.md); the database design is in [DB-API-DESIGN.md](DB-API-DESIGN.md).
+Read this first in a new session. It is the detailed record of where the work stands. Section 0 is current (13 Nov 2026); the rest is the 5 Nov record, so nothing from earlier sessions is lost. The product rules are in [DECISIONS.md](DECISIONS.md); the database design is in [DB-API-DESIGN.md](DB-API-DESIGN.md).
+
+## 0. Latest state (13 Nov 2026) - read this before section 1
+
+Sections 1 onward were written on 5 Nov and are kept for history; where they disagree with this section, this section wins.
+
+- **Dates and goal:** the user wants the **admin portal fully ready by Saturday 14 Nov 2026** (every feature, button, screen and service working). Its checklist and open decisions are in [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) ("13 Nov: admin portal go-live"); its QA record is [ADMIN-QA.md](ADMIN-QA.md); the release list is [RELEASES.md](RELEASES.md).
+- **Git:** `dev` is at `f285242` (everything pushed). Release tags `admin-v0.9.0` (5d2b4a1) and `worker-v0.9.0` (b6ff619). `main` untouched. The repository is **public**. Branches `admin-portal` and `worker-app` exist (both at 5d2b4a1) but releases are tracked by tags (DECISIONS.md, 13 Nov).
+- **Database (hosted DEV `xiozwoocisesgmegewww`):** all 50 migration files are applied, up to 0048 (0043/0044 claim-and-quote lock; 0045 and 0047 material bill; 0046 admin hardening; 0048 admin step-up). Edge Functions `admin-2fa` and `send-push` are deployed. pgTAP is not installed on hosted DEV, so tests run locally only: 36 files, 1,406 assertions.
+- **Admin portal:** all screens A01 to A15 work locally and are click-tested; hardened (emailed code, fresh code before destructive actions, 30-minute idle logout, bot check, strict headers); an independent audit found no critical problems. **Not deployed**; real email, Turnstile and the live site are unproven. Details: [ADMIN-PORTAL.md](ADMIN-PORTAL.md).
+- **Worker app:** job lock rule (a quoted job is hidden from other workers; reject returns it to open; accept locks it), material bill only while in progress with the "Bill not attached yet" pop-up, Android hardening. 256 tests. EAS dev build `bfa36333` is installed on the user's Motorola moto g05. Push works with the app closed (test push); a closed-app push from a real customer post must be re-tried.
+- **Customer app** (Shariq's repository, branch and pull request only): PR #14 (material bill photo) and PR #15 (no sign-in flash for a signed-in user) are open.
+- **CI:** `.github/workflows/ci.yml` (apps, pgTAP, Edge tests, gitleaks) is green; Dependabot on.
+- **Next steps (in order):** get the Vercel project, Turnstile site key, a new mail key and a DEV admin email from the owner; deploy and walk the whole portal on the deployed site; settle the open decisions (emailed invites, step-up for approvals, public repository, extra branches); finish the few untested clicks (resident Approve and Visit HQ, phase switch, narrow screens); then tag `admin-v1.0.0`.
+- **Never do:** push to `main`; touch the Relay project or `dha-suite`; use the Supabase MCP connector; put keys in chat or in git; run `db push`, function deploys or config pushes unless the user asks in that task; commit or push the customer repository's `main`.
 
 ## 1. Where we are
 

@@ -137,3 +137,7 @@ These do not block a DEV demo but block a real-user pilot:
 - An unanswered quote keeps the job locked until the posting expires (no timeout).
 - Pending answers from Shariq (docs/OPEN-QUESTIONS.md, 10 Nov): is the bill still required at Complete Job, should the customer get a "bill added" push.
 - Admin portal is not deployed yet; hosted email delivery of the second-factor code is unproven.
+
+## 10. Admin portal QA record (13 Nov 2026)
+
+The admin portal has its own log: `docs/ADMIN-QA.md` (click-through of every screen and action, the bugs found and fixed, the independent audit, what is still open). Counts on 13 Nov: 76 portal unit tests, the attack drill `scripts/challenge-admin-local.mjs` 39 of 39, 36 pgTAP files with 1,406 assertions, 256 worker tests. Re-run the drill and the click-through on the **deployed** portal before announcing it (real emailed code, Turnstile, documents and voice from real uploads, a stale session sent to the new-code page and back).
