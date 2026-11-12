@@ -59,6 +59,18 @@ Result: language, title, one main heading, no unlabelled fields, no images witho
 
 Not verified: layouts narrower than about 1000 px. The portal refuses to be framed (correct security header) and the browser tool cannot resize the viewport, so I could not measure them. The portal is a desktop tool; there are breakpoints at 1240, 1000 and 760 px. Check on a real tablet or a narrow window before launch.
 
+### Independent audit (performance-qa-auditor agent, 13 Nov) and fixes
+
+Verdict: yes with fixes, no critical findings. Production build pages render in about 30 to 90 ms on the local database; no N+1 queries, no `select('*')`, every list is paged. Security checks (headers, nonce CSP, cookies, open redirect, auth on every action, no secrets in the browser) passed.
+
+Fixed (commit `4a720c8` and the form fix below): static assets cached (reload 683 KB to 47 KB), logo 434 KB to 40 KB, unique page titles, badge contrast, Sign out kept on narrow screens, `<main>` landmark and skip link, database trouble shows "try again" instead of "not an admin".
+
+**Forms keep what was typed.** Before: a refused submit, or the trip to the new-code page, left an empty box. Now the shared form (`FormKit`) keeps the text in memory for refusals and in the browser tab (15 minutes) for the new-code trip; the report decision form keeps its choice and reason the same way. Verified in a real browser: duplicate category name refused with the text kept; a stale session sent to the code page and back with both fields restored (settings form and report Suspend form); a successful save clears the form and the draft.
+
+Open, decision needed: approving or rejecting a worker or resident does not ask for a fresh code (`admin_decide_verification`, also hide review, resume job, send message). Approving gives access to residents' details.
+
+Lower priority, not done: every detail-page view writes an audit row (duplicates on reload); no timeout on the portal's own database calls; jobs list search has no trigram index (fine below about 50k jobs).
+
 ### Still open
 
 1. **Invite email:** creating an invite does not email the person. The one-time link is shown once on screen and the admin has to send it. Decide with Shariq whether the portal should email it (needs the mail provider).

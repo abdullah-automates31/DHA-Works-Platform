@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import type { ActionState } from '@/lib/action';
 import { decideReportAction } from './actions';
 import { canDecide, choicesFor, REASON_MAX, type Choice } from './rules';
@@ -13,6 +13,35 @@ export function ReportDecision({ reportId, against }: { reportId: string; agains
   const [choice, setChoice] = useState<Choice>('keep_open');
   const [reason, setReason] = useState('');
   const options = choicesFor(against);
+
+  // A suspend needs a fresh code, which sends the person to another page and back. Keep the choice and the reason in
+  // this browser tab (15 minutes) so they are still there on return; a saved decision clears them.
+  const draftKey = `adm-draft:report-decision:${reportId}`;
+  useEffect(() => {
+    // Read after the first paint (not during it), so the server and browser render the same thing first.
+    const t = setTimeout(() => {
+      try {
+        const raw = sessionStorage.getItem(draftKey);
+        if (!raw) return;
+        const d = JSON.parse(raw) as { at?: number; choice?: string; reason?: string };
+        if (typeof d.at !== 'number' || Date.now() - d.at > 15 * 60_000) return void sessionStorage.removeItem(draftKey);
+        if (d.choice && options.some((o) => o.key === d.choice)) setChoice(d.choice as Choice);
+        if (typeof d.reason === 'string') setReason(d.reason.slice(0, REASON_MAX));
+      } catch {
+        /* the draft is a convenience only */
+      }
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  useEffect(() => {
+    try {
+      if (state.ok) sessionStorage.removeItem(draftKey);
+      else if (choice !== 'keep_open' || reason) sessionStorage.setItem(draftKey, JSON.stringify({ at: Date.now(), choice, reason }));
+    } catch {
+      /* ignore */
+    }
+  }, [state.ok, choice, reason, draftKey]);
   const current = options.find((o) => o.key === choice) ?? options[0]!;
   const verdict = canDecide(choice, reason);
 

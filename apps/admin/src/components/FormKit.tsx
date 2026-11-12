@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useActionState, useEffect, useRef } from 'react';
 import { Select } from '@/components/Select';
 import type { ActionState } from '@/lib/action';
@@ -30,17 +31,95 @@ type Props = {
 
 const initial: ActionState = {};
 
+const DRAFT_MINUTES = 15;
+const isTextKind = (k: FieldSpec['kind']) => k === 'textarea' || k === 'text' || k === 'number' || k === 'email';
+
+// Drafts live only in this browser tab (sessionStorage), for 15 minutes. Storage can be blocked or full: never fail because of it.
+function saveDraft(key: string, values: Record<string, string>) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), values }));
+  } catch {
+    /* the draft is a convenience only */
+  }
+}
+function clearDraft(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+function loadDraft(key: string): Record<string, string> | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at?: number; values?: Record<string, string> };
+    if (!parsed.values || typeof parsed.at !== 'number' || Date.now() - parsed.at > DRAFT_MINUTES * 60_000) {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+    return parsed.values;
+  } catch {
+    return null;
+  }
+}
+function restoreInto(form: HTMLFormElement | null, fields: FieldSpec[], values: Record<string, string>) {
+  if (!form) return;
+  for (const f of fields) {
+    const text = values[f.name];
+    if (!isTextKind(f.kind) || typeof text !== 'string') continue;
+    const el = form.elements.namedItem(f.name);
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.value = text;
+  }
+}
+
 /**
  * One generic form for the staff actions that are "a few fields and a button" (a note, a reason, a message).
  * The server action checks everything again and the database has the last word; this only shows the answer.
  */
 export function ActionForm({ action, hidden, fields, submit, tone = 'green', inline, resetOnOk = true, full }: Props) {
-  const [state, run, pending] = useActionState(action, initial);
+  const pathname = usePathname();
+  const draftKey = `adm-draft:${pathname}:${fields.map((f) => f.name).join(',')}:${JSON.stringify(hidden ?? {})}`;
+  const typed = useRef<Record<string, string>>({});
+
+  // Remember what was typed when the form is sent. If the action is refused (an error) or sends the person to enter a
+  // new code (a redirect), the text is put back instead of leaving an empty box. A successful save clears it.
+  const remembering = async (prev: ActionState, formData: FormData): Promise<ActionState> => {
+    const values: Record<string, string> = {};
+    for (const f of fields) {
+      const v = formData.get(f.name);
+      if (isTextKind(f.kind) && typeof v === 'string') values[f.name] = v;
+    }
+    typed.current = values;
+    saveDraft(draftKey, values);
+    // A redirect (new-code page) throws out of this line and leaves the saved draft for the trip back. Any answer that
+    // comes back here is settled: a save clears everything; a refusal keeps the text in memory (restored below).
+    const result = await action(prev, formData);
+    if (result.ok) typed.current = {};
+    clearDraft(draftKey);
+    return result;
+  };
+
+  const [state, run, pending] = useActionState(remembering, initial);
   const ref = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state.ok && resetOnOk) ref.current?.reset();
   }, [state, resetOnOk]);
+
+  // React clears an uncontrolled form after every action, even one that returned an error: put the typed text back.
+  useEffect(() => {
+    if (!state.error) return;
+    const t = setTimeout(() => restoreInto(ref.current, fields, typed.current), 0);
+    return () => clearTimeout(t);
+  }, [state, fields]);
+
+  // Coming back from the new-code page: the page is rebuilt, so read the saved text from this browser tab.
+  useEffect(() => {
+    const draft = loadDraft(draftKey);
+    if (draft) restoreInto(ref.current, fields, draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
 
   const btnClass = `btn${tone === 'red' ? ' red' : tone === 'out' ? ' out' : tone === 'soft' ? ' soft' : ''}${full ? ' full' : ''}${pending ? ' off' : ''}`;
 
