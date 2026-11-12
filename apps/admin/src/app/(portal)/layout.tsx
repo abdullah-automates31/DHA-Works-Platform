@@ -21,10 +21,11 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   await requireAdmin();
   return (
     <div className="app">
+      <a className="skip" href="#main">Skip to content</a>
       <Suspense fallback={<aside className="nav" />}>
         <SidebarWithCounts />
       </Suspense>
-      <div className="main">{children}</div>
+      <main id="main" tabIndex={-1} className="main">{children}</main>
     </div>
   );
 }

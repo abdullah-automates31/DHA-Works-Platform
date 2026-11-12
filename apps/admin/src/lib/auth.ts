@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
-import { parseStatus } from './status.ts';
+import { parseStatus, statusFailure } from './status.ts';
 import { createClient } from './supabase/server.ts';
 
 /**
@@ -24,7 +24,11 @@ export const requireSession = cache(async function requireSession() {
  */
 export const requireAdmin = cache(async function requireAdmin() {
   const session = await requireSession();
-  const { data: status } = await session.supabase.rpc('admin_session_status');
+  const { data: status, error } = await session.supabase.rpc('admin_session_status');
+  // The check itself failed (database or network trouble): show "try again", not "that account cannot use the portal".
+  const failure = statusFailure(error);
+  if (failure === 'signin') redirect('/signin');
+  if (failure === 'unavailable') throw new Error('The session check could not be completed');
   const s = parseStatus(status);
   if (s === 'not_admin') redirect('/signin?e=notadmin');
   if (s === 'needs_code') redirect('/signin/code');

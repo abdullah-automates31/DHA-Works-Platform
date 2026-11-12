@@ -5,6 +5,8 @@ import { parseDashboard } from '@/features/dashboard/parse';
 import { agoText, attentionHref, barPercent, dateLine, KIND_CHIP, maxStage, oldestText, STAGE_ROWS } from '@/features/dashboard/rules';
 import { requireSession } from '@/lib/auth';
 
+export const metadata = { title: 'Dashboard' };
+
 export default async function DashboardPage() {
   const { supabase, user } = await requireSession();
   const { data, error } = await supabase.rpc('admin_dashboard');

@@ -3,6 +3,8 @@ import { safeNext } from '@/lib/stepup';
 import { ConfirmForm } from './ConfirmForm';
 
 /** Asked for before a sensitive action when the last code is older than 15 minutes (migration 0048). */
+export const metadata = { title: 'Confirm it is you' };
+
 export default async function ConfirmPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   await requireAdmin();
   const { next } = await searchParams;

@@ -7,7 +7,10 @@
 @media (max-width:1000px){
   .app{flex-direction:column}
   .nav{width:auto;flex-direction:row;flex-wrap:wrap;padding:12px 16px;gap:4px}
-  .nav .sep,.nav .me{display:none}
+  .nav .sep{display:none}
+  /* Keep Sign out reachable on a narrow window: hide the avatar and name, keep only the button. */
+  .nav .me{display:flex;margin:0 0 0 auto;padding:0;border:0;align-items:center}
+  .nav .me>:not(form){display:none}
   .top{flex-wrap:wrap;padding:16px 20px}
   .ct{padding:20px}
 }

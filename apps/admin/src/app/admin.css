@@ -11,7 +11,7 @@
 .ni.on{background:rgba(255,255,255,.15);color:#fff;font-weight:800}
 .ni svg,.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ni .n{margin-left:auto;background:var(--gold);color:#241B00;border-radius:10px;font-size:12px;font-weight:800;padding:1px 8px}
-.ni .n.r{background:#E5604F;color:#fff}
+.ni .n.r{background:#C8402F;color:#fff}
 .sep{font-size:11px;letter-spacing:.08em;color:#9DBBAC;font-weight:800;padding:18px 12px 6px;text-transform:uppercase}
 .me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:14px 8px 0;border-top:1px solid rgba(255,255,255,.14);font-size:13px}
 .me b{display:block;font-weight:800}.me span{color:#B9D3C4;font-size:12px}
@@ -166,3 +166,8 @@ select.inp:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://w
 /* Keyboard users: every link, button and field shows where the focus is; people who ask for less motion get none. */
 a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* Skip link: first thing a keyboard user reaches; invisible until focused. */
+.skip{position:absolute;left:-9999px;top:8px;z-index:200;background:#fff;color:var(--g);font-weight:800;padding:10px 14px;border-radius:10px;text-decoration:none}
+.skip:focus{left:8px;outline:2px solid var(--gold)}
+.main:focus{outline:0}

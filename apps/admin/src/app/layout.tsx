@@ -7,7 +7,7 @@ import './portal.css';
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-jakarta', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'DHA Works Admin',
+  title: { default: 'DHA Works Admin', template: '%s | DHA Works Admin' },
   description: 'DHA Works staff portal',
   robots: { index: false, follow: false },
 };
