@@ -93,7 +93,7 @@ export default function JobStatusScreen() {
       void run(() => completeJob(client, { jobId, materials, bill, billAttached }), () => router.push(cashHref(jobId)));
     if (materials > 0 && !billAttached) {
       // The accepted quote had materials: the bill photo is required before the job can be completed.
-      Alert.alert(t('myjobs.billTitle'), t('myjobs.billBody'), [
+      Alert.alert(t('myjobs.billMissingTitle'), t('myjobs.billMissingBody'), [
         { text: t('documents.menu.takePhoto'), onPress: () => void takeBill('camera').then((bill) => bill && complete(bill)) },
         { text: t('documents.menu.chooseLibrary'), onPress: () => void takeBill('library').then((bill) => bill && complete(bill)) },
         { text: t('documents.menu.cancel'), style: 'cancel' },
