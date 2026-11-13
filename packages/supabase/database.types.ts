@@ -90,6 +90,24 @@ export type Database = {
           },
         ]
       }
+      admin_enroll_proofs: {
+        Row: {
+          proven_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          proven_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          proven_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_factor_challenges: {
         Row: {
           code_hash: string
@@ -131,18 +149,39 @@ export type Database = {
           },
         ]
       }
+      admin_totp_factors: {
+        Row: {
+          factor_id: string
+          registered_at: string
+          user_id: string
+        }
+        Insert: {
+          factor_id: string
+          registered_at?: string
+          user_id: string
+        }
+        Update: {
+          factor_id?: string
+          registered_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_verified_sessions: {
         Row: {
+          fresh_at: string
           session_id: string
           user_id: string
           verified_at: string
         }
         Insert: {
+          fresh_at?: string
           session_id: string
           user_id: string
           verified_at?: string
         }
         Update: {
+          fresh_at?: string
           session_id?: string
           user_id?: string
           verified_at?: string
@@ -2152,6 +2191,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_enroll_proof_status: { Args: never; Returns: boolean }
       admin_helpline_callback_done: {
         Args: { p_call: string }
         Returns: undefined
@@ -2205,6 +2245,8 @@ export type Database = {
         }
         Returns: string
       }
+      admin_mark_session_verified: { Args: never; Returns: string }
+      admin_register_totp: { Args: { p_factor: string }; Returns: string }
       admin_remove_staff: {
         Args: { p_profile: string; p_reason: string }
         Returns: undefined
@@ -2233,6 +2275,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_reset_totp: { Args: never; Returns: undefined }
       admin_reviews_list: {
         Args: {
           p_category?: number
@@ -2258,7 +2301,6 @@ export type Database = {
         Returns: undefined
       }
       admin_session_status: { Args: never; Returns: string }
-      admin_step_up_status: { Args: never; Returns: string }
       admin_set_account_status: {
         Args: { p_profile: string; p_reason: string; p_suspend: boolean }
         Returns: undefined
@@ -2273,6 +2315,9 @@ export type Database = {
       }
       admin_settings_get: { Args: never; Returns: Json }
       admin_staff_list: { Args: never; Returns: Json }
+      admin_step_up_status: { Args: never; Returns: string }
+      admin_totp_factor: { Args: never; Returns: string }
+      admin_totp_status: { Args: never; Returns: string }
       admin_update_category: {
         Args: {
           p_active: boolean
@@ -2316,15 +2361,15 @@ export type Database = {
         Args: { p_bill_path: string; p_job_id: string }
         Returns: undefined
       }
-      check_staff_invite: {
-        Args: { p_email: string; p_token: string }
-        Returns: boolean
-      }
       can_upload_media: { Args: { p_bucket: string }; Returns: boolean }
       can_view_job: { Args: { p_job: string }; Returns: boolean }
       cancel_job: {
         Args: { p_job_id: string; p_reason?: string }
         Returns: undefined
+      }
+      check_staff_invite: {
+        Args: { p_email: string; p_token: string }
+        Returns: boolean
       }
       clear_my_notifications: { Args: never; Returns: undefined }
       complete_job: {

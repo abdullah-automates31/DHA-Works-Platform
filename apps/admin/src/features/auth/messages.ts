@@ -39,3 +39,34 @@ export function sendMessage(httpStatus: number): string {
   if (httpStatus === 403 || httpStatus === 401) return 'This session cannot request a code. Sign in again.';
   return 'The code could not be sent. Try again in a minute, or ask another administrator for help.';
 }
+
+/** What `admin_mark_session_verified` answered after a good authenticator code ('ok', 'locked', 'not_ready'). Anything else counts as "try again". */
+export function markMessage(status: unknown): string {
+  switch (status) {
+    case 'locked':
+      return 'Too many wrong codes. Wait 15 minutes, then try again.';
+    case 'not_ready':
+      return 'That code could not be used for this session. Wait for a new code in your app and try again.';
+    default:
+      return 'That could not be completed. Try again.';
+  }
+}
+
+/** What Supabase Auth said when an authenticator code was checked. A wrong code and an unknown factor read the same. */
+export function totpVerifyMessage(error: { code?: string | null; status?: number | null } | null | undefined): string {
+  if (error && (error.status === 429 || error.code === 'over_request_rate_limit' || error.code === 'over_email_send_rate_limit')) {
+    return 'Too many tries. Wait a minute, then try again.';
+  }
+  return 'That code is not right. Open your authenticator app and use the current code.';
+}
+
+/** What `admin_register_totp` answered ('ok', 'proof', 'invalid'). */
+export function registerMessage(status: unknown): string {
+  if (status === 'proof') return 'The emailed code has run out. Ask for a new code and start again.';
+  return 'The authenticator could not be saved. Start the setup again.';
+}
+
+/** A name for a new authenticator entry: unique per attempt, because Supabase refuses two factors with the same name. */
+export function factorName(now: number = Date.now()): string {
+  return `DHA Works ${now.toString(36)}`;
+}

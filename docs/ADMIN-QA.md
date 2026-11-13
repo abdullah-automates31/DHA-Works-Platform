@@ -6,7 +6,7 @@ Local stack, real browser, fake `[FAKE]` data only. Updated as each pass is done
 
 | Area | Result |
 |---|---|
-| Sign-in: email + password, then the emailed code (dev-log mode) | Works. |
+| Sign-in: email + password, then the authenticator code (first time: emailed code in dev-log mode, then QR code); step-up on Approve | Works (14 Nov, real browser, local stack). |
 | All list pages (dashboard, workers, residents, reports, jobs, cancellations, helpline, reviews, users, settings, confirm) | Load, no errors (200). |
 | All detail pages (worker, resident, report, job, user), `/accept-invite` | Load, no errors. |
 | Worker review: tick checklist, Approve | Works. Banner shown, queue counts update. |

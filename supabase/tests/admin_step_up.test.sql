@@ -15,7 +15,14 @@ begin
   perform set_config('request.jwt.claims', '', true);
   execute 'reset role';
 end $$;
-grant execute on function tests.act(uuid, uuid), tests.back() to authenticated;
+create function tests.act_totp(p_uid uuid, p_session uuid, p_ts bigint) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', p_uid, 'role', 'authenticated', 'session_id', p_session, 'aal', 'aal2',
+      'amr', json_build_array(json_build_object('method', 'totp', 'timestamp', p_ts), json_build_object('method', 'password', 'timestamp', p_ts - 5)))::text, true);
+  execute 'set local role authenticated';
+end $$;
+grant execute on function tests.act(uuid, uuid), tests.act_totp(uuid, uuid, bigint), tests.back() to authenticated;
 create function tests.msg(p_sql text) returns text language plpgsql as $$
 begin
   execute p_sql;
@@ -47,6 +54,12 @@ insert into public.admin_verified_sessions (session_id, user_id, verified_at, fr
   ('00000000-0000-0000-0000-00000000a101', '00000000-0000-0000-0000-0000000000a1', now() - interval '1 hour', now() - interval '1 hour'),
   ('00000000-0000-0000-0000-00000000a102', '00000000-0000-0000-0000-0000000000a1', now(), now()),
   ('00000000-0000-0000-0000-00000000a104', '00000000-0000-0000-0000-0000000000a1', now() - interval '5 hours', now() - interval '5 hours');
+
+-- The admin has a registered authenticator; sessions a101 and a104 are aal2 sessions that used it (0052).
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at, secret)
+  values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', 'test', 'totp', 'verified', now(), now(), 'JBSWY3DPEHPK3PXP');
+insert into public.admin_totp_factors (factor_id, user_id) values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1');
+update auth.sessions set aal = 'aal2', factor_id = '00000000-0000-0000-0000-0000000000f1' where id in ('00000000-0000-0000-0000-00000000a101', '00000000-0000-0000-0000-00000000a104');
 
 -- 1. A stale (verified but not fresh) session is refused by every sensitive function ----------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
@@ -83,34 +96,34 @@ select isnt(tests.msg($$select public.admin_job_resume('00000000-0000-0000-0000-
 select isnt(tests.msg($$select public.admin_send_message('00000000-0000-0000-0000-000000000001', 'hello')$$), 'confirm with a new code', 'a fresh session is not asked for a code by admin_send_message');
 select tests.back();
 
--- 3. A new code makes the stale session fresh ------------------------------------------------------------------
-insert into tests.codes values ('a101', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101'));
-select matches((select v from tests.codes where k = 'a101'), '^[0-9]{6}$', 'a verified session can ask for a step-up code');
-select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
-select is(public.admin_verify_code('000000'), 'wrong', 'a wrong code does not freshen the session');
+-- 3. A fresh authenticator code makes the stale session fresh (0052) -----------------------------------------------
+select tests.act_totp('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101', extract(epoch from now())::bigint - 600);
+select is(public.admin_mark_session_verified(), 'not_ready', 'a code typed 10 minutes ago does not freshen the session');
 select is(public.admin_step_up_status(), 'needs_code', 'still stale');
-select is(public.admin_verify_code((select v from tests.codes where k = 'a101')), 'ok', 'the right code is accepted');
+select tests.back();
+select tests.act_totp('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101', extract(epoch from now())::bigint);
+select is(public.admin_mark_session_verified(), 'ok', 'a code typed just now is accepted');
 select is(public.admin_step_up_status(), 'fresh', 'now fresh');
 select lives_ok($$select public.admin_add_category('Tile Cleaning', 'Floors and grout')$$, 'the sensitive action now works');
 select tests.back();
 select is((select count(*)::int from public.audit_log where action = 'admin_step_up'), 1, 'the step-up is audited (not as a sign-in)');
 select is((select count(*)::int from public.audit_log where action = 'admin_signed_in'), 0, 'and no extra sign-in is recorded');
 
--- 4. The code limits still apply to step-up --------------------------------------------------------------------
-select throws_ok($$select public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101')$$, 'P0001', 'wait a minute before asking for another code', 'one code a minute');
+-- 4. A step-up never works for a session that is not aal2 with the registered authenticator ------------------------
+select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
+select is(public.admin_mark_session_verified(), 'not_ready', 'a token without the aal2 claim cannot be marked');
+select tests.back();
 
--- 5. A session whose 4 hours are over is verified again by a code (and is fresh) -----------------------------------
+-- 5. An old verification still counts (no expiry), and a new code renews freshness -----------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
 select is(public.is_admin(), true, 'a verification 5 hours old still counts (no expiry since the 14 Nov session migration)');
+select is(public.admin_step_up_status(), 'needs_code', 'but it is not fresh');
 select tests.back();
-delete from public.admin_factor_challenges where created_at > now() - interval '5 minutes';
-insert into tests.codes values ('a104', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104'));
-select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
-select is(public.admin_verify_code((select v from tests.codes where k = 'a104')), 'ok', 'the code renews it');
-select is(public.is_admin(), true, 'it is a verified session again');
-select is(public.admin_step_up_status(), 'fresh', 'and fresh');
+select tests.act_totp('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104', extract(epoch from now())::bigint);
+select is(public.admin_mark_session_verified(), 'ok', 'a new authenticator code renews it');
+select is(public.admin_step_up_status(), 'fresh', 'and it is fresh');
 select tests.back();
-select is((select count(*)::int from public.audit_log where action = 'admin_signed_in'), 1, 'recorded as a sign-in (the old verification had run out)');
+select is((select count(*)::int from public.audit_log where action = 'admin_step_up'), 2, 'recorded as a second step-up');
 
 -- 6. Everyone else still gets "not available" (the admin check comes first) -----------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a103');

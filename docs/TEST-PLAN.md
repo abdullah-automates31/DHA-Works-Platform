@@ -18,7 +18,7 @@ Goal: prove that the customer app, the worker app and the admin portal work toge
 | Resident 2 | Shariq (+923342477874) | customer app, second independent resident |
 | Worker A | Abdullah's worker account (+923323524005) | real phone, push test device |
 | Workers B, C, D | Demo Worker Plumber, Electrician, All-rounder (+923000000201 to 203) | created by `supabase/dev/seed_dev_demo_workers.sql`; add their codes in the Supabase dashboard first |
-| Admin | one of the 3 admin accounts on DEV | portal, password + emailed code |
+| Admin | one of the 3 admin accounts on DEV | portal, password + authenticator app |
 
 Before the run: seed the demo workers, check `supabase db query --linked "select count(*) from public.profiles where role='worker' and verification_status='approved'"` is at least 4, and that every worker covers the phases and trades of the test jobs.
 
@@ -41,7 +41,7 @@ Run once with Resident 1 and Workers A and B competing; keep the log of what eac
 
 | Step | Actor / app | Action | Expected result |
 | --- | --- | --- | --- |
-| 1 | Admin | sign in (password + emailed code) | dashboard loads; second factor email arrives within a minute |
+| 1 | Admin | sign in (password + authenticator code; first time: emailed code, then scan the QR code) | dashboard loads |
 | 2 | Resident (customer) | sign in with phone code | home shows the 8 categories |
 | 3 | Resident | post a job: category, title, description, 1 photo, voice note optional, date and time (arrival) or ASAP | job appears in "My jobs" as Open |
 | 4 | Workers A, B (worker) | pull to refresh Home; push on A's closed phone | job in feed within 10 s; **push "New Job Available" arrives with the app closed** |
@@ -79,7 +79,7 @@ Run once with Resident 1 and Workers A and B competing; keep the log of what eac
 - A4 Cancellation requests: approve one, decline one with a note.
 - A5 Helpline log: log a call, mark a call-back done.
 - A6 Settings: change a window, add a category, deactivate a phase, invite staff (link shown once, works once), remove staff.
-- A7 Sign-out, then open a portal URL directly: redirected to sign-in. Wait for the 4-hour verification to expire: the portal asks for a new code.
+- A7 Sign-out, then open a portal URL directly: redirected to sign-in. A verified session does not expire (14 Nov decision); sensitive actions ask for a fresh authenticator code every 15 minutes.
 
 ## 6. Automated checks (run on every push by `.github/workflows/ci.yml`)
 

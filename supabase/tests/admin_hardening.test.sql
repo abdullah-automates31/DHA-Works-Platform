@@ -34,8 +34,8 @@ select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-000
 select is(public.is_admin(), true, 'a verification 3 hours old still counts');
 select tests.back();
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a102');
-select is(public.is_admin(), false, 'a verification 5 hours old no longer counts');
-select is(public.admin_session_status(), 'needs_code', 'the portal asks for a new code');
+select is(public.is_admin(), true, 'a verification 5 hours old still counts (no expiry since the 14 Nov session migration)');
+select is(public.admin_session_status(), 'verified', 'and the portal does not ask for a new code');
 select tests.back();
 
 -- 2. Wrong guesses are capped per account, across codes ---------------------------------------------------------

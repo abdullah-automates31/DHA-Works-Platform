@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cleanCode, cleanEmail, codeMessage, sendMessage, validPassword } from './messages.ts';
+import { cleanCode, cleanEmail, codeMessage, factorName, markMessage, registerMessage, sendMessage, totpVerifyMessage, validPassword } from './messages.ts';
 
 test('emails are trimmed and lower-cased; junk and oversize values are refused', () => {
   assert.equal(cleanEmail('  Staff@DHA-Works.Example '), 'staff@dha-works.example');
@@ -33,4 +33,20 @@ test('send errors never reveal whether an account exists', () => {
   assert.match(sendMessage(403), /Sign in again/);
   assert.match(sendMessage(502), /could not be sent/);
   assert.doesNotMatch(sendMessage(403) + sendMessage(502), /admin account|not an admin/i);
+});
+
+test('authenticator messages: each answer has a plain sentence and unknown ones read as "try again"', () => {
+  assert.match(markMessage('locked'), /15 minutes/);
+  assert.match(markMessage('not_ready'), /could not be used/);
+  assert.match(markMessage(undefined), /Try again/);
+  assert.match(totpVerifyMessage({ status: 429 }), /Too many tries/);
+  assert.match(totpVerifyMessage({ code: 'mfa_verification_failed', status: 422 }), /not right/);
+  assert.match(totpVerifyMessage(null), /not right/);
+  assert.match(registerMessage('proof'), /emailed code/);
+  assert.match(registerMessage('invalid'), /Start the setup again/);
+});
+
+test('factor names are different every time', () => {
+  assert.notEqual(factorName(1_000_000), factorName(1_000_001));
+  assert.match(factorName(), /^DHA Works [0-9a-z]+$/);
 });

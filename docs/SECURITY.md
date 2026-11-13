@@ -159,7 +159,7 @@ Sign-in is a phone number and a one-time code. These controls limit what a SIM s
 
 ## 16. Admin portal sign-in (7 Nov 2026, migrations 0037 to 0039, docs/ADMIN-PORTAL.md)
 
-Staff sign in with email + password and then an emailed six-digit code (the interim second factor; Supabase's authenticator-app MFA turned out to be free on every plan, so replacing it is a decision, not a plan limit). Every control was attacked directly against the API, bypassing the screens (`scripts/challenge-admin-local.mjs`, 38 checks, all held), and the screens were driven in a real browser.
+Staff sign in with email + password and then a six-digit code from an authenticator app (migration 0052; the emailed code now only proves the mailbox when an authenticator is set up or replaced). Every control was attacked directly against the API, bypassing the screens (`scripts/challenge-admin-local.mjs`, 67 checks, all held, including a stranger who enrols an authenticator with only the password, the guess lock and recovery), and the screens were driven in a real browser.
 
 | Risk | Control | Status |
 |---|---|---|
@@ -171,7 +171,7 @@ Staff sign in with email + password and then an emailed six-digit code (the inte
 | Abuse of suspend | Cannot suspend yourself or another admin; reason required; ends sessions and push tokens (0036) and flags the worker's live jobs for staff. | Built, tested |
 | Web layer | No service-role key in the app; server actions re-validate everything; proxy refreshes cookies and redirects the signed out; CSP, no framing, no referrer, no-store, nosniff, HSTS. | Built. CSP still allows inline scripts (OPEN-QUESTIONS, admin portal item 4). |
 | Hardening 10 Nov (migration 0046, not yet on DEV) | Verified session 4 hours (was 12). Wrong code guesses are capped per ACCOUNT (10 an hour across all codes, each one audited as `admin_code_wrong`). The invitation page checks the one-time token (`check_staff_invite`) before it creates any account. CSP uses a per-request nonce with `strict-dynamic`: no `'unsafe-inline'` for scripts, `base-uri 'none'`, `upgrade-insecure-requests`. Session cookies are HttpOnly, SameSite=Lax, Secure in production (`lib/cookies.ts`). Extra headers: CORP same-origin, HSTS preload, no source maps. | Built, tested (pgTAP `admin_hardening` 14, unit 55, live check of nonces) |
-| Weaker second factor | One mailbox can reset the password and read the code. Move to TOTP (free on every plan) before production (`safety:prod-ready` blocker `ADMIN_2FA_EMAIL`). | **Open (decision)** |
+| Weaker second factor | **Done 14 Nov (migration 0052):** authenticator-app codes replace the emailed code for sign-in and step-up. The emailed code remains for set-up and lost-phone recovery only, so one mailbox that can read the code and reset the password can still replace the authenticator (documented limit; recovery needs a second admin if the mailbox is lost too). Auth does not limit wrong TOTP codes, so the database locks a factor after 10 unverified attempts in 15 minutes. | Built, pgTAP (`admin_totp`), attack drill, browser-tested |
 | Mail delivery | `admin-2fa` needs a mail provider and secrets; not deployed. | **Open** |
 
 ## 17. Admin portal operations (8 Nov 2026, migrations 0041 and 0042)

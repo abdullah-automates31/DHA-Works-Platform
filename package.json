@@ -25,7 +25,7 @@
     "db:local": "node scripts/local-supabase.mjs",
     "safety:supabase": "node scripts/check-supabase-config.mjs",
     "safety:prod-ready": "node scripts/check-production-ready.mjs",
-    "safety:test": "node --test \"scripts/*.test.mjs\"",
+    "safety:test": "node --test \"scripts/*.test.mjs\" \"scripts/lib/*.test.mjs\"",
     "supabase:config-push": "node scripts/supabase-config-push.mjs"
   }
 }
