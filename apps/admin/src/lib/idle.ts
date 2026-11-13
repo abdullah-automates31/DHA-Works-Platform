@@ -1,7 +1,8 @@
 // Idle logout: a signed-in staff member who does nothing for 30 minutes is signed out (Supabase's own session
 // timebox needs a paid plan). Pure rules here; src/proxy.ts applies them with an HttpOnly cookie.
 
-export const IDLE_LIMIT_MS = 30 * 60 * 1000;
+/** No idle logout (user decision, 14 Nov 2026): staff stay signed in until they sign out. A finite IDLE_LIMIT_SECONDS (5 or more) turns it back on for tests. */
+export const IDLE_LIMIT_MS = Number.POSITIVE_INFINITY;
 /** The activity cookie is refreshed at most once a minute, so ordinary browsing does not rewrite it on every request. */
 export const IDLE_TOUCH_MS = 60 * 1000;
 export const ACTIVE_COOKIE = 'dha_active';
@@ -37,4 +38,13 @@ export function touchIntervalMs(limitMs: number): number {
 /** True when the cookie should be written again. */
 export function shouldTouch(lastMs: number | null, nowMs: number, intervalMs: number = IDLE_TOUCH_MS): boolean {
   return lastMs === null || nowMs - lastMs >= intervalMs;
+}
+
+/**
+ * True when a signed-in session has no readable activity cookie. Signing in sets it, so a missing (deleted) or damaged
+ * one means the idle clock cannot be trusted: the session ends and the person signs in again. Without this, deleting
+ * the cookie would have restarted the 30 minutes.
+ */
+export function activityMissing(signedIn: boolean, lastMs: number | null): boolean {
+  return signedIn && (lastMs === null || !Number.isFinite(lastMs));
 }

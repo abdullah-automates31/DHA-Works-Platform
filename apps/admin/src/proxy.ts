@@ -2,8 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@dha/supabase';
 import { sessionCookie } from './lib/cookies';
-import { ACTIVE_COOKIE, idleExpired, idleLimitMs, parseActive, shouldTouch, staleActive, touchIntervalMs } from './lib/idle';
+import { ACTIVE_COOKIE, activityMissing, idleExpired, idleLimitMs, parseActive, shouldTouch, staleActive, touchIntervalMs } from './lib/idle';
 import { contentSecurityPolicy, makeNonce } from './lib/security-headers';
+import { timeoutFetch } from './lib/timeout-fetch';
 
 // Runs before every page. Four jobs:
 //  1. Give the page a fresh CSP nonce, so only Next.js's own scripts run (no inline script can be injected).
@@ -29,6 +30,7 @@ export async function proxy(request: NextRequest) {
 
   let response = withCsp(NextResponse.next({ request: { headers: forward } }));
   const supabase = createServerClient<Database>(url, anonKey, {
+    global: { fetch: timeoutFetch(10_000) },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (list) => {
@@ -45,7 +47,9 @@ export async function proxy(request: NextRequest) {
   const last = parseActive(request.cookies.get(ACTIVE_COOKIE)?.value);
   const signedIn = !!data?.claims?.sub;
   const limit = idleLimitMs(process.env.IDLE_LIMIT_SECONDS);
-  if (signedIn && idleExpired(last, now, limit)) {
+  const idleOn = Number.isFinite(limit);
+  // Signing in sets the activity cookie, so a signed-in session without one has had it deleted: end it like an idle one.
+  if (idleOn && signedIn && (idleExpired(last, now, limit) || activityMissing(signedIn, last))) {
     await supabase.auth.signOut(); // ends the session on the server and clears the session cookies through setAll
     const redirect = withCsp(NextResponse.redirect(new URL('/signin?e=idle', request.url)));
     for (const c of response.cookies.getAll()) redirect.cookies.set(c);
@@ -63,7 +67,7 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
   if (clearActive) response.cookies.set(ACTIVE_COOKIE, '', { ...sessionCookie(undefined), maxAge: 0 });
-  if (signedIn && shouldTouch(last, now, touchIntervalMs(limit))) response.cookies.set(ACTIVE_COOKIE, String(now), { ...sessionCookie(undefined), maxAge: 30 * 24 * 60 * 60 });
+  if (idleOn && signedIn && shouldTouch(last, now, touchIntervalMs(limit))) response.cookies.set(ACTIVE_COOKIE, String(now), { ...sessionCookie(undefined), maxAge: 30 * 24 * 60 * 60 });
   return response;
 }
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseSiteverify, turnstileMode, verifyTurnstile } from './turnstile.ts';
+import { parseSiteverify, turnstileMode, verifyTurnstile, clientIp } from './turnstile.ts';
 
 const ok = (body: unknown, status = 200) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 
@@ -49,4 +49,19 @@ test('the request carries the secret, the token and the address', async () => {
   assert.equal((seen as unknown as URLSearchParams).get('secret'), 'sec');
   assert.equal((seen as unknown as URLSearchParams).get('response'), 'tok');
   assert.equal((seen as unknown as URLSearchParams).get('remoteip'), '9.9.9.9');
+});
+
+test('clientIp uses only headers the platform sets, and only real-looking addresses', () => {
+  const h = (o: Record<string, string>) => (n: string) => o[n] ?? null;
+  assert.equal(clientIp(h({ 'x-vercel-forwarded-for': '203.0.113.9' })), '203.0.113.9');
+  assert.equal(clientIp(h({ 'x-real-ip': '2001:db8::1' })), '2001:db8::1');
+  assert.equal(clientIp(h({ 'x-vercel-forwarded-for': '203.0.113.9', 'x-real-ip': '198.51.100.1' })), '203.0.113.9');
+  // a visitor-supplied x-forwarded-for is never trusted
+  assert.equal(clientIp(h({ 'x-forwarded-for': '6.6.6.6' })), null);
+  assert.equal(clientIp(h({ 'x-forwarded-for': '6.6.6.6', 'x-real-ip': '198.51.100.1' })), '198.51.100.1');
+  // junk is dropped
+  assert.equal(clientIp(h({ 'x-real-ip': 'not an ip' })), null);
+  assert.equal(clientIp(h({ 'x-real-ip': '1.2.3.4; drop table' })), null);
+  assert.equal(clientIp(h({ 'x-real-ip': 'a'.repeat(100) })), null);
+  assert.equal(clientIp(h({})), null);
 });

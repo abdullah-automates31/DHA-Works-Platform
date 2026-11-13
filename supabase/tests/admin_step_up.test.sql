@@ -16,6 +16,14 @@ begin
   execute 'reset role';
 end $$;
 grant execute on function tests.act(uuid, uuid), tests.back() to authenticated;
+create function tests.msg(p_sql text) returns text language plpgsql as $$
+begin
+  execute p_sql;
+  return '';
+exception when others then
+  return sqlerrm;
+end $$;
+grant execute on function tests.msg(text) to authenticated;
 create table tests.codes (k text primary key, v text);
 grant all on tests.codes to authenticated;
 
@@ -55,6 +63,11 @@ select throws_ok($$select public.admin_save_settings('1092', true, 7, 7)$$, 'P00
 select throws_ok($$select public.admin_add_category('Painting', 'Walls')$$, 'P0001', 'confirm with a new code', 'admin_add_category needs a fresh code');
 select throws_ok($$select public.admin_update_category(1::smallint, 'Plumbing', 'Pipes', true)$$, 'P0001', 'confirm with a new code', 'admin_update_category needs a fresh code');
 select throws_ok($$select public.admin_set_phase_active(5::smallint, true)$$, 'P0001', 'confirm with a new code', 'admin_set_phase_active needs a fresh code');
+select throws_ok($$select public.admin_decide_verification('00000000-0000-0000-0000-000000000001', 'approve', 'ok', '{}'::jsonb)$$, 'P0001', 'confirm with a new code', 'admin_decide_verification needs a fresh code');
+select throws_ok($$select public.admin_report_decide('00000000-0000-0000-0000-000000000001', 'close', 'because')$$, 'P0001', 'confirm with a new code', 'admin_report_decide needs a fresh code');
+select throws_ok($$select public.admin_set_review_hidden('00000000-0000-0000-0000-000000000001', true, 'because')$$, 'P0001', 'confirm with a new code', 'admin_set_review_hidden needs a fresh code');
+select throws_ok($$select public.admin_job_resume('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_job_resume needs a fresh code');
+select throws_ok($$select public.admin_send_message('00000000-0000-0000-0000-000000000001', 'hello')$$, 'P0001', 'confirm with a new code', 'admin_send_message needs a fresh code');
 select tests.back();
 
 -- 2. A fresh session works -------------------------------------------------------------------------------------
@@ -63,6 +76,11 @@ select is(public.admin_step_up_status(), 'fresh', 'a fresh session is reported f
 select lives_ok($$select public.admin_save_settings('1092', true, 7, 7)$$, 'a fresh session can save settings');
 select lives_ok($$select public.invite_staff('new@test.dev')$$, 'and invite staff');
 select lives_ok($$select public.admin_set_account_status('00000000-0000-0000-0000-0000000000b1', true, 'because')$$, 'and suspend a worker');
+select isnt(tests.msg($$select public.admin_decide_verification('00000000-0000-0000-0000-000000000001', 'approve', 'ok', '{}'::jsonb)$$), 'confirm with a new code', 'a fresh session is not asked for a code by admin_decide_verification');
+select isnt(tests.msg($$select public.admin_report_decide('00000000-0000-0000-0000-000000000001', 'close', 'because')$$), 'confirm with a new code', 'a fresh session is not asked for a code by admin_report_decide');
+select isnt(tests.msg($$select public.admin_set_review_hidden('00000000-0000-0000-0000-000000000001', true, 'because')$$), 'confirm with a new code', 'a fresh session is not asked for a code by admin_set_review_hidden');
+select isnt(tests.msg($$select public.admin_job_resume('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'a fresh session is not asked for a code by admin_job_resume');
+select isnt(tests.msg($$select public.admin_send_message('00000000-0000-0000-0000-000000000001', 'hello')$$), 'confirm with a new code', 'a fresh session is not asked for a code by admin_send_message');
 select tests.back();
 
 -- 3. A new code makes the stale session fresh ------------------------------------------------------------------
@@ -83,7 +101,7 @@ select throws_ok($$select public.admin_issue_challenge('00000000-0000-0000-0000-
 
 -- 5. A session whose 4 hours are over is verified again by a code (and is fresh) -----------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
-select is(public.is_admin(), false, 'a verification 5 hours old no longer counts');
+select is(public.is_admin(), true, 'a verification 5 hours old still counts (no expiry since the 14 Nov session migration)');
 select tests.back();
 delete from public.admin_factor_challenges where created_at > now() - interval '5 minutes';
 insert into tests.codes values ('a104', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104'));

@@ -3,11 +3,12 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cleanCode, cleanEmail, codeMessage, GENERIC_SIGN_IN_ERROR, sendMessage, validPassword } from '@/features/auth/messages';
+import { startActivity } from '@/lib/activity';
 import { parseStatus } from '@/lib/status';
 import { publicEnv } from '@/lib/env';
 import { safeNext } from '@/lib/stepup';
 import { createClient } from '@/lib/supabase/server';
-import { verifyTurnstile } from '@/lib/turnstile';
+import { clientIp, verifyTurnstile } from '@/lib/turnstile';
 
 export type FormState = { error?: string; info?: string };
 
@@ -39,8 +40,8 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
 
   // Bot check first (Cloudflare Turnstile, verified here on the server). It never says which of the two checks failed.
   const h = await headers();
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip');
-  const human = await verifyTurnstile({ fetch, secret: process.env.TURNSTILE_SECRET_KEY, nodeEnv: process.env.NODE_ENV }, formData.get('cf-turnstile-response'), ip ?? null);
+  const ip = clientIp((name) => h.get(name));
+  const human = await verifyTurnstile({ fetch, secret: process.env.TURNSTILE_SECRET_KEY, nodeEnv: process.env.NODE_ENV }, formData.get('cf-turnstile-response'), ip);
   if (!human) return { error: 'Complete the security check and try again.' };
 
   const supabase = await createClient();
@@ -53,6 +54,8 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     await supabase.auth.signOut();
     return { error: GENERIC_SIGN_IN_ERROR };
   }
+  // Start the idle clock now (the proxy ends a signed-in session that has no activity cookie).
+  await startActivity();
   if (parseStatus(status) === 'verified') redirect('/dashboard');
 
   const failure = await requestCode();

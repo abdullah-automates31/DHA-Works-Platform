@@ -19,9 +19,21 @@ export function checkInviteEmail(email: string): Check {
   return { ok: true };
 }
 
-/** The page a new staff member opens to create their password. The token is shown once to the inviter. */
+/**
+ * The page a new staff member opens to create their password. The token is shown once to the inviter. It sits after
+ * the "#" on purpose: a browser never sends that part to the server, so it cannot end up in hosting or proxy logs.
+ */
 export function inviteLink(origin: string, email: string, token: string): string {
-  return `${origin}/accept-invite?${new URLSearchParams({ email, token }).toString()}`;
+  return `${origin}/accept-invite?${new URLSearchParams({ email }).toString()}#${new URLSearchParams({ token }).toString()}`;
+}
+
+const TOKEN_PATTERN = /^[0-9a-f]{20,100}$/i;
+
+/** The invitation token from a URL fragment ("#token=..."), or null when it is missing or not a plain hex token. */
+export function tokenFromHash(hash: string | null | undefined): string | null {
+  if (typeof hash !== 'string' || hash.length > 300) return null;
+  const value = new URLSearchParams(hash.replace(/^#/, '')).get('token');
+  return value !== null && TOKEN_PATTERN.test(value) ? value : null;
 }
 
 export const PASSWORD_MIN = 12;

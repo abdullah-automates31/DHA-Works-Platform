@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { decideAction, type DecideState } from './actions';
-import { canSubmit, CHECKLIST, DECISIONS, emptyChecks, REASON_MAX, type Checks, type Decision, type Role } from './rules';
+import { canSubmit, CHECKLIST, DECISIONS, emptyChecks, normaliseChecks, REASON_MAX, type Checks, type Decision, type Role } from './rules';
 
 const initial: DecideState = {};
 
@@ -13,12 +13,43 @@ export function DecisionForm({ role, profileId }: { role: Role; profileId: strin
   const [decision, setDecision] = useState<Decision>('approve');
   const [reason, setReason] = useState('');
 
+  // Approving or rejecting needs a fresh code, which sends the person to another page and back. Keep the checklist,
+  // the decision and the reason in this browser tab (15 minutes) so they are still there on return. The draft is put
+  // back once and then removed; it is written again only when the form is sent.
+  const draftKey = `adm-draft:decision:${profileId}`;
+  useEffect(() => {
+    // Read after the first paint (not during it), so the server and browser render the same thing first.
+    const t = setTimeout(() => {
+      try {
+        const raw = sessionStorage.getItem(draftKey);
+        if (!raw) return;
+        sessionStorage.removeItem(draftKey);
+        const d = JSON.parse(raw) as { at?: number; checks?: Checks; decision?: string; reason?: string };
+        if (typeof d.at !== 'number' || Date.now() - d.at > 15 * 60_000) return;
+        if (d.checks && typeof d.checks === 'object') setChecks(normaliseChecks(role, d.checks));
+        if (DECISIONS[role].some((o) => o.key === d.decision)) setDecision(d.decision as Decision);
+        if (typeof d.reason === 'string') setReason(d.reason.slice(0, REASON_MAX));
+      } catch {
+        /* the draft is a convenience only */
+      }
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  const remember = () => {
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({ at: Date.now(), checks, decision, reason }));
+    } catch {
+      /* ignore */
+    }
+  };
+
   const options = DECISIONS[role];
   const current = options.find((d) => d.key === decision) ?? options[0]!;
   const verdict = canSubmit(role, decision, checks, reason);
 
   return (
-    <form action={action} className="col" style={{ gap: 16 }}>
+    <form action={action} onSubmit={remember} className="col" style={{ gap: 16 }}>
       <input type="hidden" name="profileId" value={profileId} />
       <input type="hidden" name="role" value={role} />
       <input type="hidden" name="decision" value={decision} />

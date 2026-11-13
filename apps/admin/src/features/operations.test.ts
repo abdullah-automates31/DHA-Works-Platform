@@ -6,7 +6,7 @@ import { parseCancellations, parseJobCounts, parseJobDetail, parseJobs } from '.
 import { parseReportCounts, parseReportDetail, parseReports } from './reports/parse.ts';
 import { activityOf, canDecide, choicesFor, isChoice, unsafeBanner } from './reports/rules.ts';
 import { parseReviews, starsOf } from './reviews/parse.ts';
-import { checkInviteEmail, checkNewPassword, checkSettings, inviteLink } from './settings/rules.ts';
+import { checkInviteEmail, checkNewPassword, checkSettings, inviteLink, tokenFromHash } from './settings/rules.ts';
 import { parseSettings, parseStaff } from './settings/parse.ts';
 import { parseUserDetail, parseUsers } from './users/parse.ts';
 
@@ -179,7 +179,13 @@ test('invites: email check, link, and password rules', () => {
   assert.equal(checkInviteEmail('new.staff@dha.example').ok, true);
   assert.equal(checkInviteEmail('nope').ok, false);
   assert.equal(checkInviteEmail('a@b').ok, false);
-  assert.equal(inviteLink('https://admin.example', 'a+b@x.io', 'abc123'), 'https://admin.example/accept-invite?email=a%2Bb%40x.io&token=abc123');
+  // the token is in the fragment, which a browser never sends to the server
+  assert.equal(inviteLink('https://admin.example', 'a+b@x.io', 'abc123'), 'https://admin.example/accept-invite?email=a%2Bb%40x.io#token=abc123');
+  assert.equal(inviteLink('https://admin.example', 'a@x.io', 'abc123').includes('?token'), false);
+  const hex = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718';
+  assert.equal(tokenFromHash(`#token=${hex}`), hex);
+  assert.equal(tokenFromHash(`token=${hex}`), hex);
+  for (const bad of ['', '#', '#token=', '#token=short', '#token=zzzzzzzzzzzzzzzzzzzzzzzz', `#other=${hex}`, `#token=${hex}&x=1&${'y'.repeat(400)}`, null, undefined]) assert.equal(tokenFromHash(bad), null);
   assert.equal(checkNewPassword('short', 'short').ok, false);
   assert.equal(checkNewPassword('long enough password', 'different password!').ok, false);
   assert.deepEqual(checkNewPassword('long enough password', 'long enough password'), { ok: true });

@@ -17,6 +17,20 @@ export function turnstileMode(secret: string | undefined, nodeEnv: string | unde
   return nodeEnv === 'production' ? 'required' : 'off';
 }
 
+/**
+ * The visitor's address for Cloudflare's risk check, or null. Only headers that the hosting platform sets itself are
+ * used (Vercel overwrites x-vercel-forwarded-for and x-real-ip; a visitor cannot choose them there). The first entry of
+ * x-forwarded-for is NOT used: a visitor can send that header, and an invented address would skew the check. The value
+ * must look like an IPv4 or IPv6 address, or it is dropped. The address is optional for Cloudflare, so null is safe.
+ */
+export function clientIp(get: (name: string) => string | null | undefined): string | null {
+  for (const name of ['x-vercel-forwarded-for', 'x-real-ip']) {
+    const v = get(name)?.split(',')[0]?.trim();
+    if (v && v.length <= 45 && (/^\d{1,3}(\.\d{1,3}){3}$/.test(v) || /^[0-9a-f:]+$/i.test(v) && v.includes(':'))) return v;
+  }
+  return null;
+}
+
 export type SiteverifyResult = { ok: boolean };
 
 /** Reads Cloudflare's answer. Anything that is not an explicit `success: true` counts as a failure. */

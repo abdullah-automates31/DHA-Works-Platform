@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { refusal } from '@/lib/action';
 import { requireAdmin } from '@/lib/auth';
 import { isUuid } from './parse';
 import { canSubmit, isDecision, normaliseChecks, type Role } from './rules';
@@ -39,10 +40,9 @@ export async function decideAction(_prev: DecideState, formData: FormData): Prom
     p_reason: reason.trim(),
     p_checklist: checks,
   });
-  if (error) {
-    // The database writes plain-English refusals (code P0001); anything else is shown generically.
-    return { error: error.code === 'P0001' ? error.message : 'The decision could not be saved. Reload the page and try again.' };
-  }
+  // A decision needs a code typed in the last 15 minutes (migration 0049): that sends the person to /confirm and back.
+  // Every other refusal comes back as a plain sentence.
+  if (error) return (await refusal(error))!;
   // The sidebar counts live in the layout, so refresh it too (otherwise the badge keeps the old number).
   revalidatePath('/', 'layout');
   redirect(`/${role}s?done=${decision}`);
