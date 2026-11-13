@@ -7,7 +7,10 @@
   ],
   "overrides": {
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "@typescript-eslint/typescript-estree": { "minimatch": "^11.0.8" },
+    "@expo/fingerprint": { "minimatch": "^11.0.8" },
+    "glob": { "minimatch": "^11.0.8" }
   },
   "scripts": {
     "worker": "npm run start --workspace @dha/worker",
