@@ -3,6 +3,7 @@
 // visit time); it never puts a resident's name, phone or address in a notification, so none is shown here.
 import { t } from '../../i18n/index.ts';
 import { timeAgo } from '../feed/format.ts';
+import { dateText } from '../myreports/rules.ts';
 import { dayWord, windowText } from '../myjobs/rules.ts';
 
 export type Notice = {
@@ -15,7 +16,7 @@ export type Notice = {
 };
 
 export type NoticeIcon = 'check' | 'info' | 'alert' | 'job';
-export type NoticeView = { title: string; body: string; icon: NoticeIcon; opensJob: boolean };
+export type NoticeView = { title: string; body: string; icon: NoticeIcon; opensJob: boolean; opensReports?: boolean };
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -62,13 +63,37 @@ export function describe(n: Notice, now: Date = new Date()): NoticeView {
       return { title: t('notices.cancelRequestedTitle'), body: t('notices.cancelRequestedBody', { job }), icon: 'alert', opensJob: true };
     case 'verification_decided': {
       const d = text(n.payload?.decision);
+      // What staff wrote for the applicant (migration 0053); older notices have none and keep the general sentence.
+      const reason = text(n.payload?.reason);
       if (d === 'approve') return { title: t('notices.verifyApprovedTitle'), body: t('notices.verifyApprovedBody'), icon: 'check', opensJob: false };
-      if (d === 'ask_for_changes') return { title: t('notices.verifyChangesTitle'), body: t('notices.verifyChangesBody'), icon: 'alert', opensJob: false };
-      if (d === 'visit_hq') return { title: t('notices.verifyHqTitle'), body: t('notices.verifyHqBody'), icon: 'alert', opensJob: false };
-      return { title: t('notices.verifyRejectedTitle'), body: t('notices.verifyRejectedBody'), icon: 'alert', opensJob: false };
+      if (d === 'ask_for_changes') return { title: t('notices.verifyChangesTitle'), body: reason ? t('notices.verifyChangesReasonBody', { reason }) : t('notices.verifyChangesBody'), icon: 'alert', opensJob: false };
+      if (d === 'visit_hq') return { title: t('notices.verifyHqTitle'), body: reason ? t('notices.verifyHqReasonBody', { reason }) : t('notices.verifyHqBody'), icon: 'alert', opensJob: false };
+      return { title: t('notices.verifyRejectedTitle'), body: reason ? t('notices.verifyRejectedReasonBody', { reason }) : t('notices.verifyRejectedBody'), icon: 'alert', opensJob: false };
     }
     case 'account_reactivated':
-      return { title: t('notices.accountReactivatedTitle'), body: t('notices.accountReactivatedBody'), icon: 'check', opensJob: false };
+      return { title: t('notices.accountReactivatedTitle'), body: n.payload?.expired === true ? t('notices.accountExpiredBody') : t('notices.accountReactivatedBody'), icon: 'check', opensJob: false };
+    case 'account_suspended': {
+      const reason = text(n.payload?.message);
+      const until = dateText(text(n.payload?.until));
+      const body = !reason
+        ? t('notices.accountSuspendedNoReasonBody')
+        : until
+          ? t('notices.accountSuspendedUntilBody', { reason, date: until })
+          : t('notices.accountSuspendedOpenBody', { reason });
+      return { title: t('notices.accountSuspendedTitle'), body, icon: 'alert', opensJob: false };
+    }
+    case 'report_received':
+      return { title: t('notices.reportReceivedTitle'), body: t('notices.reportReceivedBody'), icon: 'info', opensJob: false, opensReports: true };
+    case 'report_in_review':
+      return { title: t('notices.reportReviewTitle'), body: t('notices.reportReviewBody'), icon: 'info', opensJob: false, opensReports: true };
+    case 'report_resolved':
+      return {
+        title: t('notices.reportResolvedTitle'),
+        body: n.payload?.outcome === 'action_taken' ? t('notices.reportResolvedActionBody') : t('notices.reportResolvedNoActionBody'),
+        icon: 'check',
+        opensJob: false,
+        opensReports: true,
+      };
     case 'report_warning':
       return { title: t('notices.reportWarningTitle'), body: t('notices.reportWarningBody', { message: text(n.payload?.message) || t('notices.updateGeneric') }), icon: 'alert', opensJob: false };
     case 'staff_message':

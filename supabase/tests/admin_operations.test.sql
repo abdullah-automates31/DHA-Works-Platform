@@ -208,16 +208,23 @@ select throws_ok(format($$select public.admin_report_decide(%L, 'banana', 'x')$$
                  'P0001', 'choose what to do with this case', 'an unknown choice is refused');
 select public.admin_report_decide((select id from public.reports where kind = 'no_show'), 'keep_open', null);
 select is((select status::text from public.reports where kind = 'no_show'), 'in_review', 'keep open marks the case in review');
-select is((select assigned_to from public.reports where kind = 'no_show'), '00000000-0000-0000-0000-0000000000a1'::uuid, 'and assigns it to the staff member');
+select is(tests.scalar($$select assigned_to::text from public.reports where kind = 'no_show'$$), '00000000-0000-0000-0000-0000000000a1', 'and assigns it to the staff member');
+select is(tests.scalar($$select count(*) from public.notifications where type = 'report_in_review' and user_id = (select reporter_id from public.reports where kind = 'no_show')$$), '1', 'the reporter is told that staff opened the case');
+select is(tests.scalar($$select payload ->> 'code' from public.notifications where type = 'report_in_review'$$), (select code from public.reports where kind = 'no_show'), 'with the case code and nothing about the other person');
+select is(tests.scalar($$select count(*) from public.notifications where type = 'report_in_review' and user_id = (select against_id from public.reports where kind = 'no_show')$$), '0', 'the person reported is not told the case was opened');
 select public.admin_report_decide((select id from public.reports where kind = 'no_show'), 'close', 'Worker was ill, rescheduled');
-select is((select status::text || '/' || action::text from public.reports where kind = 'no_show'), 'resolved/no_action', 'close resolves with no action');
+select is(tests.scalar($$select status::text || '/' || action::text from public.reports where kind = 'no_show'$$), 'resolved/no_action', 'close resolves with no action');
+select is(tests.scalar($$select payload ->> 'outcome' from public.notifications where type = 'report_resolved' and payload ->> 'code' = (select code from public.reports where kind = 'no_show')$$), 'no_action', 'closing tells the reporter no action was taken');
+select is(tests.scalar($$select count(*) from public.notifications where type = 'report_resolved' and user_id = (select against_id from public.reports where kind = 'no_show')$$), '0', 'and says nothing to the person reported');
 select throws_ok(format($$select public.admin_report_decide(%L, 'close', 'again')$$, (select id from public.reports where kind = 'no_show')),
                  'P0001', 'this case is already resolved', 'a resolved case cannot be decided again');
 
 select public.admin_report_decide((select id from public.reports where kind = 'rude_damage'), 'warning', 'Please speak politely to workers.');
-select is((select action::text from public.reports where kind = 'rude_damage'), 'warning', 'a warning is recorded');
+select is(tests.scalar($$select action::text from public.reports where kind = 'rude_damage'$$), 'warning', 'a warning is recorded');
 select is(tests.scalar($$select count(*) from public.notifications where user_id = '00000000-0000-0000-0000-0000000000b1' and type = 'report_warning'$$), '1', 'the person reported gets the warning');
 select is(tests.scalar($$select payload ->> 'message' from public.notifications where type = 'report_warning'$$), 'Please speak politely to workers.', 'with the staff message');
+select is(tests.scalar($$select payload ->> 'outcome' from public.notifications where type = 'report_resolved' and payload ->> 'code' = (select code from public.reports where kind = 'rude_damage')$$), 'action_taken', 'a warning tells the reporter that action was taken');
+select is(tests.scalar($$select (payload::text ~* 'polite') from public.notifications where type = 'report_resolved' and user_id = (select reporter_id from public.reports where kind = 'rude_damage')$$), 'false', 'without saying what the warning said');
 select is((select account_status::text from public.profiles where id = '00000000-0000-0000-0000-0000000000b1'), 'active', 'a warning does not suspend');
 
 -- unsafe: call, note, then suspend the resident
@@ -233,7 +240,9 @@ select is((select count(*) from public.report_notes), 1::bigint, 'the note is sa
 select ok((select (public.admin_reports_counts() ->> 'first_call_minutes') is not null), 'a first-call time now exists');
 select public.admin_report_decide((select id from public.reports where kind = 'unsafe'), 'suspend', 'Threatened the worker at the door');
 select is((select account_status::text from public.profiles where id = '00000000-0000-0000-0000-0000000000c1'), 'suspended', 'suspend suspends the person reported');
-select is((select action::text from public.reports where kind = 'unsafe'), 'suspend', 'and records the outcome');
+select is(tests.scalar($$select action::text from public.reports where kind = 'unsafe'$$), 'suspend', 'and records the outcome');
+select is(tests.scalar($$select payload ->> 'message' from public.notifications where type = 'account_suspended' and user_id = '00000000-0000-0000-0000-0000000000c1'$$), 'Threatened the worker at the door', 'the suspended person gets a notice with the reason');
+select is(tests.scalar($$select payload ->> 'outcome' from public.notifications where type = 'report_resolved' and payload ->> 'code' = (select code from public.reports where kind = 'unsafe')$$), 'action_taken', 'and the reporter is told that action was taken');
 select is((select under_review_reason from public.jobs where id = (select j_prog from t)), null, 'the job is no longer flagged for the unsafe report');
 select is((select count(*) from public.audit_log where action = 'report_resolved'), 3::bigint, 'each resolution is audited');
 select is((select public.admin_reports_counts() ->> 'open'), '1', 'one case (the cash one) is still open');

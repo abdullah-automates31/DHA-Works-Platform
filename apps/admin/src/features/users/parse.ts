@@ -26,7 +26,7 @@ export type UserDoc = { type: string; path: string };
 export type UserJob = { id: string; code: string; title: string; status: string; otherName: string | null; quoteTotal: number | null };
 export type UserDetail = {
   id: string; role: 'worker' | 'resident'; name: string; phone: string | null; email: string | null; cnicMasked: string | null; createdAt: string; avatarPath: string | null;
-  accountStatus: string; suspendedAt: string | null; suspensionReason: string | null; verifiedAt: string | null; openReports: number; pastSuspensions: number;
+  accountStatus: string; suspendedAt: string | null; suspendedUntil: string | null; suspensionReason: string | null; verifiedAt: string | null; openReports: number; pastSuspensions: number;
   documents: UserDoc[];
   notes: { id: string; note: string; createdAt: string; authorName: string }[];
   worker: { experienceYears: number | null; about: string | null; ratingAvg: number | null; ratingCount: number; jobsDone: number } | null;
@@ -43,7 +43,7 @@ export function parseUserDetail(json: unknown): UserDetail | null {
   return {
     id: o.id, role: o.role, name: str(o.full_name) ?? 'No name', phone: str(o.phone), email: str(o.email), cnicMasked: str(o.cnic_masked),
     createdAt: str(o.created_at) ?? new Date(0).toISOString(), avatarPath: str(o.avatar_path), accountStatus: str(o.account_status) ?? 'active',
-    suspendedAt: str(o.suspended_at), suspensionReason: str(o.suspension_reason), verifiedAt: str(o.verified_at), openReports: int(o.open_reports), pastSuspensions: int(o.past_suspensions),
+    suspendedAt: str(o.suspended_at), suspendedUntil: str(o.suspended_until), suspensionReason: str(o.suspension_reason), verifiedAt: str(o.verified_at), openReports: int(o.open_reports), pastSuspensions: int(o.past_suspensions),
     documents: arr(o.documents).flatMap((raw) => {
       const d = obj(raw);
       return d && str(d.type) && str(d.path) ? [{ type: d.type as string, path: d.path as string }] : [];

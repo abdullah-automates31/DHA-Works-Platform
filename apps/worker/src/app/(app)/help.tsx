@@ -58,6 +58,13 @@ export default function HelpScreen() {
           </>
         ) : null}
 
+        <Pressable accessibilityRole="button" onPress={() => router.push('/my-reports')} style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>{t('help.myReports')}</Text>
+            <Text style={styles.rowBody}>{t('help.myReportsBody')}</Text>
+          </View>
+        </Pressable>
+
         <Pressable accessibilityRole="button" onPress={() => router.push('/report')} style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowTitle}>{t('help.report')}</Text>

@@ -1337,6 +1337,7 @@ export type Database = {
           resolved_at: string | null
           status: Database["public"]["Enums"]["report_status"]
           system_generated: boolean
+          updated_at: string
         }
         Insert: {
           action?: Database["public"]["Enums"]["report_action"] | null
@@ -1354,6 +1355,7 @@ export type Database = {
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           system_generated?: boolean
+          updated_at?: string
         }
         Update: {
           action?: Database["public"]["Enums"]["report_action"] | null
@@ -1371,6 +1373,7 @@ export type Database = {
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           system_generated?: boolean
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2302,7 +2305,12 @@ export type Database = {
       }
       admin_session_status: { Args: never; Returns: string }
       admin_set_account_status: {
-        Args: { p_profile: string; p_reason: string; p_suspend: boolean }
+        Args: {
+          p_days?: number
+          p_profile: string
+          p_reason: string
+          p_suspend: boolean
+        }
         Returns: undefined
       }
       admin_set_phase_active: {
@@ -2412,6 +2420,10 @@ export type Database = {
       mark_notifications_read: {
         Args: { p_ids?: string[] }
         Returns: undefined
+      }
+      my_reports: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
       }
       post_job: { Args: { p_job_id: string }; Returns: undefined }
       push_webhook_secret_matches: {

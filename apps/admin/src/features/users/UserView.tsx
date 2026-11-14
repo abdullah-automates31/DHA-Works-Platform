@@ -60,7 +60,7 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
       back={{ href: isWorker ? '/users' : '/users?role=resident', label: 'Users' }}
       right={<div className="row g8"><Chip tone="ok">{isWorker ? 'Verified worker' : 'Verified resident'}</Chip><Chip tone={suspended ? 'red' : 'ok'}>{suspended ? 'Suspended' : 'Active'}</Chip></div>}
     >
-      {suspended ? <div className="note red" role="status"><span><b>Suspended {dateTime(d.suspendedAt)}.</b> {d.suspensionReason ?? ''}</span></div> : null}
+      {suspended ? <div className="note red" role="status"><span><b>Suspended {dateTime(d.suspendedAt)}.</b> {d.suspendedUntil ? <>It ends {dateTime(d.suspendedUntil)} by itself. </> : <>It lasts until you reactivate the account. </>}{d.suspensionReason ?? ''}</span></div> : null}
       <div className="split">
         <div className="col" style={{ gap: 20 }}>
           <div className="card row" style={{ gap: 18, alignItems: 'flex-start' }}>
@@ -152,8 +152,8 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
             <details>
               <summary className={`btn ${suspended ? '' : ''}`} style={{ cursor: 'pointer', width: '100%', ...(suspended ? {} : { background: '#FADCDA', color: '#7A1411' }) }}>{suspended ? 'Reactivate account' : 'Suspend account'}</summary>
               <div style={{ marginTop: 10 }}>
-                <ActionForm action={setAccountStatusAction} hidden={{ profileId: d.id, suspend: suspended ? '0' : '1' }} submit={suspended ? 'Reactivate' : 'Suspend and sign out'} tone={suspended ? 'green' : 'red'} fields={[{ name: 'reason', kind: 'textarea', label: suspended ? 'Why they can come back' : 'Reason (kept in the record)', required: true, maxLength: 500 }]} />
-                {!suspended ? <span className="mut" style={{ display: 'block', fontSize: 12.5, marginTop: 6 }}>They are signed out everywhere at once.{isWorker ? ' Their live jobs are flagged for staff.' : ''}</span> : null}
+                <ActionForm action={setAccountStatusAction} hidden={{ profileId: d.id, suspend: suspended ? '0' : '1' }} submit={suspended ? 'Reactivate' : 'Suspend and sign out'} tone={suspended ? 'green' : 'red'} fields={[{ name: 'reason', kind: 'textarea', label: suspended ? 'Why they can come back' : 'Reason (they are told this)', required: true, maxLength: 500 }, ...(suspended ? [] : [{ name: 'days', kind: 'text' as const, label: 'Days (1 to 365, empty = until you reactivate)', placeholder: 'For example 7', maxLength: 3 }])]} />
+                {!suspended ? <span className="mut" style={{ display: 'block', fontSize: 12.5, marginTop: 6 }}>They are signed out everywhere at once and told the reason and the end date.{isWorker ? ' Their live jobs are flagged for staff.' : ''}</span> : null}
               </div>
             </details>
             <details>

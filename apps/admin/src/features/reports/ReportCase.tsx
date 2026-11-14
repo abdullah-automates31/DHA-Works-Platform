@@ -9,6 +9,7 @@ import { dateTime, firstName, jobStatus, phoneText, REPORT_ACTION_TEXT, reportKi
 import { isUuid } from '@/lib/json';
 import { addReportNoteAction, logCallAction } from './actions';
 import { loadReportDetail, reportPhotoUrls } from './queries';
+import { reporterNotice, reportTrail } from './rules';
 import { ReportDecision } from './ReportDecision';
 import { activityOf, unsafeBanner } from './rules';
 import type { Person } from './parse';
@@ -58,6 +59,19 @@ export async function ReportCase({ id }: { id: string }) {
 
       <div className="split">
         <div className="col" style={{ gap: 20 }}>
+          <div className="card col">
+            <h2 className="h2">Case progress</h2>
+            <ol style={{ display: 'flex', gap: 8, listStyle: 'none', margin: 0, padding: 0 }}>
+              {reportTrail(d.status, d.action).map((step) => (
+                <li key={step.label} aria-current={step.reached ? 'step' : undefined} style={{ flex: 1 }}>
+                  <div style={{ height: 6, borderRadius: 3, background: step.reached ? '#1F6B45' : '#E2ECE6' }} />
+                  <span className={step.reached ? 'b' : 'mut b'} style={{ fontSize: 12.5, display: 'block', marginTop: 4 }}>{step.label}</span>
+                </li>
+              ))}
+            </ol>
+            <span className="mut" style={{ fontSize: 12.5 }}>{reporterNotice(d.systemGenerated)}</span>
+          </div>
+
           <div className="card col">
             <h2 className="h2">What was reported</h2>
             <dl className="kv">

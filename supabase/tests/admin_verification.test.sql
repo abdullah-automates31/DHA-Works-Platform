@@ -90,7 +90,7 @@ select throws_ok($$select public.admin_decide_verification('00000000-0000-0000-0
 select tests.back();
 select is(has_function_privilege('anon', 'public.admin_verification_queue(public.user_role, public.verification_status, text, smallint, integer, integer)', 'execute'), false, 'anon cannot run the queue');
 select is(has_function_privilege('anon', 'public.admin_decide_verification(uuid, public.verification_decision, text, jsonb)', 'execute'), false, 'anon cannot decide');
-select is(has_function_privilege('anon', 'public.admin_set_account_status(uuid, boolean, text)', 'execute'), false, 'anon cannot suspend');
+select is(has_function_privilege('anon', 'public.admin_set_account_status(uuid, boolean, text, integer)', 'execute'), false, 'anon cannot suspend');
 
 -- 2. The queue ------------------------------------------------------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
@@ -155,6 +155,13 @@ select lives_ok($$select public.admin_decide_verification('00000000-0000-0000-00
 select is((select verification_reason from public.profiles where id = '00000000-0000-0000-0000-0000000000b2'), 'CNIC photo is unreadable. Upload a clear one.', 'the applicant can see the reason');
 select lives_ok($$select public.admin_decide_verification('00000000-0000-0000-0000-0000000000c2', 'ask_for_changes', 'Utility bill is blurry.', '{"bill":false}')$$, 'ask a resident for changes');
 select is((select verification_status::text from public.profiles where id = '00000000-0000-0000-0000-0000000000c2'), 'needs_changes', 'the resident is sent back to fix it');
+select tests.back();
+select is((select payload ->> 'reason' from public.notifications where user_id = '00000000-0000-0000-0000-0000000000c2' and type = 'verification_decided'), 'Utility bill is blurry.', 'the notice tells the resident what to fix, in the words staff wrote');
+select is((select payload ->> 'decision' from public.notifications where user_id = '00000000-0000-0000-0000-0000000000c2' and type = 'verification_decided'), 'ask_for_changes', 'and which decision it was');
+select is((select payload ->> 'reason' from public.notifications where user_id = '00000000-0000-0000-0000-0000000000b2' and type = 'verification_decided'), 'CNIC photo is unreadable. Upload a clear one.', 'a rejection carries its reason too');
+select is((select payload ? 'reason' from public.notifications where user_id = '00000000-0000-0000-0000-0000000000b1' and type = 'verification_decided'), false, 'an approval carries no reason');
+select is((select count(*) from public.notifications where user_id = '00000000-0000-0000-0000-0000000000c2' and type = 'verification_decided'), 1::bigint, 'and the decision is announced once');
+select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
 select lives_ok($$select public.admin_decide_verification('00000000-0000-0000-0000-0000000000b5', 'approve', null, '{"cnic":true}')$$, 'a worker who visited HQ can be approved afterwards');
 select tests.back();
 

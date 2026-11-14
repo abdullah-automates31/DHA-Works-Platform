@@ -1,7 +1,7 @@
 // Push text per notification type and recipient role. Edit wording here only.
 //
 // A type/role pair that is missing here is not pushed (it stays in the in-app notification list),
-// e.g. admin alerts, new_sign_in, staff_message.
+// e.g. admin alerts and new_sign_in.
 
 export type Role = "resident" | "worker";
 
@@ -12,6 +12,14 @@ export interface PushContext {
   worker: string;
   /** Quote total in whole rupees, when the event is a quote. */
   total: number | null;
+  /** The text DHA staff wrote (a warning, a message or a suspension reason), when the notice has one. */
+  message?: string | null;
+  /** For a resolved report: "action_taken" or "no_action". Nothing more is ever put in the notice. */
+  outcome?: string | null;
+  /** The end date of a suspension (ISO text), when it has one. */
+  until?: string | null;
+  /** For a verification decision: approve, ask_for_changes, visit_hq or reject. */
+  decision?: string | null;
 }
 
 export interface PushText {
@@ -127,6 +135,68 @@ const worker: Record<string, Template> = {
     body: `${c.job} needs an update.`,
   }),
 };
+
+// Notices from DHA staff, the same wording for residents and workers (report tracking and suspensions, 0053).
+// A report notice never says what was done to the other person.
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Karachi" });
+
+// A push shows about two lines; the full text stays in the app.
+const short = (text: string, max = 160) => text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
+
+const staff: Record<string, Template> = {
+  // The decision on a worker or resident application. The reason is what staff wrote for the applicant to read.
+  verification_decided: (c) => {
+    const why = (fallback: string) => c.message ? short(c.message) : fallback;
+    switch (c.decision) {
+      case "approve":
+        return { title: "Your application is approved", body: "DHA staff approved your application." };
+      case "ask_for_changes":
+        return { title: "Changes needed", body: why("Open the app to see what to fix.") };
+      case "visit_hq":
+        return { title: "Please visit the DHA office", body: why("Open the app for details.") };
+      default:
+        return { title: "Application not approved", body: why("Open the app to see why.") };
+    }
+  },
+  report_received: () => ({
+    title: "We received your report",
+    body: "DHA staff will look at it. You can follow it in My reports.",
+  }),
+  report_in_review: () => ({
+    title: "Your report is being reviewed",
+    body: "DHA staff are looking at your report now.",
+  }),
+  report_resolved: (c) => ({
+    title: "Your report is resolved",
+    body: c.outcome === "action_taken"
+      ? "DHA reviewed your report and took action."
+      : "DHA reviewed your report. No action was needed.",
+  }),
+  report_warning: (c) => ({
+    title: "Warning from DHA staff",
+    body: c.message || "Open the app to read the message.",
+  }),
+  staff_message: (c) => ({
+    title: "Message from DHA staff",
+    body: c.message || "Open the app to read the message.",
+  }),
+  account_suspended: (c) => ({
+    title: "Your account is suspended",
+    body: [
+      c.message ? `Reason: ${c.message}.` : "Contact DHA staff.",
+      c.until ? `It ends on ${day(c.until)}.` : "DHA staff will tell you when it ends.",
+    ].join(" "),
+  }),
+  account_reactivated: (c) => ({
+    title: "Your account is active again",
+    body: c.outcome === "expired"
+      ? "Your suspension has ended. You can use the app again."
+      : "DHA staff reactivated your account. You can use the app again.",
+  }),
+};
+Object.assign(resident, staff);
+Object.assign(worker, staff);
 
 const byRole: Record<Role, Record<string, Template>> = { resident, worker };
 

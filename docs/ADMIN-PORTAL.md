@@ -73,3 +73,9 @@ Email + password (plus the Turnstile bot check), then a six-digit code from an *
 - Emailed codes in `ADMIN_MAIL_MODE=dev-log`: if the `supabase functions serve` log file is stale, read the newest code from `docker logs supabase_edge_runtime_dha-works`.
 - Codes are limited to 1 a minute and 5 an hour per account. Local reset: `delete from public.admin_factor_challenges;`. To force the step-up prompt: `update public.admin_verified_sessions set fresh_at = now() - interval '30 minutes';`.
 - Production-build check without disturbing the dev server: `NEXT_DIST_DIR=.next-prod` plus the local env variables, `npx next build`, then delete `.next-prod` and `git checkout apps/admin/tsconfig.json` (the build rewrites it).
+
+## Report tracking and timed suspensions (14 Nov 2026, migration 0053)
+
+- The case screen has a **Case progress** bar: Submitted, Under review, then Action taken or Closed (the same three steps the reporter sees in the app) and a line saying what the reporter is told: received, opened, resolved; only whether action was taken, never what it was or anything about the other person.
+- **Suspending** (Users screen) has an optional **Days** box (1 to 365; empty = until staff reactivate). The person is told the reason and the end date, is signed out, and the account reactivates itself on the end date (the person is told). The user screen shows the end date. A suspension made from a report decision has no end date.
+- The reporter and the person suspended are notified by the database (docs/DB-API-DESIGN.md, 0053); staff do not send anything by hand.

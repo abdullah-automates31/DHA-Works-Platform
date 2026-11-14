@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { checkCall, isCallerRole, isOutcome, isReason, outcomeChip, reasonLabel } from './helpline/rules.ts';
 import { parseCancellations, parseJobCounts, parseJobDetail, parseJobs } from './jobs/parse.ts';
 import { parseReportCounts, parseReportDetail, parseReports } from './reports/parse.ts';
-import { activityOf, canDecide, choicesFor, isChoice, unsafeBanner } from './reports/rules.ts';
+import { activityOf, canDecide, choicesFor, isChoice, reporterNotice, reportTrail, unsafeBanner } from './reports/rules.ts';
 import { parseReviews, starsOf } from './reviews/parse.ts';
 import { checkInviteEmail, checkNewPassword, checkSettings, inviteLink, tokenFromHash } from './settings/rules.ts';
 import { parseSettings, parseStaff } from './settings/parse.ts';
@@ -190,4 +190,19 @@ test('invites: email check, link, and password rules', () => {
   assert.equal(checkNewPassword('long enough password', 'different password!').ok, false);
   assert.deepEqual(checkNewPassword('long enough password', 'long enough password'), { ok: true });
   assert.equal(checkNewPassword('x'.repeat(73), 'x'.repeat(73)).ok, false);
+});
+
+test('the case trail has the same three steps the reporter sees', () => {
+  const reached = (status: string, action: string | null) => reportTrail(status, action).map((s) => [s.label, s.reached]);
+  assert.deepEqual(reached('new', null), [['Submitted', true], ['Under review', false], ['Action taken or closed', false]]);
+  assert.deepEqual(reached('in_review', null), [['Submitted', true], ['Under review', true], ['Action taken or closed', false]]);
+  assert.deepEqual(reached('resolved', 'warning'), [['Submitted', true], ['Under review', true], ['Action taken', true]]);
+  assert.deepEqual(reached('resolved', 'suspend'), [['Submitted', true], ['Under review', true], ['Action taken', true]]);
+  assert.deepEqual(reached('resolved', 'no_action'), [['Submitted', true], ['Under review', true], ['Closed', true]]);
+});
+
+test('staff are told exactly what the reporter is and is not told', () => {
+  assert.match(reporterNotice(false), /received.*staff open it.*resolved/);
+  assert.match(reporterNotice(false), /never what it was/);
+  assert.match(reporterNotice(true), /nobody is notified/);
 });

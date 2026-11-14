@@ -14,7 +14,11 @@ begin
   perform set_config('request.jwt.claims', '', true);
   execute 'reset role';
 end $$;
-grant execute on function tests.act(uuid), tests.back() to authenticated;
+-- reads as the database owner: app users cannot read the staff-only report columns (0053)
+create function tests.scalar(p_sql text) returns text language plpgsql security definer set search_path = public as $$
+declare v text;
+begin execute p_sql into v; return v; end $$;
+grant execute on function tests.act(uuid), tests.back(), tests.scalar(text) to authenticated;
 
 insert into auth.users (id, aud, role, email)
 select ('00000000-0000-0000-0000-0000000000' || n)::uuid, 'authenticated', 'authenticated', 'r' || n || '@test.dev'
@@ -52,7 +56,7 @@ select lives_ok($$select public.file_report('00000000-0000-0000-0000-00000000e00
 select is((select kind::text from public.reports where job_id = '00000000-0000-0000-0000-00000000e001' and kind = 'rude_damage'), 'rude_damage', 'it is stored with its kind');
 select is((select reason_text from public.reports where kind = 'rude_damage' and job_id = '00000000-0000-0000-0000-00000000e001'), 'Customer rude: shouted at me', 'and the text, which keeps the chosen reason');
 select is((select reporter_role::text from public.reports where kind = 'rude_damage' and job_id = '00000000-0000-0000-0000-00000000e001'), 'worker', 'as a worker report');
-select is((select against_id from public.reports where kind = 'rude_damage' and job_id = '00000000-0000-0000-0000-00000000e001'), '00000000-0000-0000-0000-0000000000a1'::uuid, 'against the resident');
+select is(tests.scalar($$select against_id::text from public.reports where kind = 'rude_damage' and job_id = '00000000-0000-0000-0000-00000000e001'$$), '00000000-0000-0000-0000-0000000000a1', 'against the resident');
 select is((select under_review_reason from public.jobs where id = '00000000-0000-0000-0000-00000000e001'), null, 'a rude-customer report does not flag the job');
 select lives_ok($$select public.file_report('00000000-0000-0000-0000-00000000e001', 'unsafe', 'I felt unsafe', array['00000000-0000-0000-0000-0000000000b1/e001-1-a.jpg', '00000000-0000-0000-0000-0000000000b2/stolen.jpg'])$$, 'w1 reports feeling unsafe, with two photo paths');
 select is((select under_review_reason from public.jobs where id = '00000000-0000-0000-0000-00000000e001'), 'report_unsafe', 'an unsafe report flags the job for staff');

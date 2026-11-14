@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { allowedRoutes, identityComplete, isRouteAllowed, statusKind, type ProfileSnapshot } from './routing.ts';
+import { allowedRoutes, changesNeededReason, identityComplete, isRouteAllowed, statusKind, type ProfileSnapshot } from './routing.ts';
 
 const base: ProfileSnapshot = {
   role: 'worker',
@@ -38,7 +38,7 @@ test('approved without areas must choose areas first; with areas goes home and m
   const approved = with_({ verification_status: 'approved' });
   assert.deepEqual(allowedRoutes(approved), ['/areas']);
   assert.deepEqual(allowedRoutes(approved, 0), ['/areas']);
-  assert.deepEqual(allowedRoutes(approved, 3), ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/introduction']);
+  assert.deepEqual(allowedRoutes(approved, 3), ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction']);
 });
 
 test('areas do not matter before approval', () => {
@@ -87,4 +87,16 @@ test('a job screen is allowed below /job, and nothing else is matched loosely', 
   assert.equal(isRouteAllowed('/job/', tabs), false);
   assert.equal(isRouteAllowed('/about', tabs), false);
   assert.equal(isRouteAllowed('/job/abc', allowedRoutes(with_({ verification_status: 'pending' }), 2)), false);
+});
+
+test('changes needed: the banner text is what staff wrote, and only when staff asked for changes', () => {
+  assert.equal(changesNeededReason({ verification_status: 'needs_changes', verification_reason: '  Upload a clear photo of your CNIC.  ' }), 'Upload a clear photo of your CNIC.');
+  // asked for changes but wrote nothing: an empty text (the banner then shows its general sentence)
+  assert.equal(changesNeededReason({ verification_status: 'needs_changes', verification_reason: null }), '');
+  assert.equal(changesNeededReason({ verification_status: 'needs_changes' }), '');
+  // every other state shows no banner, even when an old reason is still stored
+  for (const status of ['incomplete', 'pending', 'approved', 'visit_hq', 'rejected'] as const) {
+    assert.equal(changesNeededReason({ verification_status: status, verification_reason: 'old reason' }), null, status);
+  }
+  assert.equal(changesNeededReason(null), null);
 });

@@ -13,6 +13,8 @@ export type MyProfile = Pick<
   | 'verification_reason'
   | 'verification_updated_at'
   | 'account_status'
+  | 'suspension_reason'
+  | 'suspended_until'
   | 'full_name'
   | 'phone'
   | 'cnic'
@@ -22,7 +24,7 @@ export type MyProfile = Pick<
 >;
 
 const COLUMNS =
-  'role, verification_status, verification_reason, verification_updated_at, account_status, full_name, phone, cnic, gender, date_of_birth, avatar_path';
+  'role, verification_status, verification_reason, verification_updated_at, account_status, suspension_reason, suspended_until, full_name, phone, cnic, gender, date_of_birth, avatar_path';
 
 type ProfileState =
   | { status: 'loading' }

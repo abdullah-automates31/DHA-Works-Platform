@@ -10,6 +10,8 @@ export type ProfileSnapshot = {
   cnic: string | null;
   gender: string | null;
   date_of_birth: string | null;
+  /** What staff wrote with their last decision (changes needed, visit HQ, rejected). */
+  verification_reason?: string | null;
 };
 
 export type AppRoute =
@@ -26,6 +28,7 @@ export type AppRoute =
   | '/notifications'
   | '/help'
   | '/report'
+  | '/my-reports'
   | '/introduction';
 
 export type StatusKind = 'wrong_role' | 'suspended' | 'pending' | 'visit_hq' | 'rejected';
@@ -52,13 +55,22 @@ export function statusKind(p: ProfileSnapshot | null): StatusKind | null {
   }
 }
 
+/**
+ * When DHA staff asked for changes, what to fix in the words staff wrote (an empty text when they wrote none);
+ * null when no changes were asked for. The sign-up screens show it as a banner until the application is sent again.
+ */
+export function changesNeededReason(p: Pick<ProfileSnapshot, 'verification_status' | 'verification_reason'> | null): string | null {
+  if (!p || p.verification_status !== 'needs_changes') return null;
+  return (p.verification_reason ?? '').trim();
+}
+
 /** Routes the worker may be on, the first being where they are sent. */
 /** `areaCount` = phases the worker chose; an approved worker with none must choose areas first (W05). */
 export function allowedRoutes(p: ProfileSnapshot | null, areaCount = 0): AppRoute[] {
   if (!p) return ['/about'];
   if (statusKind(p) !== null) return ['/status'];
   if (p.verification_status === 'approved') {
-    return areaCount === 0 ? ['/areas'] : ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/introduction'];
+    return areaCount === 0 ? ['/areas'] : ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction'];
   }
   // incomplete or needs_changes: identity first; once it is complete, the documents step and those after it.
   return identityComplete(p) ? ['/documents', '/references', '/work', '/about'] : ['/about'];

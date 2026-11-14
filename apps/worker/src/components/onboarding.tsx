@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/i18n';
 import { colors, fontFamily } from '@/theme';
 
+import { ChangesNeededBanner } from './ChangesNeededBanner';
 import { ArrowRightIcon, CheckIcon, ChevronLeftIcon, LockIcon } from './icons';
 
 // Pieces of the onboarding screens (W02 onwards). Values come from worker/screens/dww.css and
@@ -14,10 +15,14 @@ const STEP_KEYS = ['about', 'documents', 'work', 'review'] as const;
 const MUTED_STEP = '#5B7366';
 const CONNECTOR = '#C9D9CF';
 
-/** Back button (44px round) and "Step n of 4". On the first step with nowhere to go back to, no button is drawn. */
+/**
+ * Back button (44px round) and "Step n of 4". On the first step with nowhere to go back to, no button is drawn. When DHA
+ * staff asked for changes, what to fix is shown right under it on every sign-up screen.
+ */
 export function OnboardingTop({ step, onBack }: { step: number; onBack?: () => void }) {
   const insets = useSafeAreaInsets();
   return (
+    <>
     <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
       {onBack ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} onPress={onBack} style={styles.roundButton}>
@@ -29,6 +34,8 @@ export function OnboardingTop({ step, onBack }: { step: number; onBack?: () => v
       <View style={{ flex: 1 }} />
       <Text style={styles.stepOf}>{t('onboarding.stepOf', { step, total: STEP_KEYS.length })}</Text>
     </View>
+    <ChangesNeededBanner />
+    </>
   );
 }
 

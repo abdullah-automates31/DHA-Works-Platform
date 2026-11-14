@@ -81,3 +81,49 @@ test('a new job notification opens the job detail where the worker can accept it
   assert.equal(opensDetail(n({ type: 'new_job' })), true);
   assert.equal(opensDetail(n({ type: 'quote_accepted' })), false);
 });
+
+test('report tracking and suspension notices say what happened without naming anyone or the punishment', () => {
+  const made = (type: string, payload: Record<string, unknown> | null) => describe(n({ type, jobId: null, payload }), now);
+  const received = made('report_received', { code: 'RP-0412' });
+  assert.equal(received.title, 'We received your report');
+  assert.equal(received.opensReports, true);
+  assert.equal(received.opensJob, false);
+  assert.equal(made('report_in_review', { code: 'RP-0412' }).title, 'Your report is being reviewed');
+  assert.equal(made('report_resolved', { code: 'RP-0412', outcome: 'action_taken' }).body, 'DHA reviewed your report and took action.');
+  assert.equal(made('report_resolved', { code: 'RP-0412', outcome: 'no_action' }).body, 'DHA reviewed your report. No action was needed.');
+  assert.equal(made('report_resolved', { code: 'RP-0412' }).body, 'DHA reviewed your report. No action was needed.');
+  assert.equal(made('report_resolved', null).opensReports, true);
+  const all = JSON.stringify([received, made('report_resolved', { outcome: 'action_taken' })]).toLowerCase();
+  for (const word of ['suspend', 'warning']) assert.equal(all.includes(word), false, word);
+});
+
+test('a suspension notice carries the reason and, when there is one, the end date', () => {
+  const made = (payload: Record<string, unknown> | null) => describe(n({ type: 'account_suspended', jobId: null, payload }), now);
+  const until = new Date(2026, 10, 21, 10, 0).toISOString();
+  assert.equal(made({ message: 'Rude behaviour', until }).title, 'Your account is suspended');
+  assert.equal(made({ message: 'Rude behaviour', until }).body, 'Reason: Rude behaviour. It ends on 21 Nov 2026.');
+  assert.equal(made({ message: 'Rude behaviour', until: null }).body, 'Reason: Rude behaviour. DHA staff will tell you when it ends.');
+  assert.equal(made(null).body, 'DHA staff suspended your account. Contact DHA support.');
+  assert.equal(made({ message: 'x', until }).icon, 'alert');
+  assert.equal(made({ message: 'x', until }).opensJob, false);
+});
+
+test('"active again" says whether the suspension ended by itself', () => {
+  const made = (payload: Record<string, unknown> | null) => describe(n({ type: 'account_reactivated', jobId: null, payload }), now);
+  assert.equal(made({ expired: true }).body, 'Your suspension has ended. You can use the app again.');
+  assert.equal(made({ expired: false }).body, 'DHA staff reactivated your account. You can use the app again.');
+  assert.equal(made(null).body, 'DHA staff reactivated your account. You can use the app again.');
+});
+
+test('a verification decision tells the applicant what staff wrote, and old notices keep the general sentence', () => {
+  const made = (payload: Record<string, unknown> | null) => describe(n({ type: 'verification_decided', jobId: null, payload }), now);
+  assert.equal(made({ decision: 'ask_for_changes', reason: 'Utility bill must be less than 3 months old.' }).body, 'What to fix: Utility bill must be less than 3 months old.');
+  assert.equal(made({ decision: 'ask_for_changes', reason: 'Utility bill must be less than 3 months old.' }).title, 'Changes needed');
+  assert.equal(made({ decision: 'visit_hq', reason: 'Bring your original CNIC.' }).body, 'Visit the DHA office. Bring your original CNIC.');
+  assert.equal(made({ decision: 'reject', reason: 'CNIC does not match.' }).body, 'Reason: CNIC does not match.');
+  assert.equal(made({ decision: 'approve' }).title, 'You are approved');
+  // a notice written before 0053 has no reason
+  assert.match(made({ decision: 'ask_for_changes' }).body, /fix something in your application/);
+  assert.match(made({ decision: 'reject' }).body, /could not approve/);
+  assert.equal(made({ decision: 'ask_for_changes', reason: '   ' }).body, made({ decision: 'ask_for_changes' }).body);
+});

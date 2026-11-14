@@ -171,6 +171,14 @@ Deno.serve(async (req) => {
       worker: (workerId ? nameOf.get(workerId) : null) ??
         (role === "resident" ? "Your worker" : "The worker"),
       total: quoteId ? quoteOf.get(quoteId)?.total ?? null : null,
+      // What staff wrote: a warning or suspension reason (message), a staff message (text) or the reason in a decision.
+      message: text(row.payload?.message) ?? text(row.payload?.text) ??
+        text(row.payload?.reason),
+      decision: text(row.payload?.decision),
+      // "outcome" for a resolved report; an account notice says whether the suspension ended by itself.
+      outcome: text(row.payload?.outcome) ??
+        (row.payload?.expired === true ? "expired" : null),
+      until: text(row.payload?.until),
     });
     if (!message) {
       skipped++;

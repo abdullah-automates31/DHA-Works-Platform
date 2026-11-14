@@ -66,3 +66,26 @@ export function unsafeBanner(d: ReportDetail): { title: string; text: string } {
     text: 'Call both people now. Do not wait for the report to be reviewed.',
   };
 }
+
+export type TrailStep = { label: string; reached: boolean };
+
+/**
+ * The three steps of a case: Submitted, Under review, then Action taken or Closed. The reporter sees the same three
+ * steps in the app (My reports), so staff and reporter describe a case in the same words. A warning or a suspension
+ * reads "Action taken"; a close reads "Closed".
+ */
+export function reportTrail(status: string, action: string | null): TrailStep[] {
+  const resolved = status === 'resolved';
+  return [
+    { label: 'Submitted', reached: true },
+    { label: 'Under review', reached: status === 'in_review' || resolved },
+    { label: resolved ? (action === 'warning' || action === 'suspend' ? 'Action taken' : 'Closed') : 'Action taken or closed', reached: resolved },
+  ];
+}
+
+/** What the reporter is told about this case, so staff know what they have (not) said. */
+export function reporterNotice(systemGenerated: boolean): string {
+  return systemGenerated
+    ? 'A case opened by the system has no reporter, so nobody is notified.'
+    : 'The reporter is told when the case is received, when staff open it and when it is resolved. They are only told whether action was taken, never what it was or anything about the other person.';
+}

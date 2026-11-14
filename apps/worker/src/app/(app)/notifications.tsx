@@ -52,7 +52,9 @@ export default function NotificationsScreen() {
 
   function open(n: Notice) {
     if (n.readAt === null) void markRead([n.id]);
-    if (n.jobId && describe(n, now).opensJob) router.push(opensDetail(n) ? jobHref(n.jobId) : statusHref(n.jobId));
+    const view = describe(n, now);
+    if (view.opensReports) router.push('/my-reports');
+    else if (n.jobId && view.opensJob) router.push(opensDetail(n) ? jobHref(n.jobId) : statusHref(n.jobId));
   }
 
   return (

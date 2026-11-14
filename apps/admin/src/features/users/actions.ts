@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { BAD_REQUEST, field, refusal, type ActionState } from '@/lib/action';
 import { requireAdmin } from '@/lib/auth';
 import { isUuid } from '@/lib/json';
+import { checkSuspendDays } from './rules';
 
 function refresh(id: string) {
   revalidatePath(`/users/${id}`);
@@ -18,10 +19,13 @@ export async function setAccountStatusAction(_prev: ActionState, formData: FormD
   const reason = field(formData, 'reason', 500);
   if (!isUuid(id)) return BAD_REQUEST;
   if (reason.length < 3) return { error: 'Write a reason (at least 3 characters).' };
-  const { error } = await supabase.rpc('admin_set_account_status', { p_profile: id, p_suspend: suspend, p_reason: reason });
+  // Only a suspension can have an end date; the box is empty for "until staff lift it".
+  const days = suspend ? checkSuspendDays(field(formData, 'days', 10)) : ({ ok: true, days: null } as const);
+  if (!days.ok) return { error: days.hint };
+  const { error } = await supabase.rpc('admin_set_account_status', { p_profile: id, p_suspend: suspend, p_reason: reason, ...(days.days === null ? {} : { p_days: days.days }) });
   if (error) return (await refusal(error))!;
   refresh(id);
-  return { ok: suspend ? 'The account is suspended. They are signed out everywhere.' : 'The account is active again.' };
+  return { ok: suspend ? `The account is suspended${days.days === null ? '' : ` for ${days.days} day${days.days === 1 ? '' : 's'}`}. They are signed out everywhere and have been told why.` : 'The account is active again. They have been told.' };
 }
 
 export async function addStaffNoteAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
