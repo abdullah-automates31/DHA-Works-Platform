@@ -12,6 +12,7 @@ const DONE_TEXT: Record<string, string> = {
   ask_for_changes: 'Sent back for changes. The applicant has been told what to fix.',
   visit_hq: 'Asked to visit HQ. The applicant has been told.',
   reject: 'Rejected. The applicant has been told the reason.',
+  reopened: 'Opened again. The applicant has been told and can fix their details and apply again.',
 };
 
 function href(role: Role, p: { tab: string; q?: string; f?: number | null; page?: number }) {

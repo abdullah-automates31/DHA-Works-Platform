@@ -3,6 +3,7 @@ import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { DecisionForm } from './DecisionForm';
+import { ReopenForm } from './ReopenForm';
 import { isUuid, type Detail, type DetailDoc } from './parse';
 import { loadDetail, signedUrls } from './queries';
 import { DOC_LABEL, initials, phasesText, phoneText, statusChip, waitingText, type DocType, type Role } from './rules';
@@ -159,6 +160,7 @@ export async function ReviewView({ role, id }: { role: Role; id: string }) {
               <span className="mut b" style={{ fontSize: 13 }}>Only applications that are pending or asked to visit HQ can get a new decision.</span>
             </div>
           )}
+          {detail.status === 'rejected' ? <ReopenForm role={role} profileId={detail.id} /> : null}
         </div>
       </div>
     </PortalFrame>

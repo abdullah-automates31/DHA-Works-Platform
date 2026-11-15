@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { refusal } from '@/lib/action';
 import { requireAdmin } from '@/lib/auth';
 import { isUuid } from './parse';
-import { canSubmit, isDecision, normaliseChecks, type Role } from './rules';
+import { canSubmit, isDecision, normaliseChecks, REASON_MAX, REASON_MIN, type Role } from './rules';
 
 export type DecideState = { error?: string };
 
@@ -46,4 +46,27 @@ export async function decideAction(_prev: DecideState, formData: FormData): Prom
   // The sidebar counts live in the layout, so refresh it too (otherwise the badge keeps the old number).
   revalidatePath('/', 'layout');
   redirect(`/${role}s?done=${decision}`);
+}
+
+/**
+ * Lets a rejected applicant apply again (migration 0054): the application goes back to "needs changes" with the reason
+ * staff wrote. The database checks the verified session, the fresh code, the status and the reason.
+ */
+export async function reopenAction(_prev: DecideState, formData: FormData): Promise<DecideState> {
+  const { supabase } = await requireAdmin();
+
+  const profileId = formData.get('profileId');
+  const role = formData.get('role');
+  const reason = typeof formData.get('reason') === 'string' ? (formData.get('reason') as string).trim() : '';
+  if (!isUuid(profileId) || (role !== 'worker' && role !== 'resident')) {
+    return { error: 'That request was not understood. Reload the page and try again.' };
+  }
+  if (reason.length < REASON_MIN) return { error: 'Write a reason the applicant will see.' };
+  if (reason.length > REASON_MAX) return { error: `The reason is too long (${REASON_MAX} characters at most).` };
+
+  const { error } = await supabase.rpc('admin_reopen_rejected', { p_profile: profileId, p_reason: reason });
+  // Needs a code typed in the last 15 minutes: that sends the person to /confirm and back.
+  if (error) return (await refusal(error))!;
+  revalidatePath('/', 'layout');
+  redirect(`/${role}s?tab=rejected&done=reopened`);
 }

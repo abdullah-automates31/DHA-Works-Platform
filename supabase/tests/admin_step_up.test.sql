@@ -77,6 +77,7 @@ select throws_ok($$select public.admin_add_category('Painting', 'Walls')$$, 'P00
 select throws_ok($$select public.admin_update_category(1::smallint, 'Plumbing', 'Pipes', true)$$, 'P0001', 'confirm with a new code', 'admin_update_category needs a fresh code');
 select throws_ok($$select public.admin_set_phase_active(5::smallint, true)$$, 'P0001', 'confirm with a new code', 'admin_set_phase_active needs a fresh code');
 select throws_ok($$select public.admin_decide_verification('00000000-0000-0000-0000-000000000001', 'approve', 'ok', '{}'::jsonb)$$, 'P0001', 'confirm with a new code', 'admin_decide_verification needs a fresh code');
+select throws_ok($$select public.admin_reopen_rejected('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_reopen_rejected needs a fresh code');
 select throws_ok($$select public.admin_report_decide('00000000-0000-0000-0000-000000000001', 'close', 'because')$$, 'P0001', 'confirm with a new code', 'admin_report_decide needs a fresh code');
 select throws_ok($$select public.admin_set_review_hidden('00000000-0000-0000-0000-000000000001', true, 'because')$$, 'P0001', 'confirm with a new code', 'admin_set_review_hidden needs a fresh code');
 select throws_ok($$select public.admin_job_resume('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_job_resume needs a fresh code');

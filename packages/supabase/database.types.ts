@@ -2254,6 +2254,10 @@ export type Database = {
         Args: { p_profile: string; p_reason: string }
         Returns: undefined
       }
+      admin_reopen_rejected: {
+        Args: { p_profile: string; p_reason: string }
+        Returns: undefined
+      }
       admin_report_add_note: {
         Args: { p_note: string; p_report: string }
         Returns: undefined
