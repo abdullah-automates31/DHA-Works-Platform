@@ -1,25 +1,35 @@
 'use client';
 
-import Link from 'next/link';
-import { useActionState } from 'react';
-import { signOutAction, verifyTotpAction, type FormState } from '../actions';
+import { useActionState, useTransition } from 'react';
+import { resendCodeAction, signOutAction, verifyCodeAction, type FormState } from '../actions';
 
 const initial: FormState = {};
 
-export function CodeForm() {
-  const [state, action, pending] = useActionState(verifyTotpAction, initial);
+export function CodeForm({ notSent }: { notSent: boolean }) {
+  const [state, action, pending] = useActionState(verifyCodeAction, initial);
+  const [resend, startResend] = useTransition();
+  const [resendState, resendAction] = useActionState(async () => resendCodeAction(), initial);
 
   return (
     <div className="si-form">
       <div>
         <h2>Enter your code</h2>
-        <p>Open your authenticator app and type the six-digit code for DHA Works Admin.</p>
+        <p>We emailed a six-digit code to your work address. It works for 10 minutes.</p>
       </div>
-      {state.error ? (
+      {notSent && !resendState.info && !resendState.error ? (
+        <div className="si-alert err">The code could not be sent. Press &ldquo;Send a new code&rdquo; below.</div>
+      ) : null}
+      {state.error && !resendState.info ? (
         <div className="si-alert err" role="alert">
           {state.error}
         </div>
       ) : null}
+      {resendState.error ? (
+        <div className="si-alert err" role="alert">
+          {resendState.error}
+        </div>
+      ) : null}
+      {resendState.info ? <div className="si-alert ok">{resendState.info}</div> : null}
       <form action={action} className="si-form" style={{ gap: 18 }} noValidate>
         <label className="fld">
           Six-digit code
@@ -30,9 +40,14 @@ export function CodeForm() {
         </button>
       </form>
       <p className="si-foot">
-        <Link className="si-link" href="/signin/enroll">
-          I lost my phone
-        </Link>
+        <button
+          className="si-link"
+          type="button"
+          disabled={resend}
+          onClick={() => startResend(() => resendAction())}
+        >
+          Send a new code
+        </button>
         {' · '}
         <button className="si-link" type="button" onClick={() => void signOutAction()}>
           Use a different account

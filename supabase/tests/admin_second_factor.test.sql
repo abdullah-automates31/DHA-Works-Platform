@@ -76,7 +76,7 @@ select tests.back();
 select is((select tries::int from public.admin_factor_challenges where session_id = '00000000-0000-0000-0000-00000000a101'), 5, 'the wrong tries were kept (not rolled back)');
 select is((select count(*) from public.audit_log where action = 'admin_code_locked'), 1::bigint, 'the lock is audited');
 
--- 4. A new code (after the wait) proves the mailbox, but no longer opens the session (0052) -------------------------
+-- 4. A new code (after the wait) opens the session (emailed code is the second factor again, 0055) -------------------------
 update public.admin_factor_challenges set created_at = created_at - interval '2 minutes';
 insert into tests.codes values ('a101b', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101'));
 select tests.act('00000000-0000-0000-0000-0000000000a9', '00000000-0000-0000-0000-00000000a901');
@@ -87,18 +87,13 @@ select is(public.admin_verify_code((select v from tests.codes where k = 'a101b')
 select is(public.is_admin(), false, 'the other session stays unverified');
 select tests.back();
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
-select is(public.admin_enroll_proof_status(), false, 'before the code there is no mailbox proof');
-select is(public.admin_verify_code((select v from tests.codes where k = 'a101b')), 'ok', 'the right emailed code is accepted');
-select is(public.admin_enroll_proof_status(), true, 'and counts as a mailbox proof');
-select is(public.is_admin(), false, 'but the emailed code alone does not make an admin session');
-select is(public.admin_session_status(), 'needs_code', 'the portal is still told to ask for the authenticator');
-select is((select count(*) from public.audit_log), 0::bigint, 'and the audit log stays unreadable');
+select is(public.admin_verify_code((select v from tests.codes where k = 'a101b')), 'ok', 'the right emailed code opens the session');
+select is(public.is_admin(), true, 'now it is an admin session');
+select is(public.admin_session_status(), 'verified', 'and the portal is told so');
+select ok((select count(*) from public.audit_log) >= 3, 'a verified admin can read the audit log');
 select is(public.admin_verify_code((select v from tests.codes where k = 'a101b')), 'none', 'a code cannot be used twice');
 select tests.back();
-select is((select count(*) from public.audit_log where action = 'admin_mailbox_proved'), 1::bigint, 'the mailbox proof is audited');
-select is((select count(*) from public.audit_log where action = 'admin_signed_in'), 0::bigint, 'and it is not recorded as a sign-in');
--- From here on session a101 is a verified admin session. The authenticator path that creates it is tested in admin_totp.test.sql.
-insert into public.admin_verified_sessions (session_id, user_id) values ('00000000-0000-0000-0000-00000000a101', '00000000-0000-0000-0000-0000000000a1');
+select is((select count(*) from public.audit_log where action = 'admin_signed_in'), 1::bigint, 'the sign-in is audited');
 
 -- 5. The verification ends with the session (it has no time limit of its own) --------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a102');
@@ -193,6 +188,18 @@ select tests.act('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-000
 select throws_ok(format($$select public.accept_staff_invite('other@test.dev', %L, 'Other')$$, (select v from tests.codes where k = 'invite3')), 'P0001', 'this invitation is not valid', 'an expired invite cannot be accepted');
 select throws_ok(format($$select public.accept_staff_invite('other@test.dev', %L, 'Other')$$, (select v from tests.codes where k = 'invite2')), 'P0001', 'this invitation is not valid', 'a revoked invite cannot be accepted');
 select tests.back();
+
+-- Step-up: a verified session whose last code is old gets fresh again with a new emailed code (0055) ---------------
+delete from public.admin_factor_challenges;
+update public.admin_verified_sessions set fresh_at = now() - interval '1 hour' where session_id = '00000000-0000-0000-0000-00000000a104';
+insert into tests.codes values ('step', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104'));
+select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
+select is(public.admin_step_up_status(), 'needs_code', 'a stale verified session is asked for a code');
+select is(public.admin_verify_code('000000') = 'ok' and false, false, 'a wrong code is not accepted for the step-up');
+select is(public.admin_verify_code((select v from tests.codes where k = 'step')), 'ok', 'the emailed code is accepted for the step-up');
+select is(public.admin_step_up_status(), 'fresh', 'and the session is fresh again');
+select tests.back();
+select is((select count(*) from public.audit_log where action = 'admin_step_up'), 1::bigint, 'the step-up is audited');
 
 -- The two new tables are not reachable from the app at all ----------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
