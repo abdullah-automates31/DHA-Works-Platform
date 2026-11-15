@@ -105,6 +105,14 @@ const worker: Record<string, Template> = {
     title: "Quote not accepted",
     body: `The customer did not go ahead with your quote for ${c.job}.`,
   }),
+  busy_eta_needed: (c) => ({
+    title: "Tell the customer how long you need",
+    body: `You took ${c.job} while another job is in progress. Tap to say how long it will take.`,
+  }),
+  busy_eta_expired: (c) => ({
+    title: "Your quote was withdrawn",
+    body: `${c.job} is open again, because you did not say how long your current job will take.`,
+  }),
   quote_not_selected: (c) => ({
     title: "Job went to another worker",
     body: `${c.job} was given to another worker.`,

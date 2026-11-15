@@ -4,6 +4,7 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/AuthForm';
+import { BusyEtaDialog } from '@/components/BusyEtaDialog';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { Avatar, StatusChip, TimelineCard, whoLine } from '@/components/MyJobParts';
 import { ChevronLeftIcon, ChevronRightIcon, PhoneIcon, UserIcon } from '@/components/icons';
@@ -16,6 +17,7 @@ import { pickImage } from '@/features/documents/pick';
 import { attachBill, buildBillPath, completeJob, startJob, type ActionClient, type Bill } from '@/features/myjobs/actions';
 import { canReport, canRequestCancellation, dialable, jobKind, noteFor, primaryAction, timeline, type JobKind } from '@/features/myjobs/rules';
 import { useJobStatus } from '@/features/myjobs/useJobStatus';
+import { useJobInProgress } from '@/features/feed/useJobInProgress';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -32,6 +34,11 @@ export default function JobStatusScreen() {
   const { state, reload } = useJobStatus(id ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A worker who took this job while another is in progress says how long that one will take (0057).
+  const inProgress = useJobInProgress();
+  const [etaLater, setEtaLater] = useState(false);
+  const [etaSending, setEtaSending] = useState(false);
+  const [etaError, setEtaError] = useState<string | null>(null);
   const userId = session?.user.id ?? '';
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/my-jobs'));
@@ -107,6 +114,21 @@ export default function JobStatusScreen() {
   }
 
   const ready = state.status === 'ready' ? state : null;
+  const etaOwed = ready?.extras.busyEtaPending === true && ready.extras.quoteId !== null;
+
+  async function sendEta(minutes: number) {
+    if (!ready?.extras.quoteId || etaSending) return;
+    setEtaSending(true);
+    setEtaError(null);
+    const { error: rpcError } = await supabase.rpc('set_busy_eta', { p_quote_id: ready.extras.quoteId, p_minutes: minutes });
+    setEtaSending(false);
+    if (rpcError) {
+      setEtaError(t(/between 5 minutes/.test(rpcError.message) ? 'quote.busyRange' : 'quote.busySendFailed'));
+      void reload();
+      return;
+    }
+    await reload();
+  }
   const job = ready?.job ?? null;
   const kind: JobKind | null = job ? jobKind(job) : null;
   const canChangeQuote = kind === 'quoted' && ready?.extras.quoteStatus === 'sent' && ready.extras.quoteRevision === 0;
@@ -207,7 +229,14 @@ export default function JobStatusScreen() {
 
       {ready && job && kind ? (
         <>
+          <BusyEtaDialog visible={etaOwed && !etaLater} currentJobTitle={inProgress?.title ?? ''} sending={etaSending} error={etaError} onSend={(m) => void sendEta(m)} onLater={() => setEtaLater(true)} />
           <ScrollView contentContainerStyle={styles.content}>
+            {etaOwed ? (
+              <Pressable accessibilityRole="button" onPress={() => setEtaLater(false)} style={styles.etaBanner}>
+                <Text style={styles.etaBannerText}>{t('quote.busyBanner')}</Text>
+                <Text style={styles.etaBannerLink}>{t('quote.busyBannerButton')}</Text>
+              </Pressable>
+            ) : null}
             <View style={styles.card}>
               <View style={styles.cardTop}>
                 <StatusChip kind={kind} />
@@ -326,6 +355,9 @@ function Message({ title, body, children }: { title: string; body: string; child
 }
 
 const styles = StyleSheet.create({
+  etaBanner: { backgroundColor: '#FFF4D6', borderRadius: 14, padding: 14, gap: 4 },
+  etaBannerText: { fontFamily: fontFamily.semibold, fontSize: 13.5, lineHeight: 19, color: '#5C4300' },
+  etaBannerLink: { fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.green },
   root: { flex: 1, backgroundColor: colors.background },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 12 },
   back: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },

@@ -45,6 +45,11 @@ export function describe(n: Notice, now: Date = new Date()): NoticeView {
       const when = start ? t('notices.quoteAcceptedWhen', { day: dayWord(start, now), window: windowText(start, null) }) : '';
       return { title: t('notices.quoteAcceptedTitle'), body: t('notices.quoteAcceptedBody', { job, when }), icon: 'check', opensJob: true };
     }
+    case 'busy_eta_needed':
+      // The worker took a job while another is in progress and now says how long that one will take (0057): opens the job, where the popup is.
+      return { title: t('notices.busyEtaNeededTitle'), body: t('notices.busyEtaNeededBody', { job }), icon: 'alert', opensJob: true };
+    case 'busy_eta_expired':
+      return { title: t('notices.busyEtaExpiredTitle'), body: t('notices.busyEtaExpiredBody', { job: capitalize(job) }), icon: 'info', opensJob: false };
     case 'quote_not_selected':
       return { title: t('notices.quoteRejectedTitle'), body: t('notices.quoteNotSelectedBody', { job }), icon: 'info', opensJob: false };
     case 'quote_rejected':

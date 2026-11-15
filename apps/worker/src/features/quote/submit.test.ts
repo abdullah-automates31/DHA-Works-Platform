@@ -10,6 +10,9 @@ test('every database refusal maps to a friendly key', () => {
   const cases: [string, string][] = [
     ['the resident did not accept your quote on this job', 'quote.errors.rejected'],
     ['finish the job you have started before taking another', 'quote.errors.busy'],
+    ['tell the customer how long your current job will take', 'quote.errors.busyEta'],
+    ['tell the customer how long your current job will take on your other quote first', 'quote.errors.busyEtaFirst'],
+    ['the time left on your current job must be between 5 minutes and 3 days', 'quote.errors.busyEta'],
     ['this job has expired', 'quote.errors.expired'],
     ['you have already changed this quote once', 'quote.errors.alreadyChanged'],
     ['the customer already decided on your quote', 'quote.errors.decided'],

@@ -12,13 +12,17 @@ export type ClaimErrorKey =
   | 'quote.errors.decided'
   | 'quote.errors.visit'
   | 'quote.errors.busy'
+  | 'quote.errors.busyEta'
+  | 'quote.errors.busyEtaFirst'
   | 'quote.errors.generic';
 
 type Err = { name?: string; message?: string; details?: string | null } | null | undefined;
 
 export function claimErrorKey(error: Err): ClaimErrorKey {
   const text = `${error?.name ?? ''} ${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase();
-  if (text.includes('finish the job you have started')) return 'quote.errors.busy'; // one job at a time (0056)
+  if (text.includes('finish the job you have started')) return 'quote.errors.busy'; // old paths refuse a busy worker (0056)
+  if (text.includes('on your other quote first')) return 'quote.errors.busyEtaFirst'; // one unanswered quote at a time (0057)
+  if (text.includes('tell the customer how long') || text.includes('time left on your current job')) return 'quote.errors.busyEta'; // 0057
   if (text.includes('did not accept your quote')) return 'quote.errors.rejected';
   if (text.includes('already changed this quote')) return 'quote.errors.alreadyChanged';
   if (text.includes('already decided on your quote')) return 'quote.errors.decided';

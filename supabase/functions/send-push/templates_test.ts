@@ -136,3 +136,17 @@ Deno.test("a decision without a reason still reads well, and a long reason is cu
   assertEquals(body.length <= 160, true);
   assertEquals(body.endsWith("…"), true);
 });
+
+Deno.test("a busy worker is asked how long the current job will take, and told when the quote is withdrawn", () => {
+  assertEquals(render("busy_eta_needed", "worker", ctx), {
+    title: "Tell the customer how long you need",
+    body: "You took Fix AC while another job is in progress. Tap to say how long it will take.",
+  });
+  assertEquals(render("busy_eta_expired", "worker", ctx), {
+    title: "Your quote was withdrawn",
+    body: "Fix AC is open again, because you did not say how long your current job will take.",
+  });
+  // the customer is not pushed for either: the quote reaches them only after the worker answers
+  assertEquals(render("busy_eta_needed", "resident", ctx), null);
+  assertEquals(render("busy_eta_expired", "resident", ctx), null);
+});

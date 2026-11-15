@@ -17,6 +17,8 @@ test('quote accepted names the job and the visit, never the resident', () => {
 test('each worker-facing type has its own words', () => {
   const title = (type: string) => describe(n({ type }), now).title;
   assert.equal(title('quote_not_selected'), 'Quote rejected');
+  assert.equal(title('busy_eta_needed'), 'Tell the customer how long you need');
+  assert.equal(title('busy_eta_expired'), 'Your quote was withdrawn');
   assert.equal(title('quote_rejected'), 'You are off this job');
   assert.equal(title('job_cancelled'), 'Job cancelled');
   // A cancelled job is invisible to the worker, so its notice says so plainly and opens nothing.
@@ -25,6 +27,8 @@ test('each worker-facing type has its own words', () => {
   assert.equal(cancelled.opensJob, false);
   assert.equal(describe(n({ type: 'quote_rejected' }), now).opensJob, false);
   assert.equal(describe(n({ type: 'quote_not_selected' }), now).opensJob, false);
+  assert.equal(describe(n({ type: 'busy_eta_needed' }), now).opensJob, true);
+  assert.equal(describe(n({ type: 'busy_eta_expired' }), now).opensJob, false);
   assert.equal(title('job_expired'), 'Job expired');
   assert.equal(title('cash_collected'), 'Job closed');
   // A price difference never disputes a job (Shariq, 27 Oct): an old cash_disputed row must not claim a dispute.

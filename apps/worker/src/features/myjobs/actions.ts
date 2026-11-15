@@ -5,6 +5,7 @@ import { MAX_FILE_BYTES } from '../documents/files.ts';
 export type ActionErrorKey =
   | 'myjobs.errors.cannotStart'
   | 'myjobs.errors.cannotComplete'
+  | 'myjobs.errors.anotherInProgress'
   | 'myjobs.errors.billRequired'
   | 'myjobs.errors.billType'
   | 'myjobs.errors.billSize'
@@ -18,6 +19,7 @@ type Err = { name?: string; message?: string } | null | undefined;
 
 export function actionErrorKey(error: Err): ActionErrorKey {
   const text = `${error?.name ?? ''} ${error?.message ?? ''}`.toLowerCase();
+  if (text.includes('finish the job you have started')) return 'myjobs.errors.anotherInProgress'; // one job at a time (0057)
   if (text.includes('this job cannot be started')) return 'myjobs.errors.cannotStart';
   if (text.includes('this job cannot be completed')) return 'myjobs.errors.cannotComplete';
   if (text.includes('upload the material bill')) return 'myjobs.errors.billRequired';
