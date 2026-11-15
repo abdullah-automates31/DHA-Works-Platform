@@ -9,6 +9,7 @@ const args = buildSubmitArgs('job-1', { labour: '1500', withMaterials: false, it
 test('every database refusal maps to a friendly key', () => {
   const cases: [string, string][] = [
     ['the resident did not accept your quote on this job', 'quote.errors.rejected'],
+    ['finish the job you have started before taking another', 'quote.errors.busy'],
     ['this job has expired', 'quote.errors.expired'],
     ['you have already changed this quote once', 'quote.errors.alreadyChanged'],
     ['the customer already decided on your quote', 'quote.errors.decided'],

@@ -9,7 +9,8 @@ import { FeedJobCard } from '@/components/FeedJobCard';
 import { LoadMoreFooter } from '@/components/LoadMoreFooter';
 import { feedSubtitle } from '@/features/feed/format';
 import { useFeed } from '@/features/feed/useFeed';
-import { jobHref } from '@/features/job/routes';
+import { useJobInProgress } from '@/features/feed/useJobInProgress';
+import { jobHref, statusHref } from '@/features/job/routes';
 import { t } from '@/i18n';
 import { nearEnd } from '@/lib/paging';
 import { useMyProfile } from '@/lib/profile';
@@ -24,6 +25,8 @@ export default function OpenJobsScreen() {
   const { state } = useMyProfile();
   const areas = state.status === 'ready' ? state.areas : [];
   const { data, refresh, refreshing, loadMore, loadingMore, moreFailed } = useFeed(areas.join(','));
+  // One job at a time: while a job is in progress the database shows no new jobs, so say why instead of looking empty.
+  const inProgress = useJobInProgress();
   // `now` and the press handler stay the same between renders, so cards that did not change are not redrawn when a
   // page loads or the pull spinner flips. `now` moves on when the list itself is reloaded.
   // `data` is only the trigger (a new load means a new "now"), it is not read inside
@@ -64,7 +67,15 @@ export default function OpenJobsScreen() {
           </View>
         ) : null}
 
-        {data.status === 'ready' && data.jobs.length === 0 ? (
+        {inProgress ? (
+          <View style={styles.message}>
+            <Text style={styles.messageTitle}>{t('feed.busyTitle')}</Text>
+            <Text style={styles.messageBody}>{t('feed.busyBody', { title: inProgress.title })}</Text>
+            <PrimaryButton label={t('feed.busyOpen')} onPress={() => router.push(statusHref(inProgress.id))} showArrow={false} />
+          </View>
+        ) : null}
+
+        {data.status === 'ready' && data.jobs.length === 0 && !inProgress ? (
           <View style={styles.message}>
             <Text style={styles.messageTitle}>{t('feed.emptyTitle')}</Text>
             <Text style={styles.messageBody}>{t('feed.emptyBody')}</Text>

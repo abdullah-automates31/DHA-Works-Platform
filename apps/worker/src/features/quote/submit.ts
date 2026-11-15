@@ -11,12 +11,14 @@ export type ClaimErrorKey =
   | 'quote.errors.alreadyChanged'
   | 'quote.errors.decided'
   | 'quote.errors.visit'
+  | 'quote.errors.busy'
   | 'quote.errors.generic';
 
 type Err = { name?: string; message?: string; details?: string | null } | null | undefined;
 
 export function claimErrorKey(error: Err): ClaimErrorKey {
   const text = `${error?.name ?? ''} ${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase();
+  if (text.includes('finish the job you have started')) return 'quote.errors.busy'; // one job at a time (0056)
   if (text.includes('did not accept your quote')) return 'quote.errors.rejected';
   if (text.includes('already changed this quote')) return 'quote.errors.alreadyChanged';
   if (text.includes('already decided on your quote')) return 'quote.errors.decided';

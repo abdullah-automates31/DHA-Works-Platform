@@ -152,6 +152,8 @@ select throws_ok($$ select public.complete_job((select a from t), null) $$, 'upl
 select tests.back();
 
 -- ---------------------------------------------------------------- replace worker, then someone else accepts
+-- Job A is still in progress here (the bill rule stopped its completion). A worker does one job at a time (0056), so close it first.
+update public.jobs set status = 'completed' where id = (select a from t);
 create temp table t2 as select tests.make_job('Job D', '4') as d;
 grant select on t2 to authenticated;
 select tests.act('00000000-0000-0000-0000-0000000000b1');

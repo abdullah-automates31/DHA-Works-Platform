@@ -193,6 +193,9 @@ export const en = {
     photo: 'Job photo',
     emptyTitle: 'No open jobs right now',
     emptyBody: 'New jobs in your trades and phases will appear here. Pull down to refresh, or add more phases from your profile.',
+    busyTitle: 'Finish your job first',
+    busyBody: 'You have a job in progress: {title}. New jobs show again once you mark it complete.',
+    busyOpen: 'Open my job',
     errorTitle: 'Could not load the jobs',
     errorBody: 'Check your internet connection and try again.',
     // Used by features/feed/format.ts (the pure display helpers)
@@ -302,6 +305,7 @@ export const en = {
       alreadyChanged: 'You have already changed this quote once.',
       decided: 'The customer already decided on your quote, so it cannot be changed.',
       visit: 'Check the visit time: it must be ahead of now and at most 12 hours long.',
+      busy: 'Finish the job you have started before taking another one.',
     },
   },
   visit: {
