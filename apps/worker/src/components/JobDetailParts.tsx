@@ -1,13 +1,17 @@
 import { Image } from 'expo-image';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { JobContact } from '@/features/job/useJob';
+import { dialable } from '@/features/myjobs/rules';
+import { visitText } from '@/features/quote/visit';
 import { formatDuration } from '@/features/work/rules';
 import { t } from '@/i18n';
 import { stableCacheKey, stableSource } from '@/lib/image';
 import { colors, fontFamily } from '@/theme';
 
-import { PauseIcon, PlayIcon, UserIcon, UsersIcon } from './icons';
+import { ChevronRightIcon, PauseIcon, PhoneIcon, PlayIcon, UserIcon, UsersIcon } from './icons';
 
 // Pieces of W08 Job detail (worker/screens/w-job.dc.html). Only what a worker may see before acceptance:
 // photos, the description, the voice note, how many others are interested, and a "Verified resident" card with
@@ -111,20 +115,67 @@ export function InterestCard({ title, body }: { title: string; body: string }) {
   );
 }
 
-/** "Verified resident · Phase 6", no name (decision 4): the avatar is a plain person icon, not initials. */
-export function ResidentCard({ phase }: { phase: number }) {
+/**
+ * "Verified resident · Phase 6" bar. Tapping it opens the customer's details. Before the customer accepts the quote
+ * only the phase is known (decision 4: no name, phone or address), so the sheet says they unlock on acceptance.
+ */
+export function ResidentCard({ phase, contact }: { phase: number; contact: JobContact | null }) {
+  const [open, setOpen] = useState(false);
+  const phone = dialable(contact?.phone);
+  const visit = contact?.visitStart ? visitText(contact.visitStart) : '';
   return (
-    <View style={[styles.card, styles.rowCard]}>
-      <View style={styles.avatar}>
-        <UserIcon size={22} color="#5C4300" />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.cardTitle}>{t('job.customer')}</Text>
-        <Text style={styles.sub}>{t('job.residentPhase', { phase })}</Text>
-      </View>
-      <View style={styles.verified}>
-        <Text style={styles.verifiedText}>{t('job.verified')}</Text>
-      </View>
+    <>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('job.customerDetails')} onPress={() => setOpen(true)} style={[styles.card, styles.rowCard]}>
+        <View style={styles.avatar}>
+          <UserIcon size={22} color="#5C4300" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle}>{contact?.name || t('job.customer')}</Text>
+          <Text style={styles.sub}>{contact ? t('job.residentPhase', { phase }) : t('job.customerTap')}</Text>
+        </View>
+        <View style={styles.verified}>
+          <Text style={styles.verifiedText}>{t('job.verified')}</Text>
+        </View>
+        <ChevronRightIcon size={18} color={colors.muted} />
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel={t('job.customerClose')}>
+          <Pressable style={styles.sheet} accessibilityViewIsModal onPress={() => undefined}>
+            <Text style={styles.sheetTitle}>{t('job.customerDetails')}</Text>
+            <Text style={styles.sub}>{t('job.residentPhase', { phase })}</Text>
+            {contact ? (
+              <View style={{ gap: 10, marginTop: 8 }}>
+                {contact.name ? <Line label={t('job.customerName')} value={contact.name} /> : null}
+                {contact.phone ? <Line label={t('job.customerPhone')} value={contact.phone} /> : null}
+                {contact.plot ? <Line label={t('job.customerPlot')} value={contact.plot} /> : null}
+                {contact.floor ? <Line label={t('job.customerFloor')} value={contact.floor} /> : null}
+                {visit ? <Line label={t('job.customerVisit')} value={visit} /> : null}
+                {phone ? (
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('myjobs.call')} onPress={() => void Linking.openURL('tel:' + phone)} style={styles.callBtn}>
+                    <PhoneIcon size={18} color="#fff" />
+                    <Text style={styles.callBtnText}>{t('myjobs.call')}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={[styles.cardBody, { marginTop: 8 }]}>{t('job.customerLocked')}</Text>
+            )}
+            <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={styles.closeBtn}>
+              <Text style={styles.closeText}>{t('job.customerClose')}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.line}>
+      <Text style={styles.lineLabel}>{label}</Text>
+      <Text style={styles.lineValue}>{value}</Text>
     </View>
   );
 }
@@ -150,4 +201,14 @@ const styles = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F6E7B4', alignItems: 'center', justifyContent: 'center' },
   verified: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: colors.mint, justifyContent: 'center' },
   verifiedText: { fontFamily: fontFamily.extrabold, fontSize: 11, color: colors.green },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 28, gap: 4 },
+  sheetTitle: { fontFamily: fontFamily.extrabold, fontSize: 18, color: colors.ink },
+  line: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  lineLabel: { fontFamily: fontFamily.bold, fontSize: 13, color: colors.muted },
+  lineValue: { flex: 1, textAlign: 'right', fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.ink },
+  callBtn: { height: 48, borderRadius: 24, backgroundColor: colors.green, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  callBtnText: { fontFamily: fontFamily.extrabold, fontSize: 15, color: '#fff' },
+  closeBtn: { height: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  closeText: { fontFamily: fontFamily.bold, fontSize: 14, color: colors.muted },
 });

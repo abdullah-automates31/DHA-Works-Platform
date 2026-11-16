@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
-import { jobKind, type JobKind } from '@/features/myjobs/rules';
+import { canCall, jobKind, type JobKind } from '@/features/myjobs/rules';
 import { URL_TTL_SECONDS, signedUrlMap } from '@/lib/signedUrls';
 import { supabase } from '@/lib/supabase';
 
@@ -28,7 +28,10 @@ export type JobDetail = {
   quotes: number | null;
   standing: Standing;
   kind: JobKind | null; // the worker's own stage on the job (null for a job not engaged with yet)
+  contact: JobContact | null; // the customer's details: filled by the database only for the worker who won the job
 };
+
+export type JobContact = { name: string | null; phone: string | null; plot: string | null; floor: string | null; visitStart: string | null };
 
 export type JobState =
   | { status: 'loading' }
@@ -50,7 +53,7 @@ async function fetchJob(id: string): Promise<JobState> {
       .maybeSingle(),
     supabase
       .from('worker_jobs')
-      .select('id, code, title, description, category_name, phase, lane, urgency, preferred_date, window_from, window_to, posted_at, voice_note_path, status, my_quote_status, is_mine')
+      .select('id, code, title, description, category_name, phase, lane, urgency, preferred_date, window_from, window_to, posted_at, voice_note_path, status, my_quote_status, is_mine, resident_name, resident_phone, plot_no, floor, scheduled_start')
       .eq('id', id)
       .maybeSingle(),
     supabase.from('job_photos').select('storage_path, sort').eq('job_id', id).order('sort'),
@@ -79,6 +82,7 @@ async function fetchJob(id: string): Promise<JobState> {
       quotes: feed.data.quote_count ?? 0,
       standing: 'none',
       kind: null,
+      contact: null,
     };
   } else {
     // 2) A job this worker already engaged with (interest or quote): worker_jobs.
@@ -104,6 +108,9 @@ async function fetchJob(id: string): Promise<JobState> {
       quotes: null,
       standing: standingFromMyJob({ status: mine.data.status ?? '', myQuoteStatus: mine.data.my_quote_status }),
       kind: jobKind({ status: mine.data.status ?? '', isMine: mine.data.is_mine, myQuoteStatus: mine.data.my_quote_status }),
+      contact: canCall(jobKind({ status: mine.data.status ?? '', isMine: mine.data.is_mine, myQuoteStatus: mine.data.my_quote_status }))
+        ? { name: mine.data.resident_name, phone: mine.data.resident_phone, plot: mine.data.plot_no, floor: mine.data.floor, visitStart: mine.data.scheduled_start }
+        : null,
     };
   }
 
