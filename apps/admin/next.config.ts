@@ -1,7 +1,13 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/security-headers.ts';
 
+const adminDir = path.dirname(fileURLToPath(import.meta.url));
+
 const config: NextConfig = {
+  // Vercel Root Directory is apps/admin; tracing must still see the repo root workspace.
+  outputFileTracingRoot: path.join(adminDir, '../..'),
   // A second dev server (for example against the local stack) needs its own build folder: NEXT_DIST_DIR=.next-local
   distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,

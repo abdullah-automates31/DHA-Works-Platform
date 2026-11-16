@@ -26,6 +26,7 @@ import {
   type MaterialItem,
   type QuoteInput,
 } from '@/features/quote/rules';
+import { useJobInProgress } from '@/features/feed/useJobInProgress';
 import { claimJob, reviseQuote } from '@/features/quote/submit';
 import { choiceFromRange, defaultVisit, visitArgs, visitError, visitText, type VisitChoice } from '@/features/quote/visit';
 import { t, type TranslationKey } from '@/i18n';
@@ -153,6 +154,7 @@ function ChangeQuote({ jobId, preferred, when, onDone }: { jobId: string; prefer
 function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: string; preferred: Preferred; when: string; onAccepted: () => void; revise?: Revise }) {
   const [input, setInput] = useState<QuoteInput>(revise?.input ?? { labour: '', withMaterials: false, items: [{ name: '', price: '' }] });
   const [visit, setVisit] = useState<VisitChoice>(() => revise?.visit ?? defaultVisit(preferred));
+  const busy = Boolean(useJobInProgress());
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -275,6 +277,7 @@ function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: stri
           ) : null}
 
           {revise ? <Text style={styles.warning}>{t('quote.changeWarning')}</Text> : null}
+          {busy ? <Text style={styles.warning}>{t('quote.busyVisitNote')}</Text> : null}
           <ArrivalPicker value={visit} onChange={setVisit} />
           {when ? <Text style={styles.billHint}>{t('quote.visitAsked', { when })}</Text> : null}
           <Text style={styles.billHint}>{t('quote.visitHint')}</Text>
@@ -376,7 +379,7 @@ const styles = StyleSheet.create({
   noticeBody: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.muted },
 });
 
-/** The preview line for the window being picked: "Tomorrow, 10 AM to 12 PM". */
+/** The preview line for the time being picked: "Tomorrow, 10 AM". */
 function visitTextFor(choice: VisitChoice): string {
   const { p_visit_start, p_visit_end } = visitArgs(choice);
   return visitText(p_visit_start, p_visit_end);

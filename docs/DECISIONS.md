@@ -142,3 +142,22 @@ These were found while assembling these docs. Until resolved, the resolution bel
 - The idle-logout activity cookie is cleared whenever nobody is signed in, so a new sign-in is never signed out by an old timestamp.
 - A failed session check (database or network trouble) shows a "try again" page; only a rejected or expired token goes to sign-in, and only a real "not an admin" answer shows "That account cannot use the portal".
 - Forms keep what was typed after a refusal or the trip to the new-code page (kept in this browser tab for 15 minutes; a save clears it).
+
+## Decisions of 14 to 16 Nov 2026 (owner)
+
+- **Admin sessions never expire** (14 Nov, 0051): no idle logout and no 4-hour limit; the 15-minute fresh-code check for sensitive actions stays.
+- **Admin second factor is the emailed code** (15 Nov, 0055): code by email at sign-in and for the sensitive actions only (suspending, deleting, approving or rejecting, settings, staff, reopening), never on every page. This reverses the authenticator app of 14 Nov (0052); the owner knows the emailed code is weaker.
+- **A rejected applicant can apply again** (15 Nov, 0054): staff open the application again with a note; it returns to "needs changes".
+- **A worker does one job at a time, but may line up the next** (15 Nov, 0057; a first hard block, 0056, was dropped): a worker with a job in progress still sees and accepts jobs; he tells the customer how long the current job will take (minutes, typed after accepting, popup from a notification); the customer decides to wait, reject, or replace the worker. A second job cannot be started while one is in progress. An unanswered quote is withdrawn after 30 minutes (my choice, to be confirmed).
+- **Not part of the product:** the Bloom desktop app the owner downloaded for personal customising.
+
+## 16 Nov 2026: busy workers, one visiting time, reminders, calls (owner notes; migration 0058)
+
+These notes replace the "wait and give a finish time" part of the 15 Nov busy-worker rule (0057). 0057's held quote and `set_busy_eta` stay in the database only so that a quote already waiting can still expire; nothing creates a new one.
+
+- **Parallel jobs:** a worker with a job in progress may **start** another only when it is for the **same customer on the same day** (Karachi calendar day of the booked visit). Jobs of different customers, or on different days, can never run in parallel: `start_job` refuses until the running ones are completed.
+- **A busy worker may accept and quote** a new job (they still see the feed), but the quote must carry a **day and time**. There is no "as soon as possible" for a busy worker. When the customer accepts, the job is a **scheduled** job at that time. The quote reaches the customer at once (no estimate step).
+- **One visiting time, not from/to:** the worker picks a day and one time (buttons, no sliders). The database still stores a start and an end (the customer app reads both): the end is **start + 1 hour**, the worker app sends it and the database fills it when it is missing. Show only the start.
+- **Job reminder:** a switch on the worker's profile ("Job reminders", on by default, `worker_details.job_reminders`, `set_job_reminders`). One notice (`job_reminder`) goes out about **one hour before** a scheduled visit (every 5 minutes a sweep, once per visit; a visit booked less than an hour ahead is not reminded; a visit that moves is reminded again).
+- **Call:** the customer's phone number is offered to the worker from acceptance on through every later stage (scheduled, in progress, completed, cash, reviewed, disputed). The worker's number is already in the customer's accepted quote.
+- **Change quote (requote):** unchanged: once, while the customer has not decided. The button is in the worker app on the job's status screen ("Change quote (once)").

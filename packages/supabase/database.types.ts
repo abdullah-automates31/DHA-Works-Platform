@@ -831,6 +831,7 @@ export type Database = {
           voice_note_path: string | null
           window_from: string | null
           window_to: string | null
+          worker_reminded_at: string | null
         }
         Insert: {
           accepted_quote_id?: string | null
@@ -863,6 +864,7 @@ export type Database = {
           voice_note_path?: string | null
           window_from?: string | null
           window_to?: string | null
+          worker_reminded_at?: string | null
         }
         Update: {
           accepted_quote_id?: string | null
@@ -895,6 +897,7 @@ export type Database = {
           voice_note_path?: string | null
           window_from?: string | null
           window_to?: string | null
+          worker_reminded_at?: string | null
         }
         Relationships: [
           {
@@ -1791,6 +1794,7 @@ export type Database = {
           rating_count: number
           visit_fee: number
           voice_intro_path: string | null
+          job_reminders: boolean
         }
         Insert: {
           about?: string | null
@@ -1802,6 +1806,7 @@ export type Database = {
           rating_count?: number
           visit_fee?: number
           voice_intro_path?: string | null
+          job_reminders?: boolean
         }
         Update: {
           about?: string | null
@@ -1813,6 +1818,7 @@ export type Database = {
           rating_count?: number
           visit_fee?: number
           voice_intro_path?: string | null
+          job_reminders?: boolean
         }
         Relationships: [
           {
@@ -2512,6 +2518,7 @@ export type Database = {
         Returns: string
       }
       set_available_today: { Args: { p_value: boolean }; Returns: undefined }
+      set_job_reminders: { Args: { p_value: boolean }; Returns: undefined }
       set_busy_eta: {
         Args: { p_minutes: number; p_quote_id: string }
         Returns: undefined

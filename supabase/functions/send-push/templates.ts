@@ -105,6 +105,10 @@ const worker: Record<string, Template> = {
     title: "Quote not accepted",
     body: `The customer did not go ahead with your quote for ${c.job}.`,
   }),
+  job_reminder: (c) => ({
+    title: "Visit in one hour",
+    body: `${c.job} is booked in about an hour. Get ready to leave.`,
+  }),
   busy_eta_needed: (c) => ({
     title: "Tell the customer how long you need",
     body: `You took ${c.job} while another job is in progress. Tap to say how long it will take.`,

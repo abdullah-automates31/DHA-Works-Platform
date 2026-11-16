@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { choiceFromRange, clockLabel, dayOptions, defaultVisit, fromSlots, isoDay, toSlots, visitArgs, visitError, visitText } from './visit.ts';
+import { choiceFromRange, clockLabel, dayOptions, defaultVisit, isoDay, timeSlots, visitArgs, visitError, visitText } from './visit.ts';
 
 // Monday 9 Nov 2026, 10:10 local time.
 const now = new Date(2026, 10, 9, 10, 10);
@@ -15,52 +15,55 @@ test('seven days to pick from, starting today', () => {
   assert.equal(days[2]?.label, 'Wed 11 Nov');
 });
 
-test('today only offers start times at least 30 minutes ahead; other days the whole day', () => {
-  assert.equal(fromSlots('2026-11-09', now)[0], '11:00');
-  assert.equal(fromSlots('2026-11-10', now)[0], '07:00');
-  assert.equal(fromSlots('2026-11-10', now).at(-1), '21:30');
-  assert.deepEqual(fromSlots('2026-11-09', new Date(2026, 10, 9, 21, 45)), []);
+test('today only offers times at least 30 minutes ahead; other days the whole day', () => {
+  assert.equal(timeSlots('2026-11-09', now)[0], '11:00');
+  assert.equal(timeSlots('2026-11-10', now)[0], '07:00');
+  assert.equal(timeSlots('2026-11-10', now).at(-1), '21:00');
+  assert.deepEqual(timeSlots('2026-11-09', new Date(2026, 10, 9, 21, 45)), []);
 });
 
-test('end times come after the start, up to 22:00 and 12 hours', () => {
-  assert.deepEqual(toSlots('20:30'), ['21:00', '21:30', '22:00']);
-  assert.equal(toSlots('07:00').at(-1), '19:00');
+test('chip labels', () => {
+  assert.equal(clockLabel('09:00'), '9 AM');
+  assert.equal(clockLabel('13:30'), '1:30 PM');
+  assert.equal(clockLabel('00:00'), '12 AM');
+  assert.equal(clockLabel('12:00'), '12 PM');
 });
 
-test('the form starts at the customer\'s own window when it is still ahead', () => {
-  assert.deepEqual(defaultVisit({ date: '2026-11-12', from: '16:00:00', to: '18:00:00' }, now), { day: '2026-11-12', from: '16:00', to: '18:00' });
-  // Odd minutes snap up to the next half hour.
-  assert.deepEqual(defaultVisit({ date: '2026-11-12', from: '16:10:00', to: '17:50:00' }, now), { day: '2026-11-12', from: '16:30', to: '18:00' });
+test('the form starts at the customer\'s own day and start time when it is still ahead', () => {
+  assert.deepEqual(defaultVisit({ date: '2026-11-12', from: '16:00:00', to: '18:00:00' }, now), { day: '2026-11-12', time: '16:00' });
+  // Odd minutes snap up to the next half hour; a customer window's end is ignored.
+  assert.deepEqual(defaultVisit({ date: '2026-11-12', from: '16:10:00', to: '17:50:00' }, now), { day: '2026-11-12', time: '16:30' });
 });
 
-test('an ASAP job (or a past preference) starts at the next free half hour today, two hours long', () => {
-  assert.deepEqual(defaultVisit(none, now), { day: '2026-11-09', from: '11:00', to: '13:00' });
-  assert.deepEqual(defaultVisit({ date: '2026-11-01', from: '09:00', to: '11:00' }, now), { day: '2026-11-09', from: '11:00', to: '13:00' });
+test('an ASAP job (or a past preference) starts at the next free half hour today', () => {
+  assert.deepEqual(defaultVisit(none, now), { day: '2026-11-09', time: '11:00' });
+  assert.deepEqual(defaultVisit({ date: '2026-11-01', from: '09:00', to: '11:00' }, now), { day: '2026-11-09', time: '11:00' });
   // Late at night there is nothing left today: tomorrow morning.
-  assert.deepEqual(defaultVisit(none, new Date(2026, 10, 9, 21, 45)), { day: '2026-11-10', from: '09:00', to: '11:00' });
+  assert.deepEqual(defaultVisit(none, new Date(2026, 10, 9, 21, 45)), { day: '2026-11-10', time: '09:00' });
 });
 
-test('the window must be ahead, in order and at most 12 hours (as the database checks)', () => {
-  assert.equal(visitError({ day: '2026-11-09', from: '10:00', to: '12:00' }, now), 'past');
-  assert.equal(visitError({ day: '2026-11-10', from: '12:00', to: '11:00' }, now), 'order');
-  assert.equal(visitError({ day: '2026-11-10', from: '07:00', to: '19:30' }, now), 'long');
-  assert.equal(visitError({ day: '2026-11-10', from: '10:00', to: '12:00' }, now), null);
+test('the time must be ahead (as the database checks); a malformed day or time is refused too', () => {
+  assert.equal(visitError({ day: '2026-11-09', time: '10:00' }, now), 'past');
+  assert.equal(visitError({ day: '2026-11-09', time: '10:10' }, now), 'past');
+  assert.equal(visitError({ day: '2026-11-08', time: '18:00' }, now), 'past');
+  assert.equal(visitError({ day: '2026-11-10', time: '10:00' }, now), null);
+  assert.equal(visitError({ day: 'not-a-day', time: '10:00' }, now), 'past');
+  assert.equal(visitError({ day: '2026-11-10', time: 'soon' }, now), 'past');
 });
 
-test('the window is sent as exact timestamps and reads back the same', () => {
-  const args = visitArgs({ day: '2026-11-10', from: '10:00', to: '12:30' });
+test('the visit is sent as exact timestamps, the stored end is one hour later, and it reads back the same', () => {
+  const args = visitArgs({ day: '2026-11-10', time: '10:00' });
   assert.equal(new Date(args.p_visit_start).getTime(), new Date(2026, 10, 10, 10, 0).getTime());
-  assert.deepEqual(choiceFromRange(args.p_visit_start, args.p_visit_end), { day: '2026-11-10', from: '10:00', to: '12:30' });
+  assert.equal(new Date(args.p_visit_end).getTime() - new Date(args.p_visit_start).getTime(), 60 * 60_000);
+  assert.deepEqual(choiceFromRange(args.p_visit_start, args.p_visit_end), { day: '2026-11-10', time: '10:00' });
   assert.equal(choiceFromRange(null, null), null);
+  assert.equal(choiceFromRange('garbage'), null);
   assert.equal(isoDay(now), '2026-11-09');
 });
 
-test('a stored window reads "Tomorrow, 10 AM to 12:30 PM"', () => {
-  const args = visitArgs({ day: '2026-11-10', from: '10:00', to: '12:30' });
-  assert.equal(visitText(args.p_visit_start, args.p_visit_end, now), 'Tomorrow, 10 AM to 12:30 PM');
+test('a stored visit reads "Tomorrow, 10 AM": one time, no range', () => {
+  const args = visitArgs({ day: '2026-11-10', time: '10:00' });
+  assert.equal(visitText(args.p_visit_start, args.p_visit_end, now), 'Tomorrow, 10 AM');
+  assert.equal(visitText(visitArgs({ day: '2026-11-09', time: '16:30' }).p_visit_start, null, now), 'Today, 4:30 PM');
   assert.equal(visitText(null, null, now), '');
-});
-
-test('chips read like a clock', () => {
-  assert.deepEqual(['07:00', '12:00', '13:30', '00:30'].map(clockLabel), ['7 AM', '12 PM', '1:30 PM', '12:30 AM']);
 });

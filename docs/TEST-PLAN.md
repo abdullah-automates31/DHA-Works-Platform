@@ -18,7 +18,7 @@ Goal: prove that the customer app, the worker app and the admin portal work toge
 | Resident 2 | Shariq (+923342477874) | customer app, second independent resident |
 | Worker A | Abdullah's worker account (+923323524005) | real phone, push test device |
 | Workers B, C, D | Demo Worker Plumber, Electrician, All-rounder (+923000000201 to 203) | created by `supabase/dev/seed_dev_demo_workers.sql`; add their codes in the Supabase dashboard first |
-| Admin | one of the 3 admin accounts on DEV | portal, password + authenticator app |
+| Admin | one of the 3 admin accounts on DEV | portal, password + emailed code |
 
 Before the run: seed the demo workers, check `supabase db query --linked "select count(*) from public.profiles where role='worker' and verification_status='approved'"` is at least 4, and that every worker covers the phases and trades of the test jobs.
 
@@ -41,7 +41,7 @@ Run once with Resident 1 and Workers A and B competing; keep the log of what eac
 
 | Step | Actor / app | Action | Expected result |
 | --- | --- | --- | --- |
-| 1 | Admin | sign in (password + authenticator code; first time: emailed code, then scan the QR code) | dashboard loads |
+| 1 | Admin | sign in (password, Turnstile check, then the six-digit code from the email) | dashboard loads |
 | 2 | Resident (customer) | sign in with phone code | home shows the 8 categories |
 | 3 | Resident | post a job: category, title, description, 1 photo, voice note optional, date and time (arrival) or ASAP | job appears in "My jobs" as Open |
 | 4 | Workers A, B (worker) | pull to refresh Home; push on A's closed phone | job in feed within 10 s; **push "New Job Available" arrives with the app closed** |
@@ -79,7 +79,7 @@ Run once with Resident 1 and Workers A and B competing; keep the log of what eac
 - A4 Cancellation requests: approve one, decline one with a note.
 - A5 Helpline log: log a call, mark a call-back done.
 - A6 Settings: change a window, add a category, deactivate a phase, invite staff (link shown once, works once), remove staff.
-- A7 Sign-out, then open a portal URL directly: redirected to sign-in. A verified session does not expire (14 Nov decision); sensitive actions ask for a fresh authenticator code every 15 minutes.
+- A7 Sign-out, then open a portal URL directly: redirected to sign-in. A verified session does not expire (14 Nov decision); sensitive actions ask for a fresh emailed code every 15 minutes.
 
 ## 6. Automated checks (run on every push by `.github/workflows/ci.yml`)
 
@@ -132,7 +132,7 @@ The milestone "Complete DEV demo readiness" is reached when all of these hold:
 These do not block a DEV demo but block a real-user pilot:
 
 - No production Supabase project; DEV is the free tier (no real backups, can pause when idle).
-- `safety:prod-ready` blockers: CAPTCHA, Twilio Verify (5 wrong guesses per code), authenticator-app 2FA for staff, session time limits.
+- `safety:prod-ready` blockers: CAPTCHA, Twilio Verify (5 wrong guesses per code), the admin second factor (emailed code today), session time limits.
 - Sign-in code channel: dev build is SMS, the decision was WhatsApp; real numbers need a working Twilio sender.
 - An unanswered quote keeps the job locked until the posting expires (no timeout).
 - Pending answers from Shariq (docs/OPEN-QUESTIONS.md, 10 Nov): is the bill still required at Complete Job, should the customer get a "bill added" push.
@@ -147,3 +147,8 @@ The admin portal has its own log: `docs/ADMIN-QA.md` (click-through of every scr
 On the phone, with a staff account in the portal: (1) a worker files a report on a started job: a "We received your report" notice appears and My reports shows it as Submitted; (2) staff open the case (Keep open): "Your report is being reviewed", status Under review; (3) staff decide Warning, Suspend or Close: "Your report is resolved" with Action taken or Closed, and nothing about the other person; (4) the person warned gets the warning, the person suspended gets the reason and end date (try 1 day, then wait for the sweep, or set the end date in the past in the database); (5) a suspended worker sees the reason and end date on the status screen; (6) with the app closed, the same notices arrive as pushes (after the function is deployed). Automated: pgTAP `report_tracking.test.sql`, worker `features/myreports` and `features/notifications` tests, `send-push` Deno tests, admin `features/users/rules.test.ts`.
 
 Verification decisions (14 Nov): in the portal choose "Ask for changes" for a worker with a reason such as "Upload a clear photo of your CNIC". On the phone: (1) the status screen leaves "pending" by itself within a few seconds; (2) the sign-up screens show a yellow "DHA staff asked for changes" banner with that text; (3) the notice says "What to fix: ..."; (4) with the app closed, a push "Changes needed" shows the same text (after the function is deployed). Repeat for Visit HQ and Reject (the reason shows on the status screen).
+
+## Added 15 Nov: busy worker and reopened applicant
+
+- **Busy worker (needs migration 0057 on the project, a worker build from current source, and a customer):** (1) worker A has a job `in_progress`; (2) another matching job is still in A's feed (a busy worker sees jobs); (3) A accepts it: no refusal, the job screen opens and a popup asks "How long will your current job take?"; (4) the customer sees NO quote yet; (5) A types 20 and sends; (6) the customer gets "quote received" and the quote shows the time (needs the customer app of PR #17); (7) if A closes the popup, a banner offers it again; (8) after 30 minutes without an answer the quote is withdrawn, the job is open again and A gets "Your quote was withdrawn"; (9) A cannot press Start on a second job while the first is in progress; (10) a second claim while one answer is owed says to answer the other quote first. Automated: `supabase/tests/worker_one_job_at_a_time.test.sql` and `scripts/challenge-busy-worker-local.cjs`.
+- **Reopen a rejected applicant (admin):** open a rejected worker, "Let them apply again", write a note, type a fresh code: the worker app shows "changes needed" with the note, the worker edits and resubmits, the application is pending again.

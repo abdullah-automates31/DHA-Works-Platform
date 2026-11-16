@@ -38,7 +38,7 @@ export default function ProfileScreen() {
     ]);
   const insets = useSafeAreaInsets();
   const { state: profileState } = useMyProfile();
-  const { data, reload, setAvailable, saveTrades } = useProfileSummary();
+  const { data, reload, setAvailable, setReminders, saveTrades } = useProfileSummary();
   const [sheet, setSheet] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
@@ -78,6 +78,11 @@ export default function ProfileScreen() {
   async function onToggle(value: boolean) {
     setSwitchError(false);
     if (!(await setAvailable(value))) setSwitchError(true);
+  }
+
+  async function onToggleReminders(value: boolean) {
+    setSwitchError(false);
+    if (!(await setReminders(value))) setSwitchError(true);
   }
 
   return (
@@ -127,6 +132,19 @@ export default function ProfileScreen() {
                   accessibilityLabel={t('profile.available')}
                   value={ready.available}
                   onValueChange={(value) => void onToggle(value)}
+                  trackColor={{ false: '#C9CFCB', true: colors.greenDark }}
+                  thumbColor="#fff"
+                />
+              </View>
+              <View style={[styles.row, styles.divider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>{t('profile.reminders')}</Text>
+                  <Text style={styles.rowHint}>{t(ready.reminders ? 'profile.remindersOn' : 'profile.remindersOff')}</Text>
+                </View>
+                <Switch
+                  accessibilityLabel={t('profile.reminders')}
+                  value={ready.reminders}
+                  onValueChange={(value) => void onToggleReminders(value)}
                   trackColor={{ false: '#C9CFCB', true: colors.greenDark }}
                   thumbColor="#fff"
                 />

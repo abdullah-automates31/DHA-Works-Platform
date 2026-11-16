@@ -150,3 +150,11 @@ Deno.test("a busy worker is asked how long the current job will take, and told w
   assertEquals(render("busy_eta_needed", "resident", ctx), null);
   assertEquals(render("busy_eta_expired", "resident", ctx), null);
 });
+
+Deno.test("a worker is reminded an hour before a visit; the customer gets no reminder push", () => {
+  assertEquals(render("job_reminder", "worker", ctx), {
+    title: "Visit in one hour",
+    body: "Fix AC is booked in about an hour. Get ready to leave.",
+  });
+  assertEquals(render("job_reminder", "resident", ctx), null);
+});

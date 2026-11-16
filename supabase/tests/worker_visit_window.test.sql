@@ -62,8 +62,8 @@ select throws_ok($$ select public.accept_job((select a from t), 3000, 0, null, n
   'the visit must end after it starts', 'a window that ends before it starts is refused');
 select throws_ok($$ select public.accept_job((select a from t), 3000, 0, null, null, (select s1 from w), (select s1 from w) + interval '13 hours') $$,
   'the visit window can be at most 12 hours', 'a window over 12 hours is refused');
-select throws_ok($$ select public.accept_job((select a from t), 3000, 0, null, null, (select s1 from w), null) $$,
-  'choose when you will come', 'half a window is refused');
+select throws_ok($$ select public.accept_job((select a from t), 3000, 0, null, null, null, (select e1 from w)) $$,
+  'choose when you will come', 'an end without a start is refused (0058: a start alone is enough)');
 select lives_ok($$ select public.accept_job((select a from t), 3000, 0, null, null, (select s1 from w), (select e1 from w)) $$,
   'an ASAP job is claimed with a price and a window');
 select is((select my_quote_revision from public.worker_jobs where id = (select a from t)), 0::smallint, 'worker_jobs: the quote can still be changed once');

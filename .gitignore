@@ -18,6 +18,7 @@ apps/worker/GoogleService-Info.dev.plist
 supabase/.temp/
 .supabase-local/
 .turbo/
+.vercel/
 coverage/
 expo-env.d.ts
 
@@ -26,3 +27,4 @@ expo-env.d.ts
 next-env.d.ts
 *.tsbuildinfo
 .next-*/
+.vercel

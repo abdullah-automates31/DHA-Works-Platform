@@ -38,7 +38,8 @@ const config: ExpoConfig = {
     bundleIdentifier: id.iosBundleId,
     ...(hasGoogleServiceInfoPlist ? { googleServicesFile: googleServiceInfoPlist } : {}),
     supportsTablet: false,
-    infoPlist: { ITSAppUsesNonExemptEncryption: false },
+    // remote-notification lets a push wake the app on iOS once APNs is set up (docs/OPEN-QUESTIONS.md, 16 Nov).
+    infoPlist: { ITSAppUsesNonExemptEncryption: false, UIBackgroundModes: ['remote-notification'] },
   },
   owner: 'dha-works',
   extra: { appVariant: variant, eas: { projectId: 'db709eb6-0b56-40e9-8277-a0c3ca0353f0' } },

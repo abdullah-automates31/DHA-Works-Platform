@@ -18,6 +18,7 @@ test('every database refusal maps to a friendly key', () => {
     ['the customer already decided on your quote', 'quote.errors.decided'],
     ['the visit must be in the future', 'quote.errors.visit'],
     ['choose when you will come', 'quote.errors.visit'],
+    ['choose the day and time you will visit', 'quote.errors.visit'],
     ['this job is not available', 'quote.errors.notAvailable'],
     ['your account is not approved yet', 'quote.errors.notAvailable'],
     ['your account is suspended', 'quote.errors.notAvailable'],

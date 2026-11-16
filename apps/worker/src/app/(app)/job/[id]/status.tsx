@@ -15,7 +15,7 @@ import { cancelHref, cashHref, changeQuoteHref, jobDetailsHref, quoteHref, repor
 import { visitText } from '@/features/quote/visit';
 import { pickImage } from '@/features/documents/pick';
 import { attachBill, buildBillPath, completeJob, startJob, type ActionClient, type Bill } from '@/features/myjobs/actions';
-import { canReport, canRequestCancellation, dialable, jobKind, noteFor, primaryAction, timeline, type JobKind } from '@/features/myjobs/rules';
+import { canCall, canReport, canRequestCancellation, dialable, jobKind, noteFor, primaryAction, timeline, type JobKind } from '@/features/myjobs/rules';
 import { useJobStatus } from '@/features/myjobs/useJobStatus';
 import { useJobInProgress } from '@/features/feed/useJobInProgress';
 import { t } from '@/i18n';
@@ -135,7 +135,7 @@ export default function JobStatusScreen() {
   const action = kind && job ? primaryAction(kind, job.cashRecorded === true, canChangeQuote) : null;
   const now = new Date();
   const visitLine = ready && (kind === 'quoted' || kind === 'scheduled') ? visitText(ready.extras.visitStart, ready.extras.visitEnd, now) : '';
-  const phone = job && ['scheduled', 'in_progress'].includes(kind ?? '') ? dialable(job.residentPhone) : null;
+  const phone = job && kind && canCall(kind) ? dialable(job.residentPhone) : null;
 
   function confirmWithdraw(requestId: string) {
     Alert.alert(t('myjobs.withdrawConfirmTitle'), t('myjobs.withdrawConfirmBody'), [

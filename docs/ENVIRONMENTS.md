@@ -63,7 +63,7 @@ The app never decides at runtime. The environment is fixed when the build is mad
 
 ## 8. Decisions needed
 
-1. **Approve a PROD Supabase project on a paid plan** (Pro, about 25 USD a month). The free tier was approved for development only; it has no backups and pauses on inactivity. The admin portal's proper second factor (authenticator app) also needs a paid plan.
+1. **Approve a PROD Supabase project on a paid plan** (Pro, about 25 USD a month). The free tier was approved for development only; it has no backups and pauses on inactivity. Session time limits also need a paid plan (authenticator-app MFA is free on every plan; the portal uses an emailed code since 15 Nov).
 2. **Staging:** is DEV enough as staging until launch, or do we pay for a third project?
 3. **Customer app:** can Shariq Bhai add debug (DEV) and release (PROD) configuration as in section 4, and a `.dev` app id for side-by-side installs?
 4. **Release owner:** who runs `db push` to PROD and builds the store releases.

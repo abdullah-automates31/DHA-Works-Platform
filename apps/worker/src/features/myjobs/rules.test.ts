@@ -6,6 +6,7 @@ import {
   canRequestCancellation,
   chipFor,
   dayWord,
+  canCall,
   dialable,
   initials,
   inTab,
@@ -227,4 +228,16 @@ test('after the worker records the cash the job waits for the customer', () => {
   const note = noteFor(j({ status: 'completed', isMine: true, cashRecorded: true }), 'completed');
   assert.equal(note.headline, 'Cash recorded');
   assert.match(note.body, /Waiting for Hira F\. to confirm/);
+});
+
+test('the customer can be called from acceptance on, in every later stage, and never before (16 Nov)', () => {
+  for (const kind of ['scheduled', 'in_progress', 'completed', 'cash_collected', 'reviewed', 'disputed'] as const) assert.equal(canCall(kind), true, kind);
+  for (const kind of ['interested', 'quoted', 'cancelled', 'expired', 'not_chosen'] as const) assert.equal(canCall(kind), false, kind);
+});
+
+test('a requote (change quote) is offered for a sent quote that was never changed, and only then', () => {
+  assert.equal(primaryAction('quoted', false, true), 'change_quote');
+  assert.equal(primaryAction('quoted', false, false), 'waiting');
+  assert.equal(primaryAction('scheduled', false, true), 'start');
+  assert.equal(primaryAction('interested', false, true), 'create_quote');
 });

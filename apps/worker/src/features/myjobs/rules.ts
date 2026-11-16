@@ -408,6 +408,11 @@ export function initials(fullName: string | null | undefined): string {
     .toUpperCase();
 }
 
+/** The customer's number is offered from the moment the quote is accepted and stays on every later stage (16 Nov). */
+export function canCall(kind: JobKind): boolean {
+  return ['scheduled', 'in_progress', 'completed', 'cash_collected', 'reviewed', 'disputed'].includes(kind);
+}
+
 /** A phone number the worker may call: only after acceptance, digits and a leading +. */
 export function dialable(phone: string | null | undefined): string | null {
   const clean = (phone ?? '').replace(/[^\d+]/g, '');

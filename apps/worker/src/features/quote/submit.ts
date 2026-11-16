@@ -26,7 +26,7 @@ export function claimErrorKey(error: Err): ClaimErrorKey {
   if (text.includes('did not accept your quote')) return 'quote.errors.rejected';
   if (text.includes('already changed this quote')) return 'quote.errors.alreadyChanged';
   if (text.includes('already decided on your quote')) return 'quote.errors.decided';
-  if (text.includes('the visit') || text.includes('when you will come')) return 'quote.errors.visit';
+  if (text.includes('the visit') || text.includes('when you will come') || text.includes('day and time you will visit')) return 'quote.errors.visit';
   if (text.includes('has expired')) return 'quote.errors.expired';
   if (text.includes('not available') || text.includes('not approved') || text.includes('suspended')) {
     return 'quote.errors.notAvailable';

@@ -237,3 +237,21 @@ A report can be followed by the person who filed it, and DHA staff notices reach
 - `admin_user_detail` also returns `suspended_until`.
 - Push (Edge Function `send-push`, deploy needs approval): wording for all of these notices, for residents and workers (`templates.ts`). A push that fails is released for the 10-minute retry; the in-app notice is already saved.
 - **Verification decisions tell the person why:** the `verification_decided` notice now carries `reason` (the text staff wrote, 3 to 500 characters) for `ask_for_changes`, `visit_hq` and `reject`; an approval carries only `decision`. `send-push` pushes it for residents and workers (title by decision, body = the reason, cut to 160 characters; a general sentence when there is none).
+
+## Additions of 14 to 15 Nov (migrations 0053 to 0057)
+
+| Item | What it is |
+| --- | --- |
+| `my_reports(p_limit, p_offset)` (0053) | The caller's own reports with a plain status (submitted, under review, resolved) and, for resolved ones, only "action taken" or "no action". |
+| Staff notices (0053) | Notification types `report_received`, `report_in_review`, `report_resolved`, `report_warning`, `staff_message`, `account_suspended` (reason, end date), `account_reactivated`, and `verification_decided` now carries `payload.reason`. |
+| `admin_reopen_rejected(p_profile, p_reason)` (0054) | Admin, fresh code. `rejected` to `needs_changes` with a note the applicant sees; audit `verification_reopened`. |
+| `admin_verify_code(p_code)` (0055) | A correct emailed code marks the session verified and fresh again (audit `admin_signed_in` or `admin_step_up`). |
+| `private.worker_has_job_in_progress(uuid)`, `private.lock_worker_jobs(uuid)` (0056, 0057) | Helpers; a per-worker advisory lock; executable by `authenticated` because views call them. |
+| `quotes.busy_eta_minutes`, `quotes.busy_eta_pending` (0057) | Minutes the busy worker said the current job will take; true while the answer is owed. Constraints: 5 to 4320, and pending implies no minutes. Column SELECT granted to `authenticated`. |
+| `accept_job(..., p_busy_eta_minutes default null)` (0057) | For a busy worker without a time the quote is held (`busy_eta_pending`), the worker gets `busy_eta_needed`, the customer is told nothing yet. With a time it behaves as before and stores it. A free worker's time is ignored. Refuses a second held quote ("tell the customer how long ... on your other quote first"). |
+| `set_busy_eta(p_quote_id, p_minutes)` (0057) | The worker answers (5 to 4320); the quote is released and the customer gets `quote_received` with `busy_eta_minutes`. Refuses a late or repeated answer. |
+| `resident_quotes.busy_eta_minutes` (0057) | The estimate for the customer; quotes still waiting for it are not in the view, and `quotes_read` hides them from the job owner. |
+| `accept_quote`, `reject_quote`, `revise_quote` (0057) | Refuse a quote that is still waiting for the estimate. |
+| `start_job` (0057) | Refuses while another job of the worker is in progress. |
+| `private.expire_busy_eta()` + cron `dw-busy-eta-expiry` (0057) | Withdraws held quotes older than 30 minutes, reopens the job, notifies the worker (`busy_eta_expired`). |
+| `worker_feed` (0057) | Back to showing jobs to a busy worker (0056 had hidden them). |

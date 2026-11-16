@@ -131,3 +131,11 @@ test('a verification decision tells the applicant what staff wrote, and old noti
   assert.match(made({ decision: 'reject' }).body, /could not approve/);
   assert.equal(made({ decision: 'ask_for_changes', reason: '   ' }).body, made({ decision: 'ask_for_changes' }).body);
 });
+
+test('the one-hour reminder names the job and opens it', () => {
+  const v = describe(n({ type: 'job_reminder', payload: { title: 'Bathroom flush tank leak', start: new Date(2026, 9, 30, 16, 0).toISOString() } }), now);
+  assert.equal(v.title, 'Visit in one hour');
+  assert.match(v.body, /Bathroom flush tank leak/);
+  assert.match(v.body, /4 PM/);
+  assert.equal(v.opensJob, true);
+});

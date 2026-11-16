@@ -35,6 +35,7 @@ function fake(overrides: Partial<ActionClient> = {}) {
 test('database refusals map to friendly keys', () => {
   assert.equal(actionErrorKey({ message: 'this job cannot be started' }), 'myjobs.errors.cannotStart');
   assert.equal(actionErrorKey({ message: 'finish the job you have started before starting another' }), 'myjobs.errors.anotherInProgress');
+  assert.equal(actionErrorKey({ message: 'finish your current job before starting a job for another customer or on another day' }), 'myjobs.errors.anotherInProgress');
   assert.equal(actionErrorKey({ message: 'this job cannot be completed' }), 'myjobs.errors.cannotComplete');
   assert.equal(actionErrorKey({ message: 'upload the material bill' }), 'myjobs.errors.billRequired');
   assert.equal(actionErrorKey({ message: 'invalid bill path' }), 'myjobs.errors.billInvalid');
