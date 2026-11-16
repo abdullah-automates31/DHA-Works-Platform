@@ -44,7 +44,7 @@ test('each worker-facing type has its own words', () => {
   const signIn = describe(n({ type: 'new_sign_in', jobId: null, payload: {} }), now);
   assert.equal(signIn.title, 'New sign-in');
   assert.equal(signIn.opensJob, false);
-  assert.match(signIn.body, /sign out other devices/i);
+  assert.match(signIn.body, /call DHA support/i);
   const warn = describe(n({ type: 'report_warning', jobId: null, payload: { message: 'Please be on time.' } }), now);
   assert.equal(warn.title, 'Warning from DHA staff');
   assert.equal(warn.body, 'Please be on time.');
