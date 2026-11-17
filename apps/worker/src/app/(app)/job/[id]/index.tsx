@@ -85,7 +85,7 @@ export default function JobDetailScreen() {
             {job.description ? <InfoCard title={t('job.customerSays')}>{job.description}</InfoCard> : null}
             {job.hasVoiceNote ? <VoiceMessage uri={job.voiceUrl} /> : null}
 
-            <ResidentCard phase={job.phase} contact={job.contact} />
+            <ResidentCard jobId={job.id} phase={job.phase} contact={job.contact} />
 
             {job.standing === 'closed' && !fromStatus ? (
               <View style={styles.closed}>

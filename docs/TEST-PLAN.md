@@ -136,7 +136,7 @@ These do not block a DEV demo but block a real-user pilot:
 - Sign-in code channel: dev build is SMS, the decision was WhatsApp; real numbers need a working Twilio sender.
 - An unanswered quote keeps the job locked until the posting expires (no timeout).
 - Pending answers from Shariq (docs/OPEN-QUESTIONS.md, 10 Nov): is the bill still required at Complete Job, should the customer get a "bill added" push.
-- Admin portal is not deployed yet; hosted email delivery of the second-factor code is unproven.
+- Admin portal is deployed on Vercel; hosted email delivery of the second-factor code is unproven.
 
 ## 10. Admin portal QA record (13 Nov 2026)
 

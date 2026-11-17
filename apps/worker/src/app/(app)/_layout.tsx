@@ -59,6 +59,7 @@ function ProfileGate() {
       <Stack.Screen name="job/[id]/cash" />
       <Stack.Screen name="job/[id]/cancel" />
       <Stack.Screen name="job/[id]/report" />
+      <Stack.Screen name="job/[id]/customer" />
       <Stack.Screen name="help" />
       <Stack.Screen name="report" />
       <Stack.Screen name="introduction" />

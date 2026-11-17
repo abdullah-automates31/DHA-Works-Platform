@@ -1,17 +1,16 @@
 import { Image } from 'expo-image';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
-import { useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { JobContact } from '@/features/job/useJob';
-import { dialable } from '@/features/myjobs/rules';
-import { visitText } from '@/features/quote/visit';
+import { customerHref } from '@/features/job/routes';
 import { formatDuration } from '@/features/work/rules';
 import { t } from '@/i18n';
 import { stableCacheKey, stableSource } from '@/lib/image';
 import { colors, fontFamily } from '@/theme';
 
-import { ChevronRightIcon, PauseIcon, PhoneIcon, PlayIcon, UserIcon, UsersIcon } from './icons';
+import { ChevronRightIcon, PauseIcon, PlayIcon, UserIcon, UsersIcon } from './icons';
 
 // Pieces of W08 Job detail (worker/screens/w-job.dc.html). Only what a worker may see before acceptance:
 // photos, the description, the voice note, how many others are interested, and a "Verified resident" card with
@@ -115,68 +114,23 @@ export function InterestCard({ title, body }: { title: string; body: string }) {
   );
 }
 
-/**
- * "Verified resident · Phase 6" bar. Tapping it opens the customer's details. Before the customer accepts the quote
- * only the phase is known (decision 4: no name, phone or address), so the sheet says they unlock on acceptance.
- */
-export function ResidentCard({ phase, contact }: { phase: number; contact: JobContact | null }) {
-  const [open, setOpen] = useState(false);
-  const phone = dialable(contact?.phone);
-  const visit = contact?.visitStart ? visitText(contact.visitStart) : '';
+/** 'Verified resident · Phase 6' bar. Tapping it opens the Customer details page (job/[id]/customer). */
+export function ResidentCard({ jobId, phase, contact }: { jobId: string; phase: number; contact: JobContact | null }) {
+  const router = useRouter();
   return (
-    <>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('job.customerDetails')} onPress={() => setOpen(true)} style={[styles.card, styles.rowCard]}>
-        <View style={styles.avatar}>
-          <UserIcon size={22} color="#5C4300" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>{contact?.name || t('job.customer')}</Text>
-          <Text style={styles.sub}>{contact ? t('job.residentPhase', { phase }) : t('job.customerTap')}</Text>
-        </View>
-        <View style={styles.verified}>
-          <Text style={styles.verifiedText}>{t('job.verified')}</Text>
-        </View>
-        <ChevronRightIcon size={18} color={colors.muted} />
-      </Pressable>
-
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel={t('job.customerClose')}>
-          <Pressable style={styles.sheet} accessibilityViewIsModal onPress={() => undefined}>
-            <Text style={styles.sheetTitle}>{t('job.customerDetails')}</Text>
-            <Text style={styles.sub}>{t('job.residentPhase', { phase })}</Text>
-            {contact ? (
-              <View style={{ gap: 10, marginTop: 8 }}>
-                {contact.name ? <Line label={t('job.customerName')} value={contact.name} /> : null}
-                {contact.phone ? <Line label={t('job.customerPhone')} value={contact.phone} /> : null}
-                {contact.plot ? <Line label={t('job.customerPlot')} value={contact.plot} /> : null}
-                {contact.floor ? <Line label={t('job.customerFloor')} value={contact.floor} /> : null}
-                {visit ? <Line label={t('job.customerVisit')} value={visit} /> : null}
-                {phone ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel={t('myjobs.call')} onPress={() => void Linking.openURL('tel:' + phone)} style={styles.callBtn}>
-                    <PhoneIcon size={18} color="#fff" />
-                    <Text style={styles.callBtnText}>{t('myjobs.call')}</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : (
-              <Text style={[styles.cardBody, { marginTop: 8 }]}>{t('job.customerLocked')}</Text>
-            )}
-            <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={styles.closeBtn}>
-              <Text style={styles.closeText}>{t('job.customerClose')}</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </>
-  );
-}
-
-function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.line}>
-      <Text style={styles.lineLabel}>{label}</Text>
-      <Text style={styles.lineValue}>{value}</Text>
-    </View>
+    <Pressable accessibilityRole='button' accessibilityLabel={t('job.customerDetails')} onPress={() => router.push(customerHref(jobId))} style={[styles.card, styles.rowCard]}>
+      <View style={styles.avatar}>
+        <UserIcon size={22} color='#5C4300' />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.cardTitle}>{contact?.name || t('job.customer')}</Text>
+        <Text style={styles.sub}>{contact ? t('job.residentPhase', { phase }) : t('job.customerTap')}</Text>
+      </View>
+      <View style={styles.verified}>
+        <Text style={styles.verifiedText}>{t('job.verified')}</Text>
+      </View>
+      <ChevronRightIcon size={18} color={colors.muted} />
+    </Pressable>
   );
 }
 

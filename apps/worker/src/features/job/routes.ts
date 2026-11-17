@@ -24,3 +24,5 @@ export const cashHref = (id: string): Href => safe(id, (i) => `/job/${i}/cash`);
 export const cancelHref = (id: string): Href => safe(id, (i) => `/job/${i}/cancel`);
 /** W14 Report a problem; kind "unsafe" opens it on "I felt unsafe". */
 export const reportHref = (id: string, kind?: 'unsafe'): Href => safe(id, (i) => `/job/${i}/report${kind ? `?kind=${kind}` : ''}`);
+/** Customer details page (opened from the "Verified resident" bar). */
+export const customerHref = (id: string): Href => safe(id, (i) => `/job/${i}/customer`);

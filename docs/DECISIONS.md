@@ -167,3 +167,7 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - **Supersedes** the line above that says the worker picks a day and one time. The visit time is **always the one the customer chose** when posting the job (`jobs.preferred_date` + `window_from`, Karachi time). The worker only quotes a price. Any time a worker app sends is ignored (parameters stay so older builds keep working). Stored end = start + 1 hour (placeholder).
 - A job with no date (old "as soon as possible" job) is quoted without a time, except by a busy worker, who is refused. A visit time that has already passed cannot be quoted.
 - The worker app's time picker (`ArrivalPicker`) is removed. The customer app must let the customer pick a date and **one** visiting time when posting (Shariq).
+
+## 17 Nov 2026: customer details page (worker app)
+
+- Tapping the "Verified resident" bar opens a full page (`job/[id]/customer`), not a pop-up. After the customer accepts: name, phase, Call button, phone, address (plot, floor, phase), visit time and the job summary. Before acceptance only the phase and the job summary show, with a "contact details are locked" card (privacy rule unchanged).
