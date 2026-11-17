@@ -171,3 +171,8 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 ## 17 Nov 2026: customer details page (worker app)
 
 - Tapping the "Verified resident" bar opens a full page (`job/[id]/customer`), not a pop-up. After the customer accepts: name, phase, Call button, phone, address (plot, floor, phase), visit time and the job summary. Before acceptance only the phase and the job summary show, with a "contact details are locked" card (privacy rule unchanged).
+
+## 17 Nov 2026: customer app shows the worker's details only after both sides accept (owner; customer PR #18)
+
+- Owner rule: the customer sees the worker's important details like the worker app shows the customer's, and the **phone number and booking details unlock only after both sides have accepted** (the worker quoted, the customer accepted that quote).
+- Server: `resident_quotes.worker_phone` is null unless the quote status is `accepted` (tested in `job_lifecycle.test.sql`). App: `unlockedPhone()` in `WorkerProfileScreen.kt` repeats the rule, so a wrong server value could not leak a number. Before acceptance the profile shows name, rating, trades, phases, Verified badge, voice intro, stats and a lock note; after acceptance it adds the phone with a Call button and a "Your booking" card (visit time, total). Branch `abdullah/worker-details-and-call`, commit 44b11c8, 3 unit tests. Not run on a phone.
