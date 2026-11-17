@@ -11,6 +11,8 @@ export type ClaimErrorKey =
   | 'quote.errors.alreadyChanged'
   | 'quote.errors.decided'
   | 'quote.errors.visit'
+  | 'quote.errors.visitPassed'
+  | 'quote.errors.visitNone'
   | 'quote.errors.busy'
   | 'quote.errors.busyEta'
   | 'quote.errors.busyEtaFirst'
@@ -26,6 +28,8 @@ export function claimErrorKey(error: Err): ClaimErrorKey {
   if (text.includes('did not accept your quote')) return 'quote.errors.rejected';
   if (text.includes('already changed this quote')) return 'quote.errors.alreadyChanged';
   if (text.includes('already decided on your quote')) return 'quote.errors.decided';
+  if (text.includes('already passed')) return 'quote.errors.visitPassed'; // the customer's time is over (0059)
+  if (text.includes('has no visiting time')) return 'quote.errors.visitNone'; // a busy worker and an old job with no time (0059)
   if (text.includes('the visit') || text.includes('when you will come') || text.includes('day and time you will visit')) return 'quote.errors.visit';
   if (text.includes('has expired')) return 'quote.errors.expired';
   if (text.includes('not available') || text.includes('not approved') || text.includes('suspended')) {

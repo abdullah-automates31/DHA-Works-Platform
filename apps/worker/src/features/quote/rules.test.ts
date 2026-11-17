@@ -53,10 +53,8 @@ test('validation: total above zero, and a complete item list when materials are 
   assert.equal(isQuoteValid(empty), false);
 });
 
-const VISIT = { p_visit_start: '2026-11-10T05:00:00.000Z', p_visit_end: '2026-11-10T07:00:00.000Z' };
-
 test('the request carries amounts, the item list and the worker\'s visit window, never a total', () => {
-  const args = buildSubmitArgs('job-1', design, VISIT);
+  const args = buildSubmitArgs('job-1', design);
   assert.equal(args.p_job_id, 'job-1');
   assert.equal(args.p_labour, 1500);
   assert.equal(args.p_materials, 1450);
@@ -64,27 +62,27 @@ test('the request carries amounts, the item list and the worker\'s visit window,
   assert.ok(!('p_other_amount' in args)); // accept_job has no "Other" charge
   assert.equal(args.p_note, undefined);
   assert.ok(!('p_total' in args));
-  // 0044: the worker proposes the visit window with the price.
-  assert.equal(args.p_visit_start, VISIT.p_visit_start);
-  assert.equal(args.p_visit_end, VISIT.p_visit_end);
+  // 0059: the visit time is the customer's; the worker never sends one.
+  assert.ok(!('p_visit_start' in args));
+  assert.ok(!('p_visit_end' in args));
 });
 
 test('without materials nothing about materials is sent; item names are tidied', () => {
-  const off = buildSubmitArgs('j', { ...design, withMaterials: false }, VISIT);
+  const off = buildSubmitArgs('j', { ...design, withMaterials: false });
   assert.equal(off.p_materials, 0);
   assert.equal(off.p_materials_note, undefined);
-  assert.ok(!('p_material_bill_path' in buildSubmitArgs('j', design, VISIT))); // the bill is uploaded at completion, never with the quote
-  const spaced = buildSubmitArgs('j', { labour: '0', withMaterials: true, items: [{ name: '  Trap   pipe ', price: '500' }] }, VISIT);
+  assert.ok(!('p_material_bill_path' in buildSubmitArgs('j', design))); // the bill is uploaded at completion, never with the quote
+  const spaced = buildSubmitArgs('j', { labour: '0', withMaterials: true, items: [{ name: '  Trap   pipe ', price: '500' }] });
   assert.equal(spaced.p_materials_note, 'Trap pipe Rs 500');
 });
 
-test('a changed quote sends the quote id instead of the job id, with the same amounts and window', () => {
-  const args = buildReviseArgs('q-1', design, VISIT);
+test('a changed quote sends the quote id instead of the job id, with the same amounts', () => {
+  const args = buildReviseArgs('q-1', design);
   assert.equal(args.p_quote_id, 'q-1');
   assert.ok(!('p_job_id' in args));
   assert.equal(args.p_labour, 1500);
   assert.equal(args.p_materials_note, 'Trap pipe Rs 900; Flexible hose Rs 550');
-  assert.equal(args.p_visit_end, VISIT.p_visit_end);
+  assert.ok(!('p_visit_start' in args));
 });
 
 test('a sent quote fills the form again to change it', () => {

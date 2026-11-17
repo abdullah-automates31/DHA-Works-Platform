@@ -36,7 +36,7 @@ insert into public.worker_categories (worker_id, category_id) values
 insert into public.worker_areas (worker_id, phase) values
   ('00000000-0000-0000-0000-0000000000b1', 6), ('00000000-0000-0000-0000-0000000000b2', 6);
 
-create function tests.make_job(p_res uuid, p_title text, p_n text) returns uuid
+create function tests.make_job(p_res uuid, p_title text, p_n text, p_day int default null, p_from time default null) returns uuid
 language plpgsql as $$
 declare
   v_job uuid;
@@ -44,7 +44,10 @@ declare
 begin
   perform tests.act(p_res);
   v_addr := public.upsert_address(null, 'Home' || p_n, 6::smallint, 'Lane 4', '12-C', '2nd', false);
-  v_job := public.save_job_draft(null, 1::smallint, v_addr, p_title, 'Needs fixing today', 'asap', null, null, null, null,
+  v_job := public.save_job_draft(null, 1::smallint, v_addr, p_title, 'Needs fixing today',
+                                 case when p_day is null then 'asap' else 'scheduled' end::public.job_urgency,
+                                 case when p_day is null then null else (now() at time zone 'Asia/Karachi')::date + p_day end, p_from,
+                                 case when p_from is null then null else p_from + interval '1 hour' end, null,
                                  array[p_res::text || '/p' || p_n || '.jpg']);
   perform public.post_job(v_job);
   perform tests.back();
@@ -53,12 +56,13 @@ end $$;
 
 -- A and B: customer one; C: customer two; D: customer one (a different day); E, F: more jobs of customer one.
 create temp table t as select
-  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job A', '1') as a,
-  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job B', '2') as b,
-  tests.make_job('00000000-0000-0000-0000-0000000000a2', 'Job C', '3') as c,
-  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job D', '4') as d,
-  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job E', '5') as e,
-  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job F', '6') as f;
+  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job A', '1', 1, time '10:00') as a,
+  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job B', '2', 1, time '14:00') as b,
+  tests.make_job('00000000-0000-0000-0000-0000000000a2', 'Job C', '3', 1, time '14:00') as c,
+  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job D', '4', 2, time '10:00') as d,
+  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job E', '5', 1, time '10:00') as e,
+  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job F', '6', 1, time '10:00') as f,
+  tests.make_job('00000000-0000-0000-0000-0000000000a1', 'Job G (no time)', '7') as g;
 grant select on t to authenticated;
 -- tomorrow 10:00 / 14:00 and the day after at 10:00, Karachi time
 create temp table slot as select
@@ -69,25 +73,23 @@ grant select on slot to authenticated;
 
 -- 1. A free worker claims with ONE time; the stored end is one hour later -----------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select lives_ok($$ select public.accept_job((select a from t), 3000, p_visit_start => (select d1_10 from slot)) $$, 'a free worker claims job A with a start time only');
+select lives_ok($$ select public.accept_job((select a from t), 3000, p_visit_start => (select d2_10 from slot)) $$, 'a free worker claims job A (a time he sends is ignored)');
 select tests.back();
 select is((select visit_end - visit_start from public.quotes where job_id = (select a from t)), interval '1 hour', 'the stored end is one hour after the start');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
 select lives_ok($$ select public.accept_quote((select id from public.resident_quotes where job_id = (select a from t))) $$, 'the customer accepts');
 select tests.back();
 select is((select status::text from public.jobs where id = (select a from t)), 'scheduled', 'job A is scheduled');
-select is((select scheduled_start from public.jobs where id = (select a from t)), (select d1_10 from slot), 'booked at the time the worker named');
+select is((select scheduled_start from public.jobs where id = (select a from t)), (select d1_10 from slot), 'booked at the time the CUSTOMER chose, not the one the worker sent');
 select tests.act('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$ select public.start_job((select a from t)) $$, 'the worker starts job A (now in progress)');
 
 -- 2. A busy worker may accept and quote, but only for a booked time ---------------------------------------------------------
 select is((select count(*) from public.worker_feed where id in ((select b from t), (select c from t), (select d from t))), 3::bigint, 'busy: other jobs are still in the feed');
-select throws_ok($$ select public.accept_job((select b from t), 2000) $$, 'choose the day and time you will visit', 'busy and no time: refused (no ASAP)');
-select throws_ok($$ select public.accept_job((select b from t), 2000, p_visit_end => (select d1_14 from slot)) $$, 'choose the day and time you will visit', 'an end without a start does not count as a time');
-select throws_ok($$ select public.accept_job((select b from t), 2000, p_visit_start => now() - interval '1 hour') $$, 'the visit must be in the future', 'a time in the past is refused');
-select lives_ok($$ select public.accept_job((select b from t), 2000, p_visit_start => (select d1_14 from slot)) $$, 'busy with a time: job B (same customer) is quoted');
-select lives_ok($$ select public.accept_job((select c from t), 2500, p_visit_start => (select d1_14 from slot)) $$, 'job C (another customer) can be quoted too');
-select lives_ok($$ select public.accept_job((select d from t), 1800, p_visit_start => (select d2_10 from slot)) $$, 'job D (same customer, the next day) can be quoted too');
+select throws_ok($$ select public.accept_job((select g from t), 2000) $$, 'this job has no visiting time, so you cannot take it while you are working on another job', 'busy and the job has no customer time (an old ASAP job): refused');
+select lives_ok($$ select public.accept_job((select b from t), 2000, p_visit_start => now() + interval '9 days') $$, 'busy with a time: job B (same customer) is quoted');
+select lives_ok($$ select public.accept_job((select c from t), 2500, p_visit_start => now() + interval '9 days') $$, 'job C (another customer) can be quoted too');
+select lives_ok($$ select public.accept_job((select d from t), 1800, p_visit_start => now() + interval '9 days') $$, 'job D (same customer, the next day) can be quoted too');
 select tests.back();
 select is((select count(*) from public.quotes where worker_id = '00000000-0000-0000-0000-0000000000b1' and busy_eta_pending), 0::bigint, 'nothing is held back for a finish time any more');
 select is((select count(*) from public.notifications where user_id = '00000000-0000-0000-0000-0000000000a1' and type = 'quote_received' and job_id = (select b from t)), 1::bigint, 'the customer is told at once');
@@ -125,11 +127,11 @@ select tests.back();
 
 -- 5. Quotes held before this change still expire; the old hold still blocks a second claim -------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000b2');
-select lives_ok($$ select public.accept_job((select e from t), 1500, p_visit_start => (select d1_10 from slot)) $$, 'a free worker claims job E');
+select lives_ok($$ select public.accept_job((select e from t), 1500, p_visit_start => now() + interval '9 days') $$, 'a free worker claims job E');
 select tests.back();
 update public.quotes set busy_eta_pending = true where job_id = (select e from t);
 select tests.act('00000000-0000-0000-0000-0000000000b2');
-select throws_ok($$ select public.accept_job((select f from t), 1500, p_visit_start => (select d1_10 from slot)) $$, 'tell the customer how long your current job will take on your other quote first', 'an old held quote still blocks a second claim');
+select throws_ok($$ select public.accept_job((select f from t), 1500, p_visit_start => now() + interval '9 days') $$, 'tell the customer how long your current job will take on your other quote first', 'an old held quote still blocks a second claim');
 select tests.back();
 update public.quotes set created_at = now() - interval '31 minutes' where job_id = (select e from t);
 select is(private.expire_busy_eta(), 1, 'an old held quote is withdrawn after 30 minutes');
@@ -138,7 +140,7 @@ select is((select status::text from public.jobs where id = (select e from t)), '
 -- 6. Reminders: a switch, and a notice one hour before the visit (once) ----------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000b2');
 select is((select job_reminders from public.worker_details), true, 'reminders are on by default');
-select lives_ok($$ select public.accept_job((select f from t), 1500, p_visit_start => now() + interval '3 hours') $$, 'the worker quotes job F for three hours ahead');
+select lives_ok($$ select public.accept_job((select f from t), 1500, p_visit_start => now() + interval '9 days') $$, 'the worker quotes job F for three hours ahead');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
 select lives_ok($$ select public.accept_quote((select id from public.resident_quotes where job_id = (select f from t))) $$, 'the customer accepts');
 select tests.back();

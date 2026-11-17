@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ArrivalPicker } from '@/components/ArrivalPicker';
 import { PrimaryButton } from '@/components/AuthForm';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { ChevronLeftIcon } from '@/components/icons';
@@ -28,7 +27,6 @@ import {
 } from '@/features/quote/rules';
 import { useJobInProgress } from '@/features/feed/useJobInProgress';
 import { claimJob, reviseQuote } from '@/features/quote/submit';
-import { choiceFromRange, defaultVisit, visitArgs, visitError, visitText, type VisitChoice } from '@/features/quote/visit';
 import { t, type TranslationKey } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
@@ -77,7 +75,7 @@ export default function QuoteScreen() {
       ) : null}
 
       {job && job.standing === 'quoted' && changing ? (
-        <ChangeQuote jobId={job.id} preferred={job.preferred} when={job.when} onDone={() => router.replace(statusHref(job.id))} />
+        <ChangeQuote jobId={job.id} when={job.when} onDone={() => router.replace(statusHref(job.id))} />
       ) : null}
 
       {job && job.standing === 'quoted' && !changing ? (
@@ -93,25 +91,24 @@ export default function QuoteScreen() {
       ) : null}
 
       {job && (job.standing === 'none' || job.standing === 'interested') ? (
-        <QuoteForm jobId={job.id} preferred={job.preferred} when={job.when} onAccepted={() => router.replace(statusHref(job.id))} />
+        <QuoteForm jobId={job.id} when={job.when} onAccepted={() => router.replace(statusHref(job.id))} />
       ) : null}
     </View>
   );
 }
 
-type Preferred = { date: string | null; from: string | null; to: string | null };
-type Revise = { quoteId: string; input: QuoteInput; visit: VisitChoice };
+type Revise = { quoteId: string; input: QuoteInput };
 
 // Loads this worker's sent quote so it can be changed once; anything else (already changed, or the customer has
 // decided) shows why it cannot be.
-function ChangeQuote({ jobId, preferred, when, onDone }: { jobId: string; preferred: Preferred; when: string; onDone: () => void }) {
+function ChangeQuote({ jobId, when, onDone }: { jobId: string; when: string; onDone: () => void }) {
   const [state, setState] = useState<{ status: 'loading' } | { status: 'blocked'; key: TranslationKey } | { status: 'ready'; revise: Revise }>({ status: 'loading' });
   useEffect(() => {
     let live = true;
     void (async () => {
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, status, labour, materials, materials_note, visit_start, visit_end, revision')
+        .select('id, status, labour, materials, materials_note, revision')
         .eq('job_id', jobId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -125,14 +122,13 @@ function ChangeQuote({ jobId, preferred, when, onDone }: { jobId: string; prefer
         revise: {
           quoteId: data.id,
           input: inputFromQuote({ labour: data.labour ?? 0, materials: data.materials ?? 0, materialsNote: data.materials_note }),
-          visit: choiceFromRange(data.visit_start, data.visit_end) ?? defaultVisit(preferred),
         },
       });
     })();
     return () => {
       live = false;
     };
-  }, [jobId, preferred]);
+  }, [jobId]);
 
   if (state.status === 'loading') {
     return (
@@ -148,12 +144,11 @@ function ChangeQuote({ jobId, preferred, when, onDone }: { jobId: string; prefer
       </Notice>
     );
   }
-  return <QuoteForm jobId={jobId} preferred={preferred} when={when} onAccepted={onDone} revise={state.revise} />;
+  return <QuoteForm jobId={jobId} when={when} onAccepted={onDone} revise={state.revise} />;
 }
 
-function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: string; preferred: Preferred; when: string; onAccepted: () => void; revise?: Revise }) {
+function QuoteForm({ jobId, when, onAccepted, revise }: { jobId: string; when: string; onAccepted: () => void; revise?: Revise }) {
   const [input, setInput] = useState<QuoteInput>(revise?.input ?? { labour: '', withMaterials: false, items: [{ name: '', price: '' }] });
-  const [visit, setVisit] = useState<VisitChoice>(() => revise?.visit ?? defaultVisit(preferred));
   const busy = Boolean(useJobInProgress());
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
@@ -165,8 +160,7 @@ function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: stri
   };
 
   const errors = validateQuote(input);
-  const visitProblem = visitError(visit);
-  const valid = isQuoteValid(input) && visitProblem === null;
+  const valid = isQuoteValid(input);
   const labour = parseAmount(input.labour);
   const materials = materialsTotal(input);
   const total = computeTotal(input);
@@ -183,8 +177,8 @@ function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: stri
     setError(null);
     setSending(true);
     const result = revise
-      ? await reviseQuote({ reviseQuote: (args) => supabase.rpc('revise_quote', args) }, buildReviseArgs(revise.quoteId, input, visitArgs(visit)))
-      : await claimJob({ acceptJob: (args) => supabase.rpc('accept_job', args) }, buildSubmitArgs(jobId, input, visitArgs(visit)));
+      ? await reviseQuote({ reviseQuote: (args) => supabase.rpc('revise_quote', args) }, buildReviseArgs(revise.quoteId, input))
+      : await claimJob({ acceptJob: (args) => supabase.rpc('accept_job', args) }, buildSubmitArgs(jobId, input));
     setSending(false);
     if (result.ok) {
       onAccepted(); // claimed: locked to this worker until the customer decides (0043); changed: the customer is told (0044)
@@ -278,10 +272,11 @@ function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: stri
 
           {revise ? <Text style={styles.warning}>{t('quote.changeWarning')}</Text> : null}
           {busy ? <Text style={styles.warning}>{t('quote.busyVisitNote')}</Text> : null}
-          <ArrivalPicker value={visit} onChange={setVisit} />
-          {when ? <Text style={styles.billHint}>{t('quote.visitAsked', { when })}</Text> : null}
-          <Text style={styles.billHint}>{t('quote.visitHint')}</Text>
-          {touched && visitProblem ? <FieldError>{t(`quote.visitErrors.${visitProblem}`)}</FieldError> : null}
+          <View style={styles.visitBox} accessibilityLabel={t('quote.visitTitle')}>
+            <Text style={styles.visitBoxTitle}>{t('quote.visitTitle')}</Text>
+            <Text style={styles.visitBoxTime}>{when || t('quote.visitNone')}</Text>
+            <Text style={styles.billHint}>{t('quote.visitHint')}</Text>
+          </View>
 
           <View style={styles.preview} accessibilityLabel={t('quote.preview')}>
             <Text style={styles.previewTitle}>{t('quote.preview')}</Text>
@@ -292,7 +287,7 @@ function QuoteForm({ jobId, preferred, when, onAccepted, revise }: { jobId: stri
               <Text style={styles.totalLabel}>{t('quote.total')}</Text>
               <Text style={styles.totalValue}>{formatRupees(total)}</Text>
             </View>
-            <Text style={styles.visit}>{t('quote.visitFixed', { when: visitTextFor(visit) })}</Text>
+            {when ? <Text style={styles.visit}>{t('quote.visitFixed', { when })}</Text> : null}
           </View>
 
           <Text style={styles.fine}>{t('quote.fine')}</Text>
@@ -373,6 +368,9 @@ const styles = StyleSheet.create({
   totalLabel: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.ink },
   totalValue: { fontFamily: fontFamily.extrabold, fontSize: 20, color: colors.ink },
   visit: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.muted },
+  visitBox: { borderRadius: 16, backgroundColor: '#F4F4F2', padding: 14, gap: 4 },
+  visitBoxTitle: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.muted },
+  visitBoxTime: { fontFamily: fontFamily.extrabold, fontSize: 17, color: colors.ink },
   fine: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   notice: { margin: 20, backgroundColor: colors.mint, borderRadius: 18, padding: 16, gap: 10 },
   noticeTitle: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.greenDark },
@@ -380,7 +378,3 @@ const styles = StyleSheet.create({
 });
 
 /** The preview line for the time being picked: "Tomorrow, 10 AM". */
-function visitTextFor(choice: VisitChoice): string {
-  const { p_visit_start, p_visit_end } = visitArgs(choice);
-  return visitText(p_visit_start, p_visit_end);
-}

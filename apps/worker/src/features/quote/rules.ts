@@ -71,19 +71,17 @@ export type AcceptJobArgs = {
   p_materials: number;
   p_materials_note: string | undefined;
   p_note: undefined;
-  p_visit_start: string;
-  p_visit_end: string;
 };
 
-/** revise_quote (0044): the same amounts and window, for the worker's one change before the customer accepts. */
+/** revise_quote (0044): the same amounts, for the worker's one change before the customer accepts. The visit time is the customer's, never sent (0059). */
 export type ReviseQuoteArgs = Omit<AcceptJobArgs, 'p_job_id'> & { p_quote_id: string };
 
 /**
  * accept_job (claim-and-lock): the worker states a price and the job is theirs. The materials amount is the sum of the item prices and the list goes in the note ("Pipe Rs 500; Tape Rs 50").
  * There is no "Other" charge. No total is ever sent (the database computes it), and no bill: the actual bill is
- * uploaded when the job is completed. The visit window is the worker's offer (0044).
+ * uploaded when the job is completed. The visit time is the one the customer chose (0059), so no time is sent.
  */
-export function buildSubmitArgs(jobId: string, input: QuoteInput, visit: { p_visit_start: string; p_visit_end: string }): AcceptJobArgs {
+export function buildSubmitArgs(jobId: string, input: QuoteInput): AcceptJobArgs {
   const materials = materialsTotal(input);
   const collapse = (text: string) => text.replace(/\s+/g, ' ').trim();
   const list = usedItems(input)
@@ -95,12 +93,11 @@ export function buildSubmitArgs(jobId: string, input: QuoteInput, visit: { p_vis
     p_materials: materials,
     p_materials_note: materials > 0 && list !== '' ? list : undefined,
     p_note: undefined,
-    ...visit,
   };
 }
 
-export function buildReviseArgs(quoteId: string, input: QuoteInput, visit: { p_visit_start: string; p_visit_end: string }): ReviseQuoteArgs {
-  const { p_job_id: _unused, ...rest } = buildSubmitArgs('', input, visit);
+export function buildReviseArgs(quoteId: string, input: QuoteInput): ReviseQuoteArgs {
+  const { p_job_id: _unused, ...rest } = buildSubmitArgs('', input);
   return { p_quote_id: quoteId, ...rest };
 }
 

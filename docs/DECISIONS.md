@@ -161,3 +161,9 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - **Job reminder:** a switch on the worker's profile ("Job reminders", on by default, `worker_details.job_reminders`, `set_job_reminders`). One notice (`job_reminder`) goes out about **one hour before** a scheduled visit (every 5 minutes a sweep, once per visit; a visit booked less than an hour ahead is not reminded; a visit that moves is reminded again).
 - **Call:** the customer's phone number is offered to the worker from acceptance on through every later stage (scheduled, in progress, completed, cash, reviewed, disputed). The worker's number is already in the customer's accepted quote.
 - **Change quote (requote):** unchanged: once, while the customer has not decided. The button is in the worker app on the job's status screen ("Change quote (once)").
+
+## 17 Nov 2026: the customer picks the visiting time (owner; migration 0059)
+
+- **Supersedes** the line above that says the worker picks a day and one time. The visit time is **always the one the customer chose** when posting the job (`jobs.preferred_date` + `window_from`, Karachi time). The worker only quotes a price. Any time a worker app sends is ignored (parameters stay so older builds keep working). Stored end = start + 1 hour (placeholder).
+- A job with no date (old "as soon as possible" job) is quoted without a time, except by a busy worker, who is refused. A visit time that has already passed cannot be quoted.
+- The worker app's time picker (`ArrivalPicker`) is removed. The customer app must let the customer pick a date and **one** visiting time when posting (Shariq).

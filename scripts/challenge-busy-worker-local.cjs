@@ -29,23 +29,35 @@ const karachi = (n, hh, mm = 0) => {
   return `${day}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+05:00`;
 };
 
+// The CUSTOMER picks the visiting time (migration 0059). The seed posts "as soon as possible" jobs, so the drill gives a job
+// its date and time the way a customer would have chosen them. Worker apps send a decoy time that must be ignored.
+const book = (job, n, hh, mm = 0) => {
+  const d = new Date(Date.now() + 5 * 3600 * 1000 + n * 86400000).toISOString().slice(0, 10);
+  const from = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':00';
+  const to = hh >= 23 ? null : String(hh + 1).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':00';
+  sql("update public.jobs set urgency='scheduled', preferred_date='" + d + "', window_from='" + from + "', window_to=" + (to ? "'" + to + "'" : 'null') + " where id='" + job + "'");
+};
+
 (async () => {
   const w1 = await login('atk-w1@test.dev'), w2 = await login('atk-w2@test.dev');
   const res = await login('atk-res@test.dev'), res2 = await login('atk-res2@test.dev');
   const qid = (job) => sql(`select id from public.quotes where job_id='${job}' and status='sent' order by created_at desc limit 1`);
   const claim = (job, t, extra) => rpc('accept_job', { p_job_id: job, p_labour: 1000, ...extra }, t);
+  const claimAt = (job, t, n, hh, mm = 0) => { book(job, n, hh, mm); return claim(job, t, { p_visit_start: karachi(n + 7, 3) }); };
+  const mine = (job) => sql("select (q.visit_start = ((j.preferred_date + j.window_from) at time zone 'Asia/Karachi'))::text from public.quotes q join public.jobs j on j.id = q.job_id where q.job_id='" + job + "' order by q.created_at desc limit 1");
 
   // ---- 1. a free worker, one visiting time -------------------------------------------------------------
-  let r = await claim(J(1), w1, { p_visit_start: karachi(1, 10) });
-  check('S1 free worker claims with a start time only', r.status < 300, r.msg);
+  let r = await claimAt(J(1), w1, 1, 10, 0);
+  check('S1 free worker claims (the time he sends is only a decoy)', r.status < 300, r.msg);
+  check('S1a the quote carries the CUSTOMER time, not the worker time', mine(J(1)) === 'true', 'worker time was used');
   check('S1b the stored end is exactly one hour later', sql(`select (visit_end - visit_start)::text from public.quotes where job_id='${J(1)}'`) === '01:00:00', 'end differs');
   r = await rpc('accept_quote', { p_quote_id: qid(J(1)) }, res);
   check('S2 the customer accepts', r.status < 300, r.msg);
-  check('S2b the ASAP job is now a scheduled job at the quoted time', sql(`select status || ' ' || (scheduled_start = (select visit_start from public.quotes where job_id='${J(1)}' and status='accepted'))::text from public.jobs where id='${J(1)}'`) === 'scheduled true', 'not booked');
+  check('S2b the job is scheduled at the customer time', sql(`select status || ' ' || (scheduled_start = (select visit_start from public.quotes where job_id='${J(1)}' and status='accepted'))::text from public.jobs where id='${J(1)}'`) === 'scheduled true', 'not booked');
   r = await rpc('start_job', { p_job_id: J(1) }, w1);
   check('S3 w1 starts job 1 (now busy)', r.status < 300, r.msg);
 
-  // ---- 2. a busy worker can only quote for a booked time -------------------------------------------------
+  // ---- 2. a busy worker can only quote a job that has a customer time -------------------------------------------------
   for (const [label, extra] of [
     ['no time', {}],
     ['an end without a start', { p_visit_end: karachi(1, 14) }],
@@ -58,16 +70,17 @@ const karachi = (n, hh, mm = 0) => {
     ['an end 13 hours after the start', { p_visit_start: karachi(1, 8), p_visit_end: karachi(1, 21, 30) }],
   ]) {
     r = await claim(J(2), w1, extra);
-    check(`B1 busy worker with ${label}: refused`, r.status >= 400, r.status + ' ' + r.msg);
+    check(`B1 busy worker, job has no customer time, worker sends ${label}: refused`, r.status >= 400, r.status + ' ' + r.msg);
   }
   check('B1b nothing was created by the refused tries', sql(`select count(*) from public.quotes where job_id='${J(2)}'`) === '0' && sql(`select status from public.jobs where id='${J(2)}'`) === 'open', 'a quote slipped in');
 
-  r = await claim(J(2), w1, { p_visit_start: karachi(1, 14) });
-  check('B2 busy worker quotes job 2 (same customer, same day as the running job) for a time', r.status < 300, r.msg);
+  r = await claimAt(J(2), w1, 1, 14, 0);
+  check('B2 busy worker quotes job 2 (same customer, same day as the running job) at the customer time', r.status < 300, r.msg);
+  check('B2a and the quote carries the customer time', mine(J(2)) === 'true', 'worker time was used');
   check('B2b nothing is held back; the customer is told at once', sql(`select busy_eta_pending from public.quotes where job_id='${J(2)}'`) === 'f' && sql(`select count(*) from public.notifications where type='quote_received' and job_id='${J(2)}'`) === '1', 'held');
-  r = await claim(J(3), w1, { p_visit_start: karachi(2, 10) });
+  r = await claimAt(J(3), w1, 2, 10, 0);
   check('B3 and job 3 (same customer, the next day)', r.status < 300, r.msg);
-  r = await claim(J(41), w1, { p_visit_start: karachi(1, 14) });
+  r = await claimAt(J(41), w1, 1, 14, 0);
   check('B4 and job 41 (another customer, same day)', r.status < 300, r.msg);
   check('B5 the worker was never asked for a finish time', sql(`select count(*) from public.notifications where type='busy_eta_needed'`) === '0', 'asked');
 
@@ -114,8 +127,8 @@ const karachi = (n, hh, mm = 0) => {
 
   // ---- 5. the race: two starts for two customers at the same instant ------------------------------------------
   const ra = J(4), rb = J(42);
-  await claim(ra, w2, { p_visit_start: karachi(1, 9) });
-  await claim(rb, w2, { p_visit_start: karachi(1, 9) });
+  await claimAt(ra, w2, 1, 9, 0);
+  await claimAt(rb, w2, 1, 9, 0);
   await rpc('accept_quote', { p_quote_id: qid(ra) }, res);
   await rpc('accept_quote', { p_quote_id: qid(rb) }, res2);
   const [s1, s2] = await Promise.all([rpc('start_job', { p_job_id: ra }, w2), rpc('start_job', { p_job_id: rb }, w2)]);
@@ -125,9 +138,9 @@ const karachi = (n, hh, mm = 0) => {
   // ---- 6. the Karachi day boundary --------------------------------------------------------------------------------------
   const e1 = J(5), e2 = J(6), e3 = J(7);
   // w1 is free now. 23:30 and 23:59 are the same Karachi day; 00:30 the next morning is another one.
-  await claim(e1, w1, { p_visit_start: karachi(3, 23, 30) });
-  await claim(e2, w1, { p_visit_start: karachi(3, 23, 59) });
-  await claim(e3, w1, { p_visit_start: karachi(4, 0, 30) });
+  await claimAt(e1, w1, 3, 23, 30);
+  await claimAt(e2, w1, 3, 23, 59);
+  await claimAt(e3, w1, 4, 0, 30);
   for (const e of [e1, e2, e3]) await rpc('accept_quote', { p_quote_id: qid(e) }, res);
   r = await rpc('start_job', { p_job_id: e1 }, w1);
   check('F1 start the 23:30 job', r.status < 300, r.msg);
@@ -139,20 +152,18 @@ const karachi = (n, hh, mm = 0) => {
 
   // ---- 7. change the quote once -------------------------------------------------------------------------------------------
   const g = J(8);
-  await claim(g, w1, { p_visit_start: karachi(1, 10) });
+  await claimAt(g, w1, 1, 10, 0);
   const gq = qid(g);
   const rev = (t, extra) => rpc('revise_quote', { p_quote_id: gq, p_labour: 900, p_materials: 0, p_materials_note: null, p_note: null, ...extra }, t);
   r = await rev(w2, { p_visit_start: karachi(1, 11) });
   check('G1 another worker cannot change it', r.status >= 400, r.status + ' ' + r.msg);
   r = await rev(res, { p_visit_start: karachi(1, 11) });
   check('G2 the customer cannot change it', r.status >= 400, r.status + ' ' + r.msg);
-  r = await rev(w1, {});
-  check('G3 no time: refused', r.status >= 400, r.status + ' ' + r.msg);
-  r = await rev(w1, { p_visit_start: new Date(Date.now() - 3600000).toISOString() });
-  check('G4 a past time: refused', r.status >= 400, r.status + ' ' + r.msg);
+  check('G3 the customer time is on the quote before the change', mine(g) === 'true', 'wrong time');
   r = await rev(w1, { p_visit_start: karachi(1, 11) });
-  check('G5 the worker changes it once (a start only)', r.status < 300, r.msg);
-  check('G5b the stored end follows (one hour)', sql(`select (visit_end - visit_start)::text from public.quotes where id='${gq}'`) === '01:00:00', 'end differs');
+  check('G5 the worker changes the price once (a time he sends is ignored)', r.status < 300, r.msg);
+  check('G4 the visit is still the customer time after the change', mine(g) === 'true', 'the worker moved the visit');
+  check('G5b the stored end is one hour after the start', sql(`select (visit_end - visit_start)::text from public.quotes where id='${gq}'`) === '01:00:00', 'end differs');
   r = await rev(w1, { p_visit_start: karachi(1, 12) });
   check('G6 a second change is refused', r.status >= 400 && /already changed/.test(r.msg), r.status + ' ' + r.msg);
   r = await rpc('accept_quote', { p_quote_id: gq, p_revision: 0 }, res);
@@ -161,6 +172,11 @@ const karachi = (n, hh, mm = 0) => {
   check('G8 and can accept the new one', r.status < 300, r.msg);
   r = await rev(w1, { p_visit_start: karachi(1, 13) });
   check('G9 after acceptance no change at all', r.status >= 400, r.status + ' ' + r.msg);
+
+  // ---- 7b. a customer time that has already passed cannot be quoted -------------------------------------------------------
+  book(J(9), -1, 9);
+  r = await claim(J(9), w2, {});
+  check('I1 a visiting time in the past cannot be quoted', r.status >= 400 && /already passed/.test(r.msg), r.status + ' ' + r.msg);
 
   // ---- 8. reminders -------------------------------------------------------------------------------------------------------------
   r = await rpc('set_job_reminders', { p_value: false }, w2);
