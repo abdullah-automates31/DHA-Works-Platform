@@ -364,6 +364,8 @@ export const en = {
     backToMyJobs: 'Back to My jobs',
     noQuoteYet: 'No quote yet',
     call: 'Call',
+    callFailedTitle: 'Cannot place the call',
+    callFailedBody: 'This device could not open the phone app. The number is {phone}.',
     reportProblem: 'Report a problem',
     feelUnsafe: 'I feel unsafe',
     emptyTitle: 'No jobs here yet',

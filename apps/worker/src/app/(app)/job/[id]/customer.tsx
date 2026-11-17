@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/AuthForm';
@@ -10,6 +10,7 @@ import { useJob } from '@/features/job/useJob';
 import { dialable } from '@/features/myjobs/rules';
 import { visitText } from '@/features/quote/visit';
 import { t } from '@/i18n';
+import { callPhone } from '@/lib/call';
 import { colors, fontFamily } from '@/theme';
 
 // Customer details page, opened from the "Verified resident" bar on the job screen. Before the customer accepts the
@@ -63,7 +64,7 @@ export default function CustomerDetailsScreen() {
               <Text style={styles.verifiedText}>{t('job.residentPhase', { phase: job.phase })}</Text>
             </View>
             {phone ? (
-              <Pressable accessibilityRole="button" accessibilityLabel={t('myjobs.call')} onPress={() => void Linking.openURL('tel:' + phone)} style={styles.callBtn}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('myjobs.call')} onPress={() => void callPhone(phone)} style={styles.callBtn}>
                 <PhoneIcon size={18} color="#fff" />
                 <Text style={styles.callBtnText}>{t('myjobs.call')}</Text>
               </Pressable>

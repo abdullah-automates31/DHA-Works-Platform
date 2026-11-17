@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/AuthForm';
@@ -19,6 +19,7 @@ import { canCall, canReport, canRequestCancellation, dialable, jobKind, noteFor,
 import { useJobStatus } from '@/features/myjobs/useJobStatus';
 import { useJobInProgress } from '@/features/feed/useJobInProgress';
 import { t } from '@/i18n';
+import { callPhone } from '@/lib/call';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
@@ -265,7 +266,7 @@ export default function JobStatusScreen() {
                   {whoLine(job)}
                 </Text>
                 {phone ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel={t('myjobs.call')} onPress={() => void Linking.openURL(`tel:${phone}`)} style={styles.call}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('myjobs.call')} onPress={() => void callPhone(phone)} style={styles.call}>
                     <PhoneIcon size={18} color={colors.greenDark} />
                     <Text style={styles.callText}>{t('myjobs.call')}</Text>
                   </Pressable>
