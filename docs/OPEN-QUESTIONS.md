@@ -168,6 +168,6 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 
 ## 17 Nov: customer app PR #18 leftovers
 
-- PR #18's worktree (`C:\Users\Abdullah Ali\dha-tmp-call`) holds **uncommitted "no ASAP when posting a job" edits** (PostJob*.kt) from the 16 Nov session. With them `PostJobViewModelTest` has 4 failing tests (editModeNeedsATitleToo, editModePrefillsAndCanChangeTheTitle, anEmptyNewFormListsEverythingStillNeeded, theListShrinksAsEachRequirementIsMet). Owner decision: finish them (and fix the tests) or drop them. The committed PR code (44b11c8) passes its own tests.
+- PR #18's worktree (`C:\Users\Abdullah Ali\dha-tmp-call`) had **uncommitted "no ASAP when posting a job" edits** (PostJob*.kt) from the 16 Nov session. FINISHED and pushed to PR #18 as 9cf3e0d on 17 Nov: the post and edit form always needs a date and one visiting time; the 4 PostJobViewModelTest tests were fixed; all 204 jobs tests pass. An old as-soon-as-possible job opened for edit must get a date before saving. Unused strings (`post_when_day`, `post_when_asap_hint`) were left in strings.xml; `post_when_asap` is still used to label old jobs.
 - The customer app (PR #18) has never been run on a phone; the worker app's Customer details page and call helper need a new EAS build on the phone to be seen.
 - PR #17 should not be merged (new quotes carry no finish-time estimate since 0058).
