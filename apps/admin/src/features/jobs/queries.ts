@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@dha/supabase';
-import { PAGE_SIZE, type JobFilter } from '../../lib/format.ts';
+import { PAGE_SIZE, type JobFilter, type JobStage } from '../../lib/format.ts';
 import { safePath } from '../../lib/json.ts';
 import { parseCancellations, parseJobCounts, parseJobDetail, parseJobs, type JobDetail } from './parse.ts';
 
@@ -11,10 +11,10 @@ export async function loadJobCounts(supabase: Client) {
   return parseJobCounts(data);
 }
 
-export async function loadJobs(supabase: Client, o: { status: JobFilter | null; phase: number | null; category: number | null; today: boolean; q: string; page: number }) {
+export async function loadJobs(supabase: Client, o: { status: JobFilter | null; stage?: JobStage | null; phase: number | null; category: number | null; today: boolean; q: string; page: number }) {
   const { data, error } = await supabase.rpc('admin_jobs_list', {
     p_status: o.status ?? undefined, p_phase: o.phase ?? undefined, p_category: o.category ?? undefined, p_today: o.today,
-    p_search: o.q || undefined, p_limit: PAGE_SIZE, p_offset: (o.page - 1) * PAGE_SIZE,
+    p_search: o.q || undefined, p_limit: PAGE_SIZE, p_offset: (o.page - 1) * PAGE_SIZE, p_stage: o.stage ?? undefined,
   });
   return { ok: !error, list: parseJobs(error ? null : data) };
 }

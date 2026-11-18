@@ -78,7 +78,7 @@ select has_index('public', 'profiles', 'profiles_full_name_trgm_idx', 'profiles.
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
 select is(public.admin_jobs_list(null, null, null, false, 'nothing matches this', 25, 0) ->> 'total', '0', 'a search with no match returns nothing');
 select tests.back();
-select is(has_function_privilege('anon', 'public.admin_jobs_list(public.job_status, smallint, smallint, boolean, text, integer, integer)', 'execute'), false, 'anon still cannot search jobs');
+select is(has_function_privilege('anon', 'public.admin_jobs_list(public.job_status, smallint, smallint, boolean, text, integer, integer, text)', 'execute'), false, 'anon still cannot search jobs');
 
 select * from finish();
 rollback;

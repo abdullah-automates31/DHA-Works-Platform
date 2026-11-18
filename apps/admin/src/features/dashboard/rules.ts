@@ -1,14 +1,64 @@
 // Display rules for the dashboard: labels, bar widths, where an item opens, and the date line. Pure and unit tested.
-import { isUuidText, type Attention, type AttentionKind, type Stages } from './parse.ts';
+import { isUuidText, type Activity, type ActivityKind, type Attention, type AttentionKind, type Priority, type Stages } from './parse.ts';
 
-export const STAGE_ROWS: { key: keyof Stages; label: string; tone: 'green' | 'red' }[] = [
+export const STAGE_ROWS: { key: keyof Stages; label: string; tone: 'green' | 'red' | 'gray' }[] = [
   { key: 'open', label: 'Open', tone: 'green' },
   { key: 'scheduled', label: 'Scheduled', tone: 'green' },
   { key: 'in_progress', label: 'In progress', tone: 'green' },
   { key: 'completed', label: 'Completed', tone: 'green' },
   { key: 'cash_collected', label: 'Cash collected', tone: 'green' },
   { key: 'disputed', label: 'Disputed', tone: 'red' },
+  { key: 'cancelled', label: 'Cancelled', tone: 'gray' },
+  { key: 'expired', label: 'Expired', tone: 'gray' },
 ];
+
+/** The Jobs list showing exactly the jobs counted in a stage: grouped stages use the stage filter (0063), the rest the status. */
+export function stageHref(key: keyof Stages): string {
+  if (key === 'open' || key === 'scheduled' || key === 'cash_collected') return `/jobs?stage=${key}`;
+  return `/jobs?status=${key}`;
+}
+
+export const RANGES = [
+  { key: 'today', label: 'Today', title: 'today' },
+  { key: '7d', label: '7 days', title: 'in the last 7 days' },
+  { key: '30d', label: '30 days', title: 'in the last 30 days' },
+  { key: '90d', label: '90 days', title: 'in the last 90 days' },
+] as const;
+export type Range = (typeof RANGES)[number]['key'];
+
+export function parseRange(v: unknown): Range {
+  return RANGES.find((r) => r.key === v)?.key ?? 'today';
+}
+
+export function rangeTitle(r: Range): string {
+  return RANGES.find((x) => x.key === r)?.title ?? 'today';
+}
+
+export const PRIORITY_CHIP: Record<Priority, { label: string; tone: 'red' | 'wait' | 'blue' | 'gray' }> = {
+  urgent: { label: 'Urgent', tone: 'red' },
+  high: { label: 'High', tone: 'wait' },
+  normal: { label: 'Normal', tone: 'blue' },
+  low: { label: 'Low', tone: 'gray' },
+};
+
+export const ACTIVITY_CHIP: Record<ActivityKind, { label: string; tone: 'ok' | 'wait' | 'red' | 'blue' | 'pur' | 'gray' }> = {
+  registered: { label: 'New user', tone: 'blue' },
+  verified: { label: 'Verification', tone: 'ok' },
+  job: { label: 'Job', tone: 'gray' },
+  cancellation: { label: 'Cancel', tone: 'pur' },
+  report: { label: 'Report', tone: 'wait' },
+  account: { label: 'Account', tone: 'red' },
+};
+
+/** Where an activity item opens. An odd id never builds a link. */
+export function activityHref(a: Pick<Activity, 'link' | 'linkId'>): string {
+  if (!isUuidText(a.linkId)) return '/dashboard';
+  if (a.link === 'worker') return `/workers/${a.linkId}`;
+  if (a.link === 'resident') return `/residents/${a.linkId}`;
+  if (a.link === 'job') return `/jobs/${a.linkId}`;
+  if (a.link === 'report') return `/reports/${a.linkId}`;
+  return `/users/${a.linkId}`;
+}
 
 /** Bar width in percent, relative to the biggest stage. A non-zero count always shows at least a sliver. */
 export function barPercent(count: number, max: number): number {
@@ -27,15 +77,16 @@ export const KIND_CHIP: Record<AttentionKind, { label: string; tone: 'red' | 'wa
   resident: { label: 'Resident', tone: 'wait' },
   cancellation: { label: 'Cancel', tone: 'pur' },
   stuck: { label: 'Stuck', tone: 'wait' },
+  suspended_active: { label: 'Suspended', tone: 'red' },
 };
 
 /** Where an attention item opens: an application its review screen, a report its case, a stuck job its page, a cancellation request the requests list. */
-export function attentionHref(a: Attention): string {
+export function attentionHref(a: Pick<Attention, 'id' | 'kind'>): string {
   if (a.kind === 'worker' && isUuidText(a.id)) return `/workers/${a.id}`;
   if (a.kind === 'resident' && isUuidText(a.id)) return `/residents/${a.id}`;
   if ((a.kind === 'unsafe' || a.kind === 'report') && isUuidText(a.id)) return `/reports/${a.id}`;
   if (a.kind === 'unsafe' || a.kind === 'report') return '/reports';
-  if (a.kind === 'stuck' && isUuidText(a.id)) return `/jobs/${a.id}`;
+  if ((a.kind === 'stuck' || a.kind === 'suspended_active') && isUuidText(a.id)) return `/jobs/${a.id}`;
   if (a.kind === 'cancellation') return '/jobs/cancellations';
   return '/jobs';
 }

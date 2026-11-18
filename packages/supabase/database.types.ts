@@ -2194,7 +2194,7 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number; p_status?: string }
         Returns: Json
       }
-      admin_dashboard: { Args: never; Returns: Json }
+      admin_dashboard: { Args: { p_range?: string }; Returns: Json }
       admin_decide_cancellation: {
         Args: { p_approve: boolean; p_note: string; p_request: string }
         Returns: undefined
@@ -2245,6 +2245,7 @@ export type Database = {
           p_offset?: number
           p_phase?: number
           p_search?: string
+          p_stage?: string
           p_status?: Database["public"]["Enums"]["job_status"]
           p_today?: boolean
         }

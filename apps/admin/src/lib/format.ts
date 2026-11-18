@@ -74,8 +74,20 @@ export function jobStatus(status: string): { label: string; tone: Tone } {
 }
 
 /** Filter pills on the jobs screen, in the order of the design. */
-export const JOB_FILTERS = ['open', 'interested', 'quoted', 'scheduled', 'in_progress', 'completed', 'cash_collected', 'disputed', 'cancelled'] as const;
+export const JOB_FILTERS = ['open', 'interested', 'quoted', 'scheduled', 'in_progress', 'completed', 'cash_collected', 'disputed', 'cancelled', 'expired'] as const;
 export type JobFilter = (typeof JOB_FILTERS)[number];
+
+/** Grouped stages (migration 0063, p_stage): the same groups the dashboard counts. */
+export const JOB_STAGES = {
+  open: 'Open for quotes (open, interested, quoted)',
+  scheduled: 'Scheduled',
+  cash_collected: 'Cash collected (incl. reviewed)',
+} as const;
+export type JobStage = keyof typeof JOB_STAGES;
+
+export function parseJobStage(v: unknown): JobStage | null {
+  return typeof v === 'string' && Object.hasOwn(JOB_STAGES, v) ? (v as JobStage) : null;
+}
 
 export function parseJobFilter(v: unknown): JobFilter | null {
   return (JOB_FILTERS as readonly string[]).includes(v as string) ? (v as JobFilter) : null;

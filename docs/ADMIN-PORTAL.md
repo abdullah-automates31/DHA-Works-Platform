@@ -19,13 +19,13 @@ Email + password (plus the Cloudflare Turnstile bot check, verified on the serve
 | Screen | Database |
 |---|---|
 | A01 sign-in + code | Auth password sign-in, `admin-2fa` function, `admin_verify_code`, `admin_session_status` |
-| A02 dashboard | `admin_dashboard` (counts, jobs by stage, needs-attention list: unsafe reports first, then oldest; read-only, verified admin only) |
+| A02 dashboard | `admin_dashboard(p_range)` (0063: current counts, eight job stages, prioritised needs-attention list, period figures and recent activity; read-only, verified admin only) |
 | A03 / A05 queues | `admin_verification_counts`, `admin_verification_queue` (search, filter, paging; never returns a CNIC) |
 | A04 / A06 review | `admin_verification_detail` (masked CNIC, audited), signed URLs from the `identity` and `worker-media` buckets (5 minutes), `admin_decide_verification` |
 | Suspend / reactivate (A13) | `admin_set_account_status` |
 | A07 reports list | `admin_reports_counts`, `admin_reports_list` (open / resolved / all, kind, search; unsafe first) |
 | A08 case | `admin_report_detail` (phones for call-back, audited), `admin_report_decide` (keep open / warning / suspend / close), `admin_report_add_note`, `admin_report_log_call`; photos from `report-media` by 5-minute signed URL |
-| A10 jobs | `admin_jobs_counts`, `admin_jobs_list` (status, phase, category, posted today, search) |
+| A10 jobs | `admin_jobs_counts`, `admin_jobs_list` (status, grouped stage (0063), phase, category, posted today, search) |
 | A11 job | `admin_job_detail`, `admin_cancel_job`, `admin_job_resume`, `admin_job_replace_worker`; photos and voice from `job-media` |
 | Cancellation requests (/jobs/cancellations) | `admin_cancellations_list`, `admin_decide_cancellation` (approve cancels the job; decline needs a note) |
 | A09 helpline log | table `helpline_calls` (staff-only, no grants), `admin_log_call`, `admin_helpline_summary`, `admin_helpline_list`, `admin_helpline_callback_done` |
@@ -99,3 +99,14 @@ The list screens Jobs, Worker and Resident verification, Users, Reports, Reviews
 ## Vercel region (18 Nov)
 
 `vercel.json` pins the server functions to `dub1` (Dublin), next to the Supabase DEV project (eu-west-1). Vercel defaulted to `iad1` (Washington), so every database call crossed the Atlantic and tab changes felt slow. A future production Supabase project should be in the same region as the Vercel functions (change `regions` if it is not in Europe). Check with the `X-Vercel-Id` response header: `<edge>::<function region>::...`.
+
+## Dashboard v2 (19 Nov, migration 0063)
+
+Owner content requirements (18 Nov). `admin_dashboard(p_range)` replaces `admin_dashboard()`; `p_range` is `today` (since midnight Karachi time, the default), `7d`, `30d` or `90d`; anything else is refused. The period pills on the dashboard change only the period figures and the activity list; waiting counts, open reports, jobs by stage and the needs-attention list are always the current state.
+
+- **Cards:** workers and residents to review (oldest waiting), open reports (unsafe and poor-work chips), jobs posted today or in the period (with jobs in progress now).
+- **Needs attention** (at most 15, total shown in the heading): priority first, then oldest. Urgent = unsafe reports; high = poor-work reports and **suspended workers who still hold a booked or running job**; normal = other open reports, stuck jobs, cancellation requests; low = applications. Each row: reference, title, job and people, status, priority, how long ago; it opens the record.
+- **Jobs by stage:** eight stages (open, scheduled, in progress, completed, cash collected, disputed, cancelled, expired). Each opens the Jobs list with the same jobs: grouped stages use the new `admin_jobs_list` argument `p_stage` (`open` = open/interested/quoted, `scheduled` = accepted/scheduled, `cash_collected` = cash_collected/reviewed), the others the exact status. The Jobs page reads `?stage=`, its Scheduled and Cash collected pills now use it (their counts were already grouped), and it has an Expired pill.
+- **Recent activity** (at most 20, newest first, within the period): registrations, verification decisions, jobs posted / quote accepted / completed / cancelled (resident or staff) / cancellation declined, reports filed and resolved, account suspensions and reactivations. Period summary line: new workers, new residents, jobs posted, jobs completed, reports filed, reports resolved. Names and record codes only, never a phone number or CNIC.
+- Quick-access tiles were left out on purpose (owner choice): the sidebar already links every area with its waiting count.
+- Tests: `supabase/tests/admin_dashboard.test.sql` (periods, ordering, suspended worker with a job, activity, stage filter, wrong callers); unit tests in `features/dashboard/dashboard.test.ts`. Deploy order: `supabase db push` first, then the portal (the new portal calls `p_range` and `p_stage`; the old portal keeps working on the new database).
