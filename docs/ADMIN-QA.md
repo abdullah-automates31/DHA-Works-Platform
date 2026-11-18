@@ -11,7 +11,7 @@ Local stack, real browser, fake `[FAKE]` data only. Updated as each pass is done
 | All detail pages (worker, resident, report, job, user), `/accept-invite` | Load, no errors. |
 | Worker review: tick checklist, Approve | Works. Banner shown, queue counts update. |
 | Document viewer (identity bucket, signed links) | Works when the file exists; a missing file shows "Could not load". Needs real uploads to confirm on hosted DEV. |
-| Attack drill (`scripts/challenge-admin-local.mjs`) | 39 of 39 pass: code limits, lock-out, verified-session rules, sign-out. |
+| Attack drill (`scripts/challenge-admin-session-local.cjs`, replaced the authenticator drill on 18 Nov) | 46 of 46 pass (18 Nov): password only, self-enrolled authenticator, code guessing and limits, codes bound to one session, expiry, forged tokens, sign-out, email sign-up strangers. |
 | `admin:typecheck`, `admin:lint`, `admin:test` (74), `admin:build` | Pass. |
 
 ### Bugs found and fixed

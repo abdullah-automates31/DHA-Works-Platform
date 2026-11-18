@@ -1,4 +1,5 @@
-// Attack drill for admin sessions (migrations 0055, 0060, 0061; sign-in lasts until sign-out). LOCAL stack only (refuses any other URL).
+// Attack drill for admin sign-in and sessions (0055 emailed code, 0060, 0061, 0062; sign-in lasts until sign-out).
+// Replaces scripts/challenge-admin-local.mjs (authenticator flow, removed 18 Nov). LOCAL stack only (refuses any other URL).
 // Run: npm run db:local -- start, then node scripts/challenge-admin-session-local.cjs  (uses supabase/dev/seed_local_admin.sql)
 const { execSync } = require('child_process');
 const crypto = require('crypto');
@@ -6,7 +7,7 @@ const crypto = require('crypto');
 const env = Object.fromEntries(execSync('npx supabase status -o env', { encoding: 'utf8' }).split('\n').filter((l) => l.includes('=')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
 const URL = env.API_URL, ANON = env.ANON_KEY;
 if (!/^http:\/\/127\.0\.0\.1:/.test(URL)) throw new Error('refusing: not a local stack ' + URL);
-const sql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -tA', { input: q, encoding: 'utf8' }).trim();
+const sql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -tA -v ON_ERROR_STOP=1', { input: q, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
 let pass = 0, fail = 0;
 const check = (ok, name, extra = '') => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${extra ? '  [' + extra + ']' : ''}`); };
 
@@ -37,7 +38,7 @@ async function signIn() {
 
 (async () => {
   execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -q', { input: require('fs').readFileSync('supabase/dev/seed_local_admin.sql'), stdio: ['pipe', 'ignore', 'inherit'] });
-  sql("delete from auth.mfa_factors where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from public.admin_verified_sessions where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from public.admin_factor_challenges where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
+  sql("delete from auth.mfa_factors where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from public.admin_verified_sessions where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from auth.sessions where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from public.admin_factor_challenges where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
 
   console.log('--- A. Attacker has the password but not the mailbox');
   const s1 = await signIn();
@@ -101,6 +102,54 @@ async function signIn() {
   const re = await call('/auth/v1/token?grant_type=refresh_token', { body: { refresh_token: ref.body.refresh_token } });
   check(!re.body.access_token, 'E10 a stolen refresh token cannot start the session again after sign-out');
   check(Number(sql(`select count(*) from public.admin_verified_sessions where session_id = '${sid}';`)) === 0, 'E11 sign-out removed the verification row');
+
+  console.log('--- F. A stranger signs up with an email (email sign-up stays on for staff invites) and tries to become an applicant');
+  const mail = `stranger${Date.now()}@evil.test`;
+  const su = await call('/auth/v1/signup', { body: { email: mail, password: 'Stranger#2026x' } });
+  const st = su.body.access_token || (su.body.session && su.body.session.access_token);
+  check(!!st, 'F0 (setup) the email sign-up gives a session', `status ${su.status}`);
+  if (st) {
+    const reg = await rpc('register_profile', { p_role: 'resident', p_full_name: 'Fake Person', p_phone: '+923001234567' }, st);
+    check(refused(reg) || (reg.body && /phone number first/.test(JSON.stringify(reg.body))), 'F1 it cannot register as a resident with a typed phone', `status ${reg.status}`);
+    const regw = await rpc('register_profile', { p_role: 'worker', p_full_name: 'Fake Worker', p_phone: '+923001234567' }, st);
+    check(regw.status >= 400, 'F2 or as a worker');
+    check(refused(await rpc('register_profile', { p_role: 'admin', p_full_name: 'Fake Admin', p_phone: '' }, st)) || (await rpc('register_profile', { p_role: 'admin', p_full_name: 'x', p_phone: '' }, st)).status >= 400, 'F3 or as an admin');
+    const own = await call('/rest/v1/profiles?select=id', { token: st, method: 'GET' });
+    check(refused(own) || (Array.isArray(own.body) && own.body.length === 0), 'F4 it has no profile and reads none');
+    const jobs = await call('/rest/v1/jobs?select=id&limit=1', { token: st, method: 'GET' });
+    check(refused(jobs) || (Array.isArray(jobs.body) && jobs.body.length === 0), 'F5 it cannot read any job', `status ${jobs.status}`);
+    check(refused(await rpc('admin_session_status', {}, st)) || (await rpc('admin_session_status', {}, st)).body === 'not_admin', 'F6 it is not an admin');
+    sql(`delete from auth.users where email = '${mail}';`);
+  }
+
+  console.log('--- G. Emailed code rules (replaces the old authenticator drill)');
+  const g1 = await signIn();
+  const g2 = await signIn();
+  const sid1 = sessionOf(g1.access_token);
+  sql("delete from public.admin_factor_challenges where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
+  const code1 = sql(`select public.admin_issue_challenge('${g1.user.id}', '${sid1}');`);
+  check(/^\d{6}$/.test(code1), 'G0 (setup) a code is issued for session 1');
+  let early = ''; try { sql(`select public.admin_issue_challenge('${g1.user.id}', '${sid1}');`); } catch (e) { early = String(e.stderr || e.message); }
+  check(/wait a minute/.test(early), 'G1 a second code within a minute is refused');
+  check((await rpc('admin_verify_code', { p_code: code1 }, g2.access_token)).body !== 'ok', 'G2 a code issued for one session does not work in another');
+  check((await rpc('admin_session_status', {}, g2.access_token)).body === 'needs_code', 'G3 the other session is still not verified');
+  sql(`update public.admin_factor_challenges set expires_at = now() - interval '1 second' where session_id = '${sid1}' and not consumed;`);
+  check((await rpc('admin_verify_code', { p_code: code1 }, g1.access_token)).body !== 'ok', 'G4 an expired code (over 10 minutes) is refused');
+  sql("update public.admin_factor_challenges set created_at = now() - interval '2 minutes' where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
+  const code2 = sql(`select public.admin_issue_challenge('${g1.user.id}', '${sid1}');`);
+  check((await rpc('admin_verify_code', { p_code: code2 }, g1.access_token)).body === 'ok', 'G5 (control) the right fresh code verifies the session');
+  check((await rpc('admin_session_status', {}, g1.access_token)).body === 'verified', 'G6 (control) the session is now an admin session');
+  check((await rpc('admin_verify_code', { p_code: code2 }, g2.access_token)).body !== 'ok', 'G7 the used code cannot be replayed in another session');
+  check((await rpc('admin_session_status', {}, g2.access_token)).body === 'needs_code', 'G8 verifying one session does not verify the other');
+  sql("update public.admin_factor_challenges set created_at = now() - interval '2 hours' where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
+  let n = 0, capped = false;
+  for (let i = 0; i < 7; i++) {
+    sql("update public.admin_factor_challenges set created_at = created_at - interval '61 seconds' where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1' and created_at > now() - interval '1 hour';");
+    try { sql(`select public.admin_issue_challenge('${g1.user.id}', '${sid1}');`); n++; } catch (e) { if (/too many codes/.test(String(e.stderr || e.message))) { capped = true; break; } }
+  }
+  check(capped && n <= 5, 'G9 at most 5 codes an hour', `issued ${n}`);
+  const gout = await call('/auth/v1/logout?scope=local', { token: g1.access_token, body: {} });
+  check((gout.status === 204 || gout.status === 200) && refused(await rpc('admin_save_settings', { p_helpline_number: '1092', p_helpline_enabled: true, p_report_window_days: 7, p_review_window_days: 7 }, g1.access_token)), 'G10 after sign-out the verified token is dead');
 
   sql("delete from auth.mfa_factors where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
   console.log(`\n${pass} passed, ${fail} failed`);

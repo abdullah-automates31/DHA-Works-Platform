@@ -29,7 +29,7 @@ npm run safety:prod-ready             # 4 blockers; ADMIN_2FA_EMAIL etc.
 
 - Use `npm run db:local --` for local Supabase commands. It copies `supabase/` to git-ignored `.supabase-local/` and adds the five static test OTPs; plain `supabase start` has no test OTPs. The wrapper blocks `--linked`, `--project-ref`, `--db-url`, `--workdir`; use the plain CLI for hosted read-only checks.
 - Worker (`apps/worker`): `npm run worker:typecheck`, `worker:lint`, `worker:test` (256 node:test tests); bundle check `npx expo export --platform ios` (or android) from `apps/worker`.
-- Admin (`apps/admin`): `npm run admin:typecheck`, `admin:lint`, `admin:test` (76), `admin:build`; attack drill `FN_LOG=<function log> node scripts/challenge-admin-local.mjs` (39 checks); QA record `docs/ADMIN-QA.md`; releases are tags (`docs/RELEASES.md`).
+- Admin (`apps/admin`): `npm run admin:typecheck`, `admin:lint`, `admin:test` (76), `admin:build`; attack drill `node scripts/challenge-admin-session-local.cjs` (46 checks, local stack only); QA record `docs/ADMIN-QA.md`; releases are tags (`docs/RELEASES.md`).
 - Functions: in `send-push`, `deno test` (4), `deno lint` and `deno fmt --check`; in `admin-2fa`, `deno test` (15) and `deno lint`.
 - Single app test: `node --test apps/worker/src/features/quote/rules.test.ts` (same pattern for admin).
 - `.sh` scripts need Git Bash: `& "C:\Program Files\Git\bin\bash.exe" <script>`. Concurrency: `supabase/tests/concurrency/{accept,claim,register}_race.sh` against local only, then `db reset`. Proposal tests: `supabase/proposals/run_proposal_test.sh`.

@@ -21,10 +21,12 @@ begin
 end $$;
 grant execute on function tests.act(uuid), tests.signed_out(), tests.back() to authenticated;
 
--- Auth users only: no profile rows exist until register_profile runs.
-insert into auth.users (id, aud, role, email)
-select ('00000000-0000-0000-0000-0000000000' || n)::uuid, 'authenticated', 'authenticated', 'u' || n || '@test.dev'
+-- Auth users only: no profile rows exist until register_profile runs. Users 01-09 signed in by phone OTP (phone
+-- proven) and also have an email; user 10 is an email-only account (0062: it may not register).
+insert into auth.users (id, aud, role, email, phone, phone_confirmed_at)
+select ('00000000-0000-0000-0000-0000000000' || n)::uuid, 'authenticated', 'authenticated', 'u' || n || '@test.dev', '9230011000' || n, now()
 from unnest(array['01', '02', '03', '04', '05', '06', '07', '08', '09']) n;
+insert into auth.users (id, aud, role, email) values ('00000000-0000-0000-0000-000000000010', 'authenticated', 'authenticated', 'u10@test.dev');
 
 -- ---------------------------------------------------------------- signed out and bad roles
 select tests.signed_out();
@@ -50,7 +52,7 @@ select is((select email from public.profiles where id = '00000000-0000-0000-0000
   'the email comes from the auth user, not from the app');
 select is((select full_name from public.profiles where id = '00000000-0000-0000-0000-000000000001'), 'Usman   Khan',
   'the name is trimmed at the ends (inner spacing is the app''s job)');
-select is((select phone from public.profiles where id = '00000000-0000-0000-0000-000000000001'), '+923214567890', 'phone is stored as given, trimmed');
+select is((select phone from public.profiles where id = '00000000-0000-0000-0000-000000000001'), '+923001100001', 'the phone is the number that signed in (the typed one is ignored)');
 select is((select date_of_birth from public.profiles where id = '00000000-0000-0000-0000-000000000001'), date '1994-03-14', 'date of birth is stored');
 select is((select cnic from public.profiles where id = '00000000-0000-0000-0000-000000000001'), '42101-5678901-3', 'CNIC is stored');
 select is((select count(*) from public.worker_details where profile_id = '00000000-0000-0000-0000-000000000001'), 1::bigint,
@@ -73,16 +75,22 @@ select is((select count(*) from public.worker_details where profile_id = '000000
 select tests.act('00000000-0000-0000-0000-000000000003');
 select lives_ok($$select public.register_profile('worker', '   ', '', null, null, '')$$, 'blank fields are accepted at registration');
 select tests.back();
-select ok((select full_name is null and phone is null and cnic is null from public.profiles
-           where id = '00000000-0000-0000-0000-000000000003'), 'blank text is stored as null (submit_for_review checks completeness)');
+select ok((select full_name is null and cnic is null and phone = '+923001100003' from public.profiles
+           where id = '00000000-0000-0000-0000-000000000003'), 'blank text is stored as null (submit_for_review checks completeness); the phone is the signed-in number');
 
 select tests.act('00000000-0000-0000-0000-000000000004');
 select throws_ok($$select public.register_profile('worker', 'Bad Cnic', '+923001112222', 'male', date '1990-01-01', '12345')$$,
   '23514', null, 'a malformed CNIC is refused');
 select throws_ok($$select public.register_profile('worker', 'Bad Cnic', '+923001112222', 'male', date '1990-01-01', '4210156789013')$$,
   '23514', null, 'a CNIC without dashes is refused');
-select throws_ok($$select public.register_profile('worker', 'Bad Phone', '123')$$, '23514', null, 'a too-short phone is refused');
 select tests.back();
+select tests.act('00000000-0000-0000-0000-000000000010');
+select throws_ok($$select public.register_profile('worker', 'Email Only', '+923001112222')$$, 'P0001', 'sign in with your phone number first',
+  'an email-only account cannot register, whatever phone it types (0062)');
+select throws_ok($$select public.register_profile('resident', 'Email Only', '+923001112222')$$, 'P0001', 'sign in with your phone number first',
+  'not as a resident either');
+select tests.back();
+select is((select count(*) from public.profiles where id = '00000000-0000-0000-0000-000000000010'), 0::bigint, 'the email-only account has no profile');
 select is((select count(*) from public.profiles where id = '00000000-0000-0000-0000-000000000004'), 0::bigint,
   'refused registrations leave no profile behind');
 
@@ -103,8 +111,9 @@ select lives_ok($$select public.update_my_profile()$$, 'an update with no values
 select is((select cnic from public.profiles where id = '00000000-0000-0000-0000-000000000001'), '42101-5678901-3', 'null leaves values unchanged');
 select lives_ok($$select public.update_my_profile('  Usman Ali Khan ')$$, 'name can be corrected before approval');
 select throws_ok($$select public.update_my_profile(p_cnic => '42101-5678901')$$, '23514', null, 'a malformed CNIC is refused on update');
-select throws_ok($$select public.update_my_profile(p_phone => '12')$$, '23514', null, 'a too-short phone is refused on update');
+select lives_ok($$select public.update_my_profile(p_phone => '12')$$, 'a typed phone on update is ignored for a phone account');
 select tests.back();
+select is((select phone from public.profiles where id = '00000000-0000-0000-0000-000000000001'), '+923001100001', 'the phone stays the signed-in number');
 select is((select full_name from public.profiles where id = '00000000-0000-0000-0000-000000000001'), 'Usman Ali Khan', 'the corrected name is stored');
 select is((select cnic from public.profiles where id = '00000000-0000-0000-0000-000000000001'), '42101-5678901-3', 'a refused update changed nothing');
 

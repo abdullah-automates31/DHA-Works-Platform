@@ -159,7 +159,7 @@ Sign-in is a phone number and a one-time code. These controls limit what a SIM s
 
 ## 16. Admin portal sign-in (7 Nov 2026, migrations 0037 to 0039, docs/ADMIN-PORTAL.md)
 
-Staff sign in with email + password (plus a Turnstile check) and then a six-digit code **emailed** by the `admin-2fa` Edge Function (migration 0055, 15 Nov; the authenticator app of 0052 was replaced at the owner's request, and its functions stay in the database unused). Every control was attacked directly against the API, bypassing the screens (`scripts/challenge-admin-local.mjs`, 67 checks, written for the authenticator flow and **stale since 0055**; the busy-worker drill `scripts/challenge-busy-worker-local.cjs` is current), and the screens were driven in a real browser.
+Staff sign in with email + password (plus a Turnstile check) and then a six-digit code **emailed** by the `admin-2fa` Edge Function (migration 0055, 15 Nov; the authenticator app of 0052 was replaced at the owner's request, and its functions stay in the database unused). Every control was attacked directly against the API, bypassing the screens (`scripts/challenge-admin-session-local.cjs`, 46 checks for the emailed-code flow, 18 Nov; it replaced the old authenticator drill; the busy-worker drill `scripts/challenge-busy-worker-local.cjs` is current), and the screens were driven in a real browser.
 
 | Risk | Control | Status |
 |---|---|---|

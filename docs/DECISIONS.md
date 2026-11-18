@@ -189,3 +189,4 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - The six authenticator-app functions from 0052 (unused since 0055) are closed to all app roles (migration 0061).
 - Checked by pgTAP (`admin_step_up`, `admin_totp`) and a live drill against the local API, `scripts/challenge-admin-session-local.cjs` (28 attacks: password only, self-enrolled authenticator, code guessing, forged and unsigned tokens, editing its own row, stolen tokens after sign-out; all refused).
 - Customer app (Shariq's repo, PR #19): `allowBackup="false"` plus backup and data-extraction rules, so the sign-in session cannot be copied off the phone.
+- Email sign-up stays on (the staff-invite page creates accounts with an email), but since migration 0062 `register_profile` refuses any account without a proven phone: an email-only stranger cannot become a resident or worker applicant with a typed number, and has no profile, so it can read nothing.

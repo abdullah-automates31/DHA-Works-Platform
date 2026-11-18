@@ -17,9 +17,9 @@ end $$;
 grant execute on function tests.act(uuid), tests.back() to authenticated;
 
 -- Phone accounts (auth phone has no plus sign, like GoTrue stores it) and one email account.
-insert into auth.users (id, aud, role, phone) values
-  ('00000000-0000-0000-0000-0000000000b1', 'authenticated', 'authenticated', '923001110001'),
-  ('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'authenticated', '923001110002');
+insert into auth.users (id, aud, role, phone, phone_confirmed_at) values
+  ('00000000-0000-0000-0000-0000000000b1', 'authenticated', 'authenticated', '923001110001', now()),
+  ('00000000-0000-0000-0000-0000000000b2', 'authenticated', 'authenticated', '923001110002', now());
 insert into auth.users (id, aud, role, email) values
   ('00000000-0000-0000-0000-0000000000b3', 'authenticated', 'authenticated', 'mail@test.dev');
 
@@ -37,11 +37,15 @@ select tests.back();
 select is((select phone from public.profiles where id = '00000000-0000-0000-0000-0000000000b1'), '+923001110001',
           'a phone account cannot type a different contact phone');
 
--- an email account keeps the typed phone
+-- An email account (no proven phone) cannot register at all (0062, audit 18 Nov).
 select tests.act('00000000-0000-0000-0000-0000000000b3');
-select public.register_profile('worker', 'Mail Worker', '03005550000', 'male', '1990-01-01', '42101-7654321-1');
+select throws_ok($$ select public.register_profile('worker', 'Mail Worker', '03005550000', 'male', '1990-01-01', '42101-7654321-1') $$,
+                 'P0001', 'sign in with your phone number first', 'an email account cannot register with a typed phone');
 select tests.back();
-select is((select phone from public.profiles where id = '00000000-0000-0000-0000-0000000000b3'), '03005550000', 'an email account keeps the typed phone');
+select is((select count(*)::int from public.profiles where id = '00000000-0000-0000-0000-0000000000b3'), 0, 'and no profile was created');
+-- The reference checks below need a worker profile for b3: created here as test setup, not through the app.
+insert into public.profiles (id, role, full_name, email, phone) values ('00000000-0000-0000-0000-0000000000b3', 'worker', 'Mail Worker', 'mail@test.dev', '+923005550000');
+insert into public.worker_details (profile_id) values ('00000000-0000-0000-0000-0000000000b3');
 
 -- ---------------------------------------------------------------- registration races and duplicates
 select tests.act('00000000-0000-0000-0000-0000000000b1');
