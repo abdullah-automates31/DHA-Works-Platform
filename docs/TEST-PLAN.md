@@ -15,8 +15,8 @@ Goal: prove that the customer app, the worker app and the admin portal work toge
 | Role | Who | Notes |
 | --- | --- | --- |
 | Resident 1 | Abdullah (+923000000101) | customer app |
-| Resident 2 | Shariq (+923342477874) | customer app, second independent resident |
-| Worker A | Abdullah's worker account (+923323524005) | real phone, push test device |
+| Resident 2 | Shariq (his own phone; number kept out of the public repo) | customer app, second independent resident |
+| Worker A | Abdullah's worker account (owner's phone; number kept out of the public repo) | real phone, push test device |
 | Workers B, C, D | Demo Worker Plumber, Electrician, All-rounder (+923000000201 to 203) | created by `supabase/dev/seed_dev_demo_workers.sql`; add their codes in the Supabase dashboard first |
 | Admin | one of the 3 admin accounts on DEV | portal, password + emailed code |
 
