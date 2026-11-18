@@ -182,3 +182,10 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - Owner: typing a new emailed code before every sensitive action was too slow. The six-digit code is now asked **once, at sign-in**. After that the session can invite or remove staff, suspend, approve or reject, decide reports, cancel or replace on a job, change settings, categories and phases, hide reviews and send messages without a new code.
 - How: `private.admin_fresh()` now returns true for any verified session of the caller (migration 0060). Every sensitive function still calls it, so the 15-minute step-up can come back by restoring the 0048 body. The portal's `/confirm` page stays but is never reached. Sessions still do not expire (0051).
 - Cost: a stolen session that already passed the code can now do these actions without the staff member's mailbox (docs/SECURITY.md section 18).
+
+## 18 Nov 2026: admin sessions last 7 days; customer app blocks backups (audit fixes; migration 0061, customer PR #19)
+
+- Audit finding: a session that never expires plus no step-up code meant a stolen portal cookie was admin access until sign-out. Now the emailed-code verification of a session counts for **7 days**; after that the portal shows the code page again and a new emailed code renews it for the same session. A stolen cookie alone cannot renew it.
+- The six authenticator-app functions from 0052 (unused since 0055) are closed to all app roles.
+- Checked by pgTAP (`admin_step_up`, `admin_totp`) and a live drill against the local API, `scripts/challenge-admin-session-local.cjs` (26 attacks: password only, self-enrolled authenticator, code guessing, forged and unsigned tokens, an expired session refreshing its token or editing its own row; all refused).
+- Customer app (Shariq's repo, PR #19): `allowBackup="false"` plus backup and data-extraction rules, so the sign-in session cannot be copied off the phone.
