@@ -47,8 +47,7 @@ export async function ReviewsView({ params }: { params: Params }) {
           <form key={String(cat ?? '')} action="/reviews" method="get" className="row g8">
             {stars !== 'all' ? <input type="hidden" name="stars" value={stars} /> : null}
             {q ? <input type="hidden" name="q" value={q} /> : null}
-            <Select compact width={190} name="cat" ariaLabel="Category" placeholder="All categories" allLabel="All categories" defaultValue={String(cat ?? '')} options={options.categories.map((c) => ({ value: String(c.id), label: c.name }))} />
-            <button className="btn soft sm" type="submit">Apply</button>
+            <Select compact autoSubmit width={190} name="cat" ariaLabel="Category" placeholder="All categories" allLabel="All categories" defaultValue={String(cat ?? '')} options={options.categories.map((c) => ({ value: String(c.id), label: c.name }))} />
           </form>
         }
       />

@@ -1,3 +1,4 @@
+import { AutoSubmitCheckbox } from '@/components/AutoSubmitCheckbox';
 import { Select } from '@/components/Select';
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
@@ -54,10 +55,9 @@ export async function JobsView({ params }: { params: Params }) {
       <form key={`${phase ?? ''}-${category ?? ''}-${today}`} action="/jobs" method="get" className="row wrap g8" style={{ alignItems: 'center' }}>
         {status ? <input type="hidden" name="status" value={status} /> : null}
         {q ? <input type="hidden" name="q" value={q} /> : null}
-        <Select compact width={150} name="phase" ariaLabel="Phase" placeholder="All phases" allLabel="All phases" defaultValue={String(phase ?? '')} options={options.phases.map((p) => ({ value: String(p), label: `Phase ${p}` }))} />
-        <Select compact width={190} name="cat" ariaLabel="Category" placeholder="All categories" allLabel="All categories" defaultValue={String(category ?? '')} options={options.categories.map((c) => ({ value: String(c.id), label: c.name }))} />
-        <label className="row g8 b" style={{ fontSize: 13 }}><input type="checkbox" name="today" value="1" defaultChecked={today} /> Posted today</label>
-        <button className="btn soft sm" type="submit">Apply</button>
+        <Select compact autoSubmit width={150} name="phase" ariaLabel="Phase" placeholder="All phases" allLabel="All phases" defaultValue={String(phase ?? '')} options={options.phases.map((p) => ({ value: String(p), label: `Phase ${p}` }))} />
+        <Select compact autoSubmit width={190} name="cat" ariaLabel="Category" placeholder="All categories" allLabel="All categories" defaultValue={String(category ?? '')} options={options.categories.map((c) => ({ value: String(c.id), label: c.name }))} />
+        <AutoSubmitCheckbox name="today" value="1" defaultChecked={today} label="Posted today" />
         <span className="fx" />
         <Link className="pill" href="/jobs/cancellations">Cancellation requests{counts.cancellationsPending ? ` ${counts.cancellationsPending}` : ''}</Link>
         <span className="mut b" style={{ fontSize: 13 }}>Newest update first</span>

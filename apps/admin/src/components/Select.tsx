@@ -17,6 +17,8 @@ type Props = {
   required?: boolean;
   /** Adds a first entry with the empty value (for example "All phases"). */
   allLabel?: string;
+  /** Filter bars: send the surrounding form as soon as a different entry is chosen (no Apply button). */
+  autoSubmit?: boolean;
 };
 
 /**
@@ -25,7 +27,7 @@ type Props = {
  * actions work as before. Keyboard: Arrow keys, Home/End, Enter or Space to choose, Escape to close,
  * and typing a letter jumps to the matching entry.
  */
-export function Select({ name, options, placeholder, defaultValue = '', ariaLabel, compact, width, required, allLabel }: Props) {
+export function Select({ name, options, placeholder, defaultValue = '', ariaLabel, compact, width, required, allLabel, autoSubmit }: Props) {
   const all: SelectOption[] = allLabel !== undefined ? [{ value: '', label: allLabel }, ...options] : options;
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -41,11 +43,20 @@ export function Select({ name, options, placeholder, defaultValue = '', ariaLabe
     setActive(Math.max(0, all.findIndex((o) => o.value === value)));
     setOpen(true);
   };
+  const submitNext = useRef(false);
   const choose = (v: string) => {
+    if (autoSubmit && v !== value) submitNext.current = true;
     setValue(v);
     setOpen(false);
     root.current?.querySelector<HTMLButtonElement>('button.sel-btn')?.focus();
   };
+
+  // Sent after the render, so the hidden input already carries the new value.
+  useEffect(() => {
+    if (!submitNext.current) return;
+    submitNext.current = false;
+    root.current?.closest('form')?.requestSubmit();
+  }, [value]);
 
   useEffect(() => {
     if (!open) return;

@@ -51,8 +51,7 @@ export async function UsersView({ params }: { params: Params }) {
             {!isWorker ? <input type="hidden" name="role" value="resident" /> : null}
             {state !== 'all' ? <input type="hidden" name="state" value={state} /> : null}
             {q ? <input type="hidden" name="q" value={q} /> : null}
-            <Select compact width={150} name="phase" ariaLabel="Phase" placeholder="All phases" allLabel="All phases" defaultValue={String(phase ?? '')} options={options.phases.map((p) => ({ value: String(p), label: `Phase ${p}` }))} />
-            <button className="btn soft sm" type="submit">Apply</button>
+            <Select compact autoSubmit width={150} name="phase" ariaLabel="Phase" placeholder="All phases" allLabel="All phases" defaultValue={String(phase ?? '')} options={options.phases.map((p) => ({ value: String(p), label: `Phase ${p}` }))} />
           </form>
         }
       />
