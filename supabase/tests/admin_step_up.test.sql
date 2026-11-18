@@ -93,35 +93,22 @@ select throws_ok($$select public.admin_totp_factor()$$, '42501', null, 'admin_to
 select throws_ok($$select public.admin_enroll_proof_status()$$, '42501', null, 'admin_enroll_proof_status is closed (0061)');
 select tests.back();
 
--- 4. A verification younger than 7 days counts (0061) -----------------------------------------------------------
+-- 4. A verification never runs out (owner, 18 Nov 2026: an admin sign-in lasts until sign-out) ----------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
 select is(public.is_admin(), true, 'a verification 5 hours old still counts');
 select is(public.admin_step_up_status(), 'fresh', 'and it counts as fresh (0060)');
 select tests.back();
-
--- 5. A verification older than 7 days no longer counts; only a new emailed code renews it (0061) -----------------
-update public.admin_verified_sessions set verified_at = now() - interval '7 days 1 minute', fresh_at = now() - interval '7 days 1 minute'
+update public.admin_verified_sessions set verified_at = now() - interval '400 days', fresh_at = now() - interval '400 days'
   where session_id = '00000000-0000-0000-0000-00000000a104';
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
-select is(public.is_admin(), false, 'a verification older than 7 days is not an admin session any more');
-select is(public.admin_session_status(), 'needs_code', 'the portal is told to ask for the emailed code');
-select is(public.admin_step_up_status(), 'not_admin', 'and no step-up status is given');
-select throws_ok($$select public.admin_save_settings('1092', true, 7, 7)$$, '42501', 'not available', 'an expired session cannot save settings');
-select throws_ok($$select public.admin_set_account_status('00000000-0000-0000-0000-0000000000b1', false, 'because')$$, '42501', 'not available', 'or change an account');
-select throws_ok($$select public.invite_staff('late@test.dev')$$, '42501', 'not available', 'or invite staff');
-select throws_ok($$select public.admin_mark_session_verified()$$, '42501', null, 'and cannot use the old authenticator path to renew itself');
-select throws_ok($$insert into public.admin_verified_sessions (session_id, user_id) values ('00000000-0000-0000-0000-00000000a104', auth.uid())$$, '42501', null, 'or write its own verification row');
-select throws_ok($$update public.admin_verified_sessions set verified_at = now()$$, '42501', null, 'or move its verification date');
-select is(public.admin_verify_code('123456') = 'ok', false, 'a guessed code does not renew it');
+select is(public.is_admin(), true, 'a verification 400 days old still counts');
+select lives_ok($$select public.admin_save_settings('1092', true, 7, 7)$$, 'and can still save settings');
+
+-- 5. A verified session cannot touch its own verification row, and a guessed code changes nothing ----------------
+select throws_ok($$insert into public.admin_verified_sessions (session_id, user_id) values (gen_random_uuid(), auth.uid())$$, '42501', null, 'cannot write a verification row');
+select throws_ok($$update public.admin_verified_sessions set verified_at = now()$$, '42501', null, 'or change one');
+select is(public.admin_verify_code('123456') = 'ok', false, 'a guessed code is not accepted');
 select tests.back();
-select is(public.is_admin(), false, 'outside any session nothing is an admin');
-insert into tests.codes values ('renew', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104'));
-select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
-select is(public.admin_verify_code((select v from tests.codes where k = 'renew')), 'ok', 'the emailed code renews the expired session');
-select is(public.is_admin(), true, 'and it is an admin session again for 7 days');
-select lives_ok($$select public.admin_save_settings('1092', true, 7, 7)$$, 'so it can save settings again');
-select tests.back();
-select is((select verified_at > now() - interval '1 minute' from public.admin_verified_sessions where session_id = '00000000-0000-0000-0000-00000000a104'), true, 'the 7 days start again from the new code');
 
 -- 6. Everyone else still gets "not available" (the admin check comes first) -----------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a103');

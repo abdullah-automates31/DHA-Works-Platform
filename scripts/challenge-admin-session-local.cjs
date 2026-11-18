@@ -1,4 +1,4 @@
-// Attack drill for admin sessions (migrations 0055, 0060, 0061). LOCAL stack only (refuses any other URL).
+// Attack drill for admin sessions (migrations 0055, 0060, 0061; sign-in lasts until sign-out). LOCAL stack only (refuses any other URL).
 // Run: npm run db:local -- start, then node scripts/challenge-admin-session-local.cjs  (uses supabase/dev/seed_local_admin.sql)
 const { execSync } = require('child_process');
 const crypto = require('crypto');
@@ -81,22 +81,26 @@ async function signIn() {
   const none = Buffer.from('{"alg":"none","typ":"JWT"}').toString('base64url') + '.' + p + '.';
   check(refused(await rpc('admin_session_status', {}, none)) || (await rpc('admin_session_status', {}, none)).body !== 'verified', 'D2 an unsigned (alg none) token is rejected');
 
-  console.log('--- E. A real verified session, then 7 days later (stolen cookie case)');
+  console.log('--- E. A real verified session (sign-in lasts until sign-out, owner 18 Nov), then sign-out (stolen cookie case)');
   const s3 = await signIn();
   const sid = sessionOf(s3.access_token);
   sql(`insert into public.admin_verified_sessions (session_id, user_id) values ('${sid}', '${s3.user.id}') on conflict (session_id) do update set verified_at = now(), fresh_at = now();`);
   check((await rpc('admin_session_status', {}, s3.access_token)).body === 'verified', 'E1 (setup) a verified session is an admin');
   const ok = await rpc('admin_save_settings', { p_helpline_number: '1092', p_helpline_enabled: true, p_report_window_days: 7, p_review_window_days: 7 }, s3.access_token);
   check(!refused(ok), 'E2 (control) the verified session can do admin work', `status ${ok.status}`);
-  sql(`update public.admin_verified_sessions set verified_at = now() - interval '7 days 1 minute', fresh_at = now() - interval '7 days 1 minute' where session_id = '${sid}';`);
-  check((await rpc('admin_session_status', {}, s3.access_token)).body === 'needs_code', 'E3 after 7 days the session needs the emailed code again');
-  check(refused(await rpc('admin_save_settings', { p_helpline_number: '1092', p_helpline_enabled: true, p_report_window_days: 7, p_review_window_days: 7 }, s3.access_token)), 'E4 after 7 days it cannot do admin work');
+  sql(`update public.admin_verified_sessions set verified_at = now() - interval '400 days', fresh_at = now() - interval '400 days' where session_id = '${sid}';`);
+  check(!refused(await rpc('admin_save_settings', { p_helpline_number: '1092', p_helpline_enabled: true, p_report_window_days: 7, p_review_window_days: 7 }, s3.access_token)), 'E3 (owner rule) a sign-in 400 days old still works');
   const ref = await call('/auth/v1/token?grant_type=refresh_token', { body: { refresh_token: s3.refresh_token } });
-  check(!!ref.body.access_token && sessionOf(ref.body.access_token) === sid, 'E5 (setup) refreshing the token keeps the same session');
-  check(refused(await rpc('admin_save_settings', { p_helpline_number: '1092', p_helpline_enabled: true, p_report_window_days: 7, p_review_window_days: 7 }, ref.body.access_token)), 'E6 a refreshed token does not reset the 7 days');
-  check(refused(await call(`/rest/v1/admin_verified_sessions?session_id=eq.${sid}`, { token: ref.body.access_token, method: 'PATCH', body: { verified_at: new Date().toISOString() } })), 'E7 cannot move its own verification date');
-  check(refused(await rpc('admin_mark_session_verified', {}, ref.body.access_token)), 'E8 cannot renew through the old authenticator function');
-  check((await rpc('admin_verify_code', { p_code: '000000' }, ref.body.access_token)).body !== 'ok', 'E9 a guessed code does not renew it');
+  check(!!ref.body.access_token && sessionOf(ref.body.access_token) === sid, 'E4 (setup) refreshing the token keeps the same session');
+  check(refused(await call(`/rest/v1/admin_verified_sessions?session_id=eq.${sid}`, { token: ref.body.access_token, method: 'PATCH', body: { user_id: '00000000-0000-0000-0000-000000000001' } })), 'E5 cannot edit its own verification row');
+  check(refused(await rpc('admin_mark_session_verified', {}, ref.body.access_token)), 'E6 the old authenticator function stays closed');
+  const out = await call('/auth/v1/logout?scope=local', { token: ref.body.access_token, body: {} });
+  check(out.status === 204 || out.status === 200, 'E7 (setup) the staff member signs out', `status ${out.status}`);
+  check(refused(await rpc('admin_save_settings', { p_helpline_number: '1092', p_helpline_enabled: true, p_report_window_days: 7, p_review_window_days: 7 }, ref.body.access_token)), 'E8 after sign-out a stolen access token (still unexpired) cannot do admin work');
+  check((await rpc('admin_session_status', {}, ref.body.access_token)).body !== 'verified', 'E9 and is not reported as verified');
+  const re = await call('/auth/v1/token?grant_type=refresh_token', { body: { refresh_token: ref.body.refresh_token } });
+  check(!re.body.access_token, 'E10 a stolen refresh token cannot start the session again after sign-out');
+  check(Number(sql(`select count(*) from public.admin_verified_sessions where session_id = '${sid}';`)) === 0, 'E11 sign-out removed the verification row');
 
   sql("delete from auth.mfa_factors where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
   console.log(`\n${pass} passed, ${fail} failed`);
