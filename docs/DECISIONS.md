@@ -176,3 +176,9 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 
 - Owner rule: the customer sees the worker's important details like the worker app shows the customer's, and the **phone number and booking details unlock only after both sides have accepted** (the worker quoted, the customer accepted that quote).
 - Server: `resident_quotes.worker_phone` is null unless the quote status is `accepted` (tested in `job_lifecycle.test.sql`). App: `unlockedPhone()` in `WorkerProfileScreen.kt` repeats the rule, so a wrong server value could not leak a number. Before acceptance the profile shows name, rating, trades, phases, Verified badge, voice intro, stats and a lock note; after acceptance it adds the phone with a Call button and a "Your booking" card (visit time, total). Branch `abdullah/worker-details-and-call`, commit 44b11c8, 3 unit tests. Not run on a phone.
+
+## 18 Nov 2026: the admin code is asked only at sign-in (owner; migration 0060)
+
+- Owner: typing a new emailed code before every sensitive action was too slow. The six-digit code is now asked **once, at sign-in**. After that the session can invite or remove staff, suspend, approve or reject, decide reports, cancel or replace on a job, change settings, categories and phases, hide reviews and send messages without a new code.
+- How: `private.admin_fresh()` now returns true for any verified session of the caller (migration 0060). Every sensitive function still calls it, so the 15-minute step-up can come back by restoring the 0048 body. The portal's `/confirm` page stays but is never reached. Sessions still do not expire (0051).
+- Cost: a stolen session that already passed the code can now do these actions without the staff member's mailbox (docs/SECURITY.md section 18).

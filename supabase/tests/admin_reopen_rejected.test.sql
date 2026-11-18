@@ -54,9 +54,9 @@ select throws_ok($$select public.admin_reopen_rejected('00000000-0000-0000-0000-
 select tests.back();
 select is(has_function_privilege('anon', 'public.admin_reopen_rejected(uuid, text)', 'execute'), false, 'anon cannot reopen');
 
--- 2. A stale session needs a new code --------------------------------------------------------------------------------
+-- 2. Since 0060 an older verified session is not asked for a new code (the reason check runs instead) --------------------------------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a102');
-select throws_ok($$select public.admin_reopen_rejected('00000000-0000-0000-0000-0000000000b1', 'Please fix your CNIC photo')$$, 'P0001', 'confirm with a new code', 'a stale session is asked for a code');
+select throws_ok($$select public.admin_reopen_rejected('00000000-0000-0000-0000-0000000000b1', null)$$, 'P0001', 'write a reason the applicant will see', 'a session verified an hour ago is not asked for a new code (0060)');
 select tests.back();
 
 -- 3. A fresh verified admin -------------------------------------------------------------------------------------------

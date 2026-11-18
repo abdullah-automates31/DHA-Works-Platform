@@ -1,4 +1,5 @@
--- Migration 0048: a verified admin session is not enough for destructive actions; a code typed in the last 15 minutes is.
+-- Migration 0048 asked for a code typed in the last 15 minutes before destructive actions. Since 0060 (18 Nov 2026) the
+-- code is asked only at sign-in: any verified admin session may do them; password-only sessions and non-admins still may not.
 begin;
 select no_plan();
 
@@ -48,12 +49,14 @@ insert into auth.sessions (id, user_id) values
   ('00000000-0000-0000-0000-00000000a102', '00000000-0000-0000-0000-0000000000a1'),
   ('00000000-0000-0000-0000-00000000a103', '00000000-0000-0000-0000-0000000000a1'),
   ('00000000-0000-0000-0000-00000000a104', '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-00000000a105', '00000000-0000-0000-0000-0000000000a1'),
   ('00000000-0000-0000-0000-00000000a901', '00000000-0000-0000-0000-0000000000a9'),
   ('00000000-0000-0000-0000-00000000b101', '00000000-0000-0000-0000-0000000000b1');
 insert into public.admin_verified_sessions (session_id, user_id, verified_at, fresh_at) values
   ('00000000-0000-0000-0000-00000000a101', '00000000-0000-0000-0000-0000000000a1', now() - interval '1 hour', now() - interval '1 hour'),
   ('00000000-0000-0000-0000-00000000a102', '00000000-0000-0000-0000-0000000000a1', now(), now()),
-  ('00000000-0000-0000-0000-00000000a104', '00000000-0000-0000-0000-0000000000a1', now() - interval '5 hours', now() - interval '5 hours');
+  ('00000000-0000-0000-0000-00000000a104', '00000000-0000-0000-0000-0000000000a1', now() - interval '5 hours', now() - interval '5 hours'),
+  ('00000000-0000-0000-0000-00000000a105', '00000000-0000-0000-0000-0000000000a1', now() - interval '2 hours', now() - interval '2 hours');
 
 -- The admin has a registered authenticator; sessions a101 and a104 are aal2 sessions that used it (0052).
 insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at, secret)
@@ -61,27 +64,10 @@ insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, c
 insert into public.admin_totp_factors (factor_id, user_id) values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1');
 update auth.sessions set aal = 'aal2', factor_id = '00000000-0000-0000-0000-0000000000f1' where id in ('00000000-0000-0000-0000-00000000a101', '00000000-0000-0000-0000-00000000a104');
 
--- 1. A stale (verified but not fresh) session is refused by every sensitive function ----------------------------
+-- 1. Since 0060 the code is asked only at sign-in: an old verified session counts as fresh ------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101');
-select is(public.is_admin(), true, 'the stale session is still a verified admin session');
-select is(public.admin_step_up_status(), 'needs_code', 'but the portal is told to ask for a code');
-select throws_ok($$select public.invite_staff('new@test.dev')$$, 'P0001', 'confirm with a new code', 'invite_staff needs a fresh code');
-select throws_ok($$select public.revoke_staff_invite('00000000-0000-0000-0000-000000000001')$$, 'P0001', 'confirm with a new code', 'revoke_staff_invite needs a fresh code');
-select throws_ok($$select public.admin_remove_staff('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_remove_staff needs a fresh code');
-select throws_ok($$select public.admin_set_account_status('00000000-0000-0000-0000-0000000000b1', true, 'because')$$, 'P0001', 'confirm with a new code', 'admin_set_account_status needs a fresh code');
-select throws_ok($$select public.admin_cancel_job('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_cancel_job needs a fresh code');
-select throws_ok($$select public.admin_decide_cancellation('00000000-0000-0000-0000-000000000001', true, 'ok')$$, 'P0001', 'confirm with a new code', 'admin_decide_cancellation needs a fresh code');
-select throws_ok($$select public.admin_job_replace_worker('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_job_replace_worker needs a fresh code');
-select throws_ok($$select public.admin_save_settings('1092', true, 7, 7)$$, 'P0001', 'confirm with a new code', 'admin_save_settings needs a fresh code');
-select throws_ok($$select public.admin_add_category('Painting', 'Walls')$$, 'P0001', 'confirm with a new code', 'admin_add_category needs a fresh code');
-select throws_ok($$select public.admin_update_category(1::smallint, 'Plumbing', 'Pipes', true)$$, 'P0001', 'confirm with a new code', 'admin_update_category needs a fresh code');
-select throws_ok($$select public.admin_set_phase_active(5::smallint, true)$$, 'P0001', 'confirm with a new code', 'admin_set_phase_active needs a fresh code');
-select throws_ok($$select public.admin_decide_verification('00000000-0000-0000-0000-000000000001', 'approve', 'ok', '{}'::jsonb)$$, 'P0001', 'confirm with a new code', 'admin_decide_verification needs a fresh code');
-select throws_ok($$select public.admin_reopen_rejected('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_reopen_rejected needs a fresh code');
-select throws_ok($$select public.admin_report_decide('00000000-0000-0000-0000-000000000001', 'close', 'because')$$, 'P0001', 'confirm with a new code', 'admin_report_decide needs a fresh code');
-select throws_ok($$select public.admin_set_review_hidden('00000000-0000-0000-0000-000000000001', true, 'because')$$, 'P0001', 'confirm with a new code', 'admin_set_review_hidden needs a fresh code');
-select throws_ok($$select public.admin_job_resume('00000000-0000-0000-0000-000000000001', 'because')$$, 'P0001', 'confirm with a new code', 'admin_job_resume needs a fresh code');
-select throws_ok($$select public.admin_send_message('00000000-0000-0000-0000-000000000001', 'hello')$$, 'P0001', 'confirm with a new code', 'admin_send_message needs a fresh code');
+select is(public.is_admin(), true, 'a session verified an hour ago is still a verified admin session');
+select is(public.admin_step_up_status(), 'fresh', 'and the portal is not asked to send a new code (0060)');
 select tests.back();
 
 -- 2. A fresh session works -------------------------------------------------------------------------------------
@@ -100,7 +86,7 @@ select tests.back();
 -- 3. A fresh authenticator code makes the stale session fresh (0052) -----------------------------------------------
 select tests.act_totp('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101', extract(epoch from now())::bigint - 600);
 select is(public.admin_mark_session_verified(), 'not_ready', 'a code typed 10 minutes ago does not freshen the session');
-select is(public.admin_step_up_status(), 'needs_code', 'still stale');
+select is(public.admin_step_up_status(), 'fresh', 'still fresh: no step-up code is needed since 0060');
 select tests.back();
 select tests.act_totp('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a101', extract(epoch from now())::bigint);
 select is(public.admin_mark_session_verified(), 'ok', 'a code typed just now is accepted');
@@ -118,7 +104,7 @@ select tests.back();
 -- 5. An old verification still counts (no expiry), and a new code renews freshness -----------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
 select is(public.is_admin(), true, 'a verification 5 hours old still counts (no expiry since the 14 Nov session migration)');
-select is(public.admin_step_up_status(), 'needs_code', 'but it is not fresh');
+select is(public.admin_step_up_status(), 'fresh', 'and it counts as fresh (0060)');
 select tests.back();
 select tests.act_totp('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104', extract(epoch from now())::bigint);
 select is(public.admin_mark_session_verified(), 'ok', 'a new authenticator code renews it');
@@ -139,6 +125,27 @@ select throws_ok($$select public.invite_staff('x@test.dev')$$, '42501', 'not ava
 select tests.back();
 select is(has_function_privilege('anon', 'public.admin_step_up_status()', 'execute'), false, 'anon cannot call admin_step_up_status');
 select is(has_function_privilege('authenticated', 'private.admin_fresh(integer)', 'execute'), false, 'the freshness helper is not callable by app roles');
+
+-- 7. A session verified two hours ago (no code since) is not asked for a new code by any sensitive function (0060) ---
+select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a105');
+select isnt(tests.msg($$select public.invite_staff('new@test.dev')$$), 'confirm with a new code', 'invite_staff: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.revoke_staff_invite('00000000-0000-0000-0000-000000000001')$$), 'confirm with a new code', 'revoke_staff_invite: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_remove_staff('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_remove_staff: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_set_account_status('00000000-0000-0000-0000-0000000000b1', true, 'because')$$), 'confirm with a new code', 'admin_set_account_status: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_cancel_job('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_cancel_job: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_decide_cancellation('00000000-0000-0000-0000-000000000001', true, 'ok')$$), 'confirm with a new code', 'admin_decide_cancellation: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_job_replace_worker('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_job_replace_worker: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_save_settings('1092', true, 7, 7)$$), 'confirm with a new code', 'admin_save_settings: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_add_category('Painting', 'Walls')$$), 'confirm with a new code', 'admin_add_category: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_update_category(1::smallint, 'Plumbing', 'Pipes', true)$$), 'confirm with a new code', 'admin_update_category: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_set_phase_active(5::smallint, true)$$), 'confirm with a new code', 'admin_set_phase_active: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_decide_verification('00000000-0000-0000-0000-000000000001', 'approve', 'ok', '{}'::jsonb)$$), 'confirm with a new code', 'admin_decide_verification: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_reopen_rejected('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_reopen_rejected: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_report_decide('00000000-0000-0000-0000-000000000001', 'close', 'because')$$), 'confirm with a new code', 'admin_report_decide: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_set_review_hidden('00000000-0000-0000-0000-000000000001', true, 'because')$$), 'confirm with a new code', 'admin_set_review_hidden: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_job_resume('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_job_resume: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_send_message('00000000-0000-0000-0000-000000000001', 'hello')$$), 'confirm with a new code', 'admin_send_message: no new code needed after sign-in (0060)');
+select tests.back();
 
 select * from finish();
 rollback;

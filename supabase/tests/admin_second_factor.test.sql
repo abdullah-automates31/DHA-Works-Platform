@@ -194,10 +194,10 @@ delete from public.admin_factor_challenges;
 update public.admin_verified_sessions set fresh_at = now() - interval '1 hour' where session_id = '00000000-0000-0000-0000-00000000a104';
 insert into tests.codes values ('step', public.admin_issue_challenge('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104'));
 select tests.act('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000a104');
-select is(public.admin_step_up_status(), 'needs_code', 'a stale verified session is asked for a code');
+select is(public.admin_step_up_status(), 'fresh', 'since 0060 an older verified session is not asked for a new code');
 select is(public.admin_verify_code('000000') = 'ok' and false, false, 'a wrong code is not accepted for the step-up');
 select is(public.admin_verify_code((select v from tests.codes where k = 'step')), 'ok', 'the emailed code is accepted for the step-up');
-select is(public.admin_step_up_status(), 'fresh', 'and the session is fresh again');
+select is(public.admin_step_up_status(), 'fresh', 'and the session is still fresh');
 select tests.back();
 select is((select count(*) from public.audit_log where action = 'admin_step_up'), 1::bigint, 'the step-up is audited');
 
