@@ -95,3 +95,7 @@ A rejected worker or resident can be given another chance. On the review page of
 ## Clear all (18 Nov)
 
 The list screens Jobs, Worker and Resident verification, Users, Reports, Reviews and Helpline end with a "Clear all" bar (`ClearAllBar` in `src/components/ListBits.tsx`). It appears only when a search or filter is on, names what is on ("Filtered by: ..."), and links back to the plain list; the current tab stays (verification tab, Workers/Residents, Open/Resolved/All). It changes the view only and never deletes data. The search box and the filter dropdowns are keyed on the current value so they show empty after clearing. The Helpline "Log a call" form has a "Clear form" button that empties a half-filled call without saving it. Not on the dashboard, cancellation requests, settings, detail pages or sign-in (no filters there, or a clear button would risk wiping saved settings or be mistaken for a decision).
+
+## Vercel region (18 Nov)
+
+`vercel.json` pins the server functions to `dub1` (Dublin), next to the Supabase DEV project (eu-west-1). Vercel defaulted to `iad1` (Washington), so every database call crossed the Atlantic and tab changes felt slow. A future production Supabase project should be in the same region as the Vercel functions (change `regions` if it is not in Europe). Check with the `X-Vercel-Id` response header: `<edge>::<function region>::...`.
