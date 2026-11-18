@@ -32,7 +32,8 @@ export function SearchBox({ action, q, placeholder, keep }: { action: string; q:
   return (
     <form className="srch" action={action} method="get" role="search">
       <Icon>{ICONS.search}</Icon>
-      <input name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} maxLength={80} />
+      {/* key: a new search (or "Clear all") remounts the box so it never keeps old text. */}
+      <input key={q} name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} maxLength={80} />
       {Object.entries(keep ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
     </form>
   );
@@ -46,6 +47,22 @@ export function PagerBar({ shown, total, page, last, hrefFor, noun }: { shown: n
         {page > 1 ? <Link className="btn out sm" href={hrefFor(page - 1)}>Previous</Link> : null}
         {page < last ? <Link className="btn out sm" href={hrefFor(page + 1)}>Next</Link> : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The "Clear all" bar at the bottom of a list screen: names the search and filters that are on and links back to
+ * the plain list (the tab stays). Shown only when something is on. It changes the view only; it never deletes data.
+ */
+export function ClearAllBar({ active, href }: { active: string[]; href: string }) {
+  if (active.length === 0) return null;
+  return (
+    <div className="card row sb wrap g8" style={{ padding: '12px 16px' }} role="region" aria-label="Search and filters">
+      <span className="mut b" style={{ fontSize: 13 }}>
+        Filtered by: <span className="xb">{active.join(' · ')}</span>
+      </span>
+      <Link className="btn out sm" href={href} aria-label="Clear all search and filters">Clear all</Link>
     </div>
   );
 }

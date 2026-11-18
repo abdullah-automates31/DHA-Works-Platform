@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ButtonForm } from '@/components/FormKit';
-import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
+import { ClearAllBar, EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Chip } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
@@ -34,6 +34,7 @@ export async function HelplineView({ params }: { params: Params }) {
   const summary = parseSummary(summaryRes.error ? null : summaryRes.data);
   const { rows, total } = parseCalls(listRes.error ? null : listRes.data);
   const base = (over: Record<string, string | number | null>) => buildHref('/helpline', { range: range === 'today' ? null : range, cb: cb ? '1' : null, q, ...over });
+  const activeFilters = [q ? `"${q}"` : null, range === 'week' ? 'This week' : range === 'all' ? 'All' : null, cb ? 'Callback pending' : null].filter((x): x is string => x !== null);
   const wait = waitText(summary.oldestCallbackSince);
 
   return (
@@ -93,6 +94,7 @@ export async function HelplineView({ params }: { params: Params }) {
         </div>
         <LogCallForm />
       </div>
+      <ClearAllBar active={activeFilters} href="/helpline" />
     </PortalFrame>
   );
 }

@@ -1,7 +1,7 @@
 import { Select } from '@/components/Select';
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
-import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
+import { ClearAllBar, EmptyRow, LoadError, PagerBar, PillRow, SearchBox } from '@/components/ListBits';
 import { Chip } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { ago, buildHref, JOB_FILTERS, jobStatus, lastPage, pageNumber, parseJobFilter, rupees, searchText } from '@/lib/format';
@@ -26,6 +26,13 @@ export async function JobsView({ params }: { params: Params }) {
   const [counts, options, result] = await Promise.all([loadJobCounts(supabase), loadFilterOptions(supabase), loadJobs(supabase, { status, phase, category, today, q, page })]);
   const { rows, total } = result.list;
   const base = (over: Record<string, string | number | null | false>) => buildHref('/jobs', { status, phase, cat: category, today: today && '1', q, ...over });
+  const activeFilters = [
+    q ? `"${q}"` : null,
+    status ? jobStatus(status).label : null,
+    phase ? `Phase ${phase}` : null,
+    category ? (options.categories.find((c) => c.id === category)?.name ?? 'Category') : null,
+    today ? 'Posted today' : null,
+  ].filter((x): x is string => x !== null);
   const pill = (key: string, label: string, n: number) => ({ key, label: `${label} ${n}`, href: base({ status: key === 'all' ? null : key, page: null }) });
 
   return (
@@ -44,7 +51,7 @@ export async function JobsView({ params }: { params: Params }) {
           ...JOB_FILTERS.map((s) => pill(s, jobStatus(s).label, s === 'scheduled' ? (counts.byStatus.scheduled ?? 0) + (counts.byStatus.accepted ?? 0) : s === 'cash_collected' ? (counts.byStatus.cash_collected ?? 0) + (counts.byStatus.reviewed ?? 0) : (counts.byStatus[s] ?? 0))),
         ]}
       />
-      <form action="/jobs" method="get" className="row wrap g8" style={{ alignItems: 'center' }}>
+      <form key={`${phase ?? ''}-${category ?? ''}-${today}`} action="/jobs" method="get" className="row wrap g8" style={{ alignItems: 'center' }}>
         {status ? <input type="hidden" name="status" value={status} /> : null}
         {q ? <input type="hidden" name="q" value={q} /> : null}
         <Select compact width={150} name="phase" ariaLabel="Phase" placeholder="All phases" allLabel="All phases" defaultValue={String(phase ?? '')} options={options.phases.map((p) => ({ value: String(p), label: `Phase ${p}` }))} />
@@ -90,6 +97,7 @@ export async function JobsView({ params }: { params: Params }) {
         </table>
       </div>
       <PagerBar shown={rows.length} total={total} page={page} last={lastPage(total)} noun="jobs" hrefFor={(p) => base({ page: p })} />
+      <ClearAllBar active={activeFilters} href="/jobs" />
     </PortalFrame>
   );
 }

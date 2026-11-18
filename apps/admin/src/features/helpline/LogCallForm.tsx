@@ -14,14 +14,15 @@ export function LogCallForm() {
   const [outcome, setOutcome] = useState<Outcome>('answered');
   const ref = useRef<HTMLFormElement>(null);
   // After a saved call the form goes back to its starting state (done in the result handler, not in an effect).
+  const clearForm = () => {
+    ref.current?.reset();
+    setRole('resident');
+    setReason('question');
+    setOutcome('answered');
+  };
   const [state, run, pending] = useActionState(async (prev: ActionState, formData: FormData) => {
     const result = await logCallAction(prev, formData);
-    if (result.ok) {
-      ref.current?.reset();
-      setRole('resident');
-      setReason('question');
-      setOutcome('answered');
-    }
+    if (result.ok) clearForm();
     return result;
   }, initial);
 
@@ -58,6 +59,8 @@ export function LogCallForm() {
       {state.error ? <div className="note red" role="alert" style={{ padding: '10px 12px', fontSize: 13 }}>{state.error}</div> : null}
       {state.ok ? <div className="note g" role="status" style={{ padding: '10px 12px', fontSize: 13 }}>{state.ok}</div> : null}
       <button type="submit" className={`btn full${pending ? ' off' : ''}`} style={{ height: 46 }} disabled={pending}>{pending ? 'Saving...' : 'Save call'}</button>
+      {/* Empties a half-filled call without saving anything. */}
+      <button type="button" className="btn out full" style={{ height: 40 }} onClick={clearForm} disabled={pending}>Clear form</button>
     </form>
   );
 }

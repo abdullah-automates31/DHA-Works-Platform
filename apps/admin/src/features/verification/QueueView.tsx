@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
+import { ClearAllBar } from '@/components/ListBits';
 import { requireSession } from '@/lib/auth';
 import { loadCounts, loadFilters, loadQueue } from './queries';
 import { documentsChip, initials, PAGE_SIZE, parsePositiveInt, parseTab, phasesText, phoneText, tabsFor, waitingText, type Role } from './rules';
@@ -36,6 +37,7 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
   const { rows, total } = result.queue;
   const last = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isWorker = role === 'worker';
+  const activeFilters = [q ? `"${q}"` : null, filter ? (filters.find((x) => x.id === filter)?.label ?? (isWorker ? 'Category' : 'Phase')) : null].filter((x): x is string => x !== null);
 
   return (
     <PortalFrame
@@ -47,7 +49,7 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
       right={
         <form className="srch" action={`/${role}s`} method="get" role="search">
           <Icon>{ICONS.search}</Icon>
-          <input name="q" defaultValue={q} placeholder={isWorker ? 'Search by name or CNIC' : 'Search by name or plot'} aria-label={`Search ${role}s`} maxLength={80} />
+          <input key={q} name="q" defaultValue={q} placeholder={isWorker ? 'Search by name or CNIC' : 'Search by name or plot'} aria-label={`Search ${role}s`} maxLength={80} />
           <input type="hidden" name="tab" value={tab} />
           {filter ? <input type="hidden" name="f" value={filter} /> : null}
         </form>
@@ -156,6 +158,7 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
           {page < last ? <Link className="btn out sm" href={href(role, { tab, q, f: filter, page: page + 1 })}>Next</Link> : null}
         </div>
       </div>
+      <ClearAllBar active={activeFilters} href={href(role, { tab })} />
     </PortalFrame>
   );
 }

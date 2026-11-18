@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
-import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
+import { ClearAllBar, EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
 import { Chip, Icon, ICONS } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { ago, buildHref, lastPage, pageNumber, reportKind, reportStatus, REPORT_KIND_KEYS, searchText } from '@/lib/format';
@@ -20,6 +20,7 @@ export async function ReportsView({ params }: { params: Params }) {
   const [counts, result] = await Promise.all([loadReportCounts(supabase), loadReports(supabase, { tab, kind, q, page })]);
   const { rows, total } = result.list;
   const base = (over: Record<string, string | number | null>) => buildHref('/reports', { tab: tab === 'open' ? null : tab, kind, q, ...over });
+  const activeFilters = [q ? `"${q}"` : null, kind ? reportKind(kind).label : null].filter((x): x is string => x !== null);
   const diff = counts.resolvedThisWeek - counts.resolvedLastWeek;
 
   return (
@@ -84,6 +85,7 @@ export async function ReportsView({ params }: { params: Params }) {
         <div className="card stat"><span>Unsafe cases</span><b>{counts.unsafeMonth}</b><span>This month, {counts.unsafeOpen} still open</span></div>
         <div className="card stat"><span>Cash disputes</span><b>{counts.cashDisputesMonth}</b><span>This month</span></div>
       </div>
+      <ClearAllBar active={activeFilters} href={buildHref('/reports', { tab: tab === 'open' ? null : tab })} />
     </PortalFrame>
   );
 }

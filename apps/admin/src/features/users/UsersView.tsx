@@ -1,6 +1,6 @@
 import { Select } from '@/components/Select';
 import Link from 'next/link';
-import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
+import { ClearAllBar, EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
@@ -24,6 +24,7 @@ export async function UsersView({ params }: { params: Params }) {
 
   const [counts, options, result] = await Promise.all([loadUserCounts(supabase), loadFilterOptions(supabase), loadUsers(supabase, { role, state, phase, q, page })]);
   const { rows, total } = result.list;
+  const activeFilters = [q ? `"${q}"` : null, state !== 'all' ? STATE_LABEL[state] : null, phase ? `Phase ${phase}` : null].filter((x): x is string => x !== null);
   const base = (over: Record<string, string | number | null>) => buildHref('/users', { role: isWorker ? null : 'resident', state: state === 'all' ? null : state, phase, q, ...over });
 
   return (
@@ -46,7 +47,7 @@ export async function UsersView({ params }: { params: Params }) {
         active={state}
         pills={(Object.keys(STATE_LABEL) as UserState[]).map((s) => ({ key: s, label: STATE_LABEL[s], href: base({ state: s === 'all' ? null : s, page: null }) }))}
         right={
-          <form action="/users" method="get" className="row g8">
+          <form key={String(phase ?? '')} action="/users" method="get" className="row g8">
             {!isWorker ? <input type="hidden" name="role" value="resident" /> : null}
             {state !== 'all' ? <input type="hidden" name="state" value={state} /> : null}
             {q ? <input type="hidden" name="q" value={q} /> : null}
@@ -98,6 +99,7 @@ export async function UsersView({ params }: { params: Params }) {
         </table>
       </div>
       <PagerBar shown={rows.length} total={total} page={page} last={lastPage(total)} noun={isWorker ? 'workers' : 'residents'} hrefFor={(p) => base({ page: p })} />
+      <ClearAllBar active={activeFilters} href={buildHref('/users', { role: isWorker ? null : 'resident' })} />
     </PortalFrame>
   );
 }
