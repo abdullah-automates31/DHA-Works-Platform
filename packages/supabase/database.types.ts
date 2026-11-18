@@ -1788,37 +1788,37 @@ export type Database = {
           about: string | null
           available_today: boolean
           experience_years: number | null
+          job_reminders: boolean
           jobs_done: number
           profile_id: string
           rating_avg: number
           rating_count: number
           visit_fee: number
           voice_intro_path: string | null
-          job_reminders: boolean
         }
         Insert: {
           about?: string | null
           available_today?: boolean
           experience_years?: number | null
+          job_reminders?: boolean
           jobs_done?: number
           profile_id: string
           rating_avg?: number
           rating_count?: number
           visit_fee?: number
           voice_intro_path?: string | null
-          job_reminders?: boolean
         }
         Update: {
           about?: string | null
           available_today?: boolean
           experience_years?: number | null
+          job_reminders?: boolean
           jobs_done?: number
           profile_id?: string
           rating_avg?: number
           rating_count?: number
           visit_fee?: number
           voice_intro_path?: string | null
-          job_reminders?: boolean
         }
         Relationships: [
           {
@@ -2519,11 +2519,11 @@ export type Database = {
         Returns: string
       }
       set_available_today: { Args: { p_value: boolean }; Returns: undefined }
-      set_job_reminders: { Args: { p_value: boolean }; Returns: undefined }
       set_busy_eta: {
         Args: { p_minutes: number; p_quote_id: string }
         Returns: undefined
       }
+      set_job_reminders: { Args: { p_value: boolean }; Returns: undefined }
       set_my_areas: { Args: { p_phases: number[] }; Returns: undefined }
       set_my_categories: {
         Args: { p_category_ids: number[] }
