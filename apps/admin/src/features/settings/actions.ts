@@ -133,3 +133,35 @@ export async function acceptInviteAction(_prev: ActionState, formData: FormData)
   await supabase.auth.signOut();
   redirect('/signin?e=invited');
 }
+
+/**
+ * Saves one section of rules (jobs or workers). The page only forwards the numbers: the database checks every value,
+ * keeps the audit row with the old and new values, and refuses anything out of range with a plain sentence.
+ */
+export async function saveRulesAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase } = await requireAdmin();
+  const group = field(formData, 'group', 10);
+  if (group !== 'jobs' && group !== 'workers') return BAD_REQUEST;
+  const values: Record<string, number> = {};
+  for (const [name, raw] of formData.entries()) {
+    if (name === 'group' || name.startsWith('$ACTION')) continue;
+    if (!/^[a-z_]{3,40}$/.test(name) || typeof raw !== 'string' || !/^[0-9]{1,6}(\.[0-9]{1,3})?$/.test(raw.trim())) return { error: 'Every setting needs a number. Check the boxes and try again.' };
+    if (Object.keys(values).length >= 12) return BAD_REQUEST;
+    values[name] = Number(raw.trim());
+  }
+  const { data, error } = await supabase.rpc('admin_rules_save', { p_group: group, p_values: values });
+  if (error) return (await refusal(error))!;
+  refresh();
+  const changed = typeof data === 'object' && data !== null && 'changed' in data ? Number((data as { changed: unknown }).changed) : 0;
+  return { ok: changed === 0 ? 'Nothing changed.' : `Saved. ${changed} ${changed === 1 ? 'setting' : 'settings'} changed.` };
+}
+
+/** Ends every other admin session (this one stays). The database wants the words SIGN OUT and writes the audit row. */
+export async function signOutOthersAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase } = await requireAdmin();
+  const { data, error } = await supabase.rpc('admin_signout_other_admins', { p_confirm: field(formData, 'confirm', 20) });
+  if (error) return (await refusal(error))!;
+  refresh();
+  const ended = typeof data === 'object' && data !== null && 'ended' in data ? Number((data as { ended: unknown }).ended) : 0;
+  return { ok: ended === 0 ? 'No other admin was signed in.' : `${ended} other ${ended === 1 ? 'session was' : 'sessions were'} signed out. This one stays.` };
+}

@@ -2186,6 +2186,17 @@ export type Database = {
         Args: { p_note: string; p_profile: string }
         Returns: undefined
       }
+      admin_audit_list: {
+        Args: {
+          p_action?: string
+          p_actor?: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_to?: string
+        }
+        Returns: Json
+      }
       admin_cancel_job: {
         Args: { p_job: string; p_reason: string }
         Returns: undefined
@@ -2309,6 +2320,11 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_rules_get: { Args: never; Returns: Json }
+      admin_rules_save: {
+        Args: { p_group: string; p_values: Json }
+        Returns: Json
+      }
       admin_save_settings: {
         Args: {
           p_helpline_enabled: boolean
@@ -2341,8 +2357,11 @@ export type Database = {
         Returns: undefined
       }
       admin_settings_get: { Args: never; Returns: Json }
+      admin_signout_other_admins: { Args: { p_confirm: string }; Returns: Json }
+      admin_staff_activity: { Args: never; Returns: Json }
       admin_staff_list: { Args: never; Returns: Json }
       admin_step_up_status: { Args: never; Returns: string }
+      admin_system_status: { Args: never; Returns: Json }
       admin_totp_factor: { Args: never; Returns: string }
       admin_totp_status: { Args: never; Returns: string }
       admin_update_category: {
