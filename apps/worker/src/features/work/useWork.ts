@@ -17,7 +17,7 @@ export type WorkData =
       about: string;
     };
 
-async function fetchWork(): Promise<WorkData> {
+export async function fetchWork(): Promise<WorkData> {
   // RLS: categories are readable by every signed-in user; the worker's own choices and details only by them.
   // One join: every active trade, with this worker's own choice nested inside it (an empty list when not chosen).
   const [categories, details] = await Promise.all([

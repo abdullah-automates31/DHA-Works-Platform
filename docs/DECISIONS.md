@@ -190,3 +190,12 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - Checked by pgTAP (`admin_step_up`, `admin_totp`) and a live drill against the local API, `scripts/challenge-admin-session-local.cjs` (28 attacks: password only, self-enrolled authenticator, code guessing, forged and unsigned tokens, editing its own row, stolen tokens after sign-out; all refused).
 - Customer app (Shariq's repo, PR #19): `allowBackup="false"` plus backup and data-extraction rules, so the sign-in session cannot be copied off the phone.
 - Email sign-up stays on (the staff-invite page creates accounts with an email), but since migration 0062 `register_profile` refuses any account without a proven phone: an email-only stranger cannot become a resident or worker applicant with a typed number, and has no profile, so it can read nothing.
+
+## 19 Nov 2026: worker app Settings
+
+- New Settings area (Profile > Settings, or tap the profile header): Personal information, Professional details, Service area, Verification and documents, Notifications, Privacy and security, help rows, legal rows, app version, log out with confirmation. Only for approved workers (routing guard).
+- Personal information: the name is editable only while the application is open (the database locks it after approval); the phone number is the sign-in and is never editable; the profile picture can be changed any time (only `avatar_path` changes, the verification photo stays with staff).
+- Verification screen: the database records one decision per application, not per file, so each file shows the application's state, and the staff reason is shown once. Since the owner cannot read their own document rows after submission, migration 0065 adds `get_my_document_summary()` (type, upload time, reference count; never a path).
+- Notifications: migration 0065 adds four switches (new jobs, job updates, report updates, announcements) next to the existing job reminders. They stop only the PUSH (a BEFORE INSERT trigger marks the row handled); the in-app list always shows every notice. Account warnings, verification decisions, suspensions and requests that need an answer are never switchable.
+- Terms and Privacy Policy rows say "Coming soon" with no link. No password or device list screen: sign-in is a one-time code and the server keeps no device list.
+- Migration 0065 applied on DEV 19 Nov (owner asked). pgTAP 43 files, 1,768 assertions; worker 300 tests.

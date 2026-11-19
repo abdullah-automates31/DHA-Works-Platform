@@ -38,7 +38,7 @@ test('approved without areas must choose areas first; with areas goes home and m
   const approved = with_({ verification_status: 'approved' });
   assert.deepEqual(allowedRoutes(approved), ['/areas']);
   assert.deepEqual(allowedRoutes(approved, 0), ['/areas']);
-  assert.deepEqual(allowedRoutes(approved, 3), ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction']);
+  assert.deepEqual(allowedRoutes(approved, 3), ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction', '/settings']);
 });
 
 test('areas do not matter before approval', () => {
@@ -99,4 +99,17 @@ test('changes needed: the banner text is what staff wrote, and only when staff a
     assert.equal(changesNeededReason({ verification_status: status, verification_reason: 'old reason' }), null, status);
   }
   assert.equal(changesNeededReason(null), null);
+});
+
+test('Settings and its sub-screens are for approved workers only', () => {
+  const approved = with_({ verification_status: 'approved' });
+  const allowed = allowedRoutes(approved, 2);
+  assert.equal(isRouteAllowed('/settings', allowed), true);
+  assert.equal(isRouteAllowed('/settings/personal', allowed), true);
+  assert.equal(isRouteAllowed('/settings/', allowed), false);
+  assert.equal(isRouteAllowed('/settingsx', allowed), false);
+  for (const s of ['incomplete', 'pending', 'needs_changes', 'rejected'] as const) {
+    assert.equal(isRouteAllowed('/settings', allowedRoutes(with_({ verification_status: s }), 2)), false, s);
+    assert.equal(isRouteAllowed('/settings/personal', allowedRoutes(with_({ verification_status: s }), 2)), false, s);
+  }
 });

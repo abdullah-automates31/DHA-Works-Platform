@@ -1790,6 +1790,10 @@ export type Database = {
           experience_years: number | null
           job_reminders: boolean
           jobs_done: number
+          notify_announcements: boolean
+          notify_job_updates: boolean
+          notify_new_jobs: boolean
+          notify_report_updates: boolean
           profile_id: string
           rating_avg: number
           rating_count: number
@@ -1802,6 +1806,10 @@ export type Database = {
           experience_years?: number | null
           job_reminders?: boolean
           jobs_done?: number
+          notify_announcements?: boolean
+          notify_job_updates?: boolean
+          notify_new_jobs?: boolean
+          notify_report_updates?: boolean
           profile_id: string
           rating_avg?: number
           rating_count?: number
@@ -1814,6 +1822,10 @@ export type Database = {
           experience_years?: number | null
           job_reminders?: boolean
           jobs_done?: number
+          notify_announcements?: boolean
+          notify_job_updates?: boolean
+          notify_new_jobs?: boolean
+          notify_report_updates?: boolean
           profile_id?: string
           rating_avg?: number
           rating_count?: number
@@ -2441,6 +2453,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_my_document_summary: {
+        Args: never
+        Returns: {
+          doc_type: Database["public"]["Enums"]["document_type"]
+          reference_count: number
+          uploaded_at: string
+        }[]
+      }
       get_my_earnings: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
@@ -2549,6 +2569,10 @@ export type Database = {
         Returns: undefined
       }
       set_my_references: { Args: { p_refs: Json }; Returns: undefined }
+      set_notification_preference: {
+        Args: { p_key: string; p_value: boolean }
+        Returns: undefined
+      }
       start_job: { Args: { p_job_id: string }; Returns: undefined }
       submit_for_review: { Args: never; Returns: undefined }
       submit_quote: {

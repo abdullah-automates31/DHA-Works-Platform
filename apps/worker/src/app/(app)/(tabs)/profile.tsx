@@ -77,7 +77,7 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void reload()} tintColor={colors.green} />}
       >
-        <View style={styles.header}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('settings.personal')} onPress={() => router.push('/settings/personal')} style={styles.header}>
           <ProfilePhoto size={72} />
           <Text style={styles.name}>{profile?.full_name ?? ''}</Text>
           <Text style={styles.sub}>
@@ -89,7 +89,7 @@ export default function ProfileScreen() {
               <Text style={styles.verifiedText}>{t('profile.verified')}</Text>
             </View>
           ) : null}
-        </View>
+        </Pressable>
 
         {data.status === 'loading' ? <ActivityIndicator color={colors.green} /> : null}
         {data.status === 'error' ? (
@@ -138,6 +138,7 @@ export default function ProfileScreen() {
               <Row title={t('profile.category')} value={tradeSummary(names)} onPress={openSheet} divider />
               <Row title={t('profile.introduction')} onPress={() => router.push('/introduction')} divider />
               <Row title={t('profile.areas')} value={areaSummary(areas)} onPress={() => router.push('/areas')} divider />
+              <Row title={t('settings.open')} onPress={() => router.push('/settings')} divider />
               <Row title={t('profile.help')} onPress={() => router.push('/help')} divider />
               <Row title={t('profile.signOut')} danger onPress={() => void signOut()} />
             </View>

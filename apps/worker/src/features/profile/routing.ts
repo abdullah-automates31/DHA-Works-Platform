@@ -29,7 +29,8 @@ export type AppRoute =
   | '/help'
   | '/report'
   | '/my-reports'
-  | '/introduction';
+  | '/introduction'
+  | '/settings';
 
 export type StatusKind = 'wrong_role' | 'suspended' | 'pending' | 'visit_hq' | 'rejected';
 
@@ -70,7 +71,7 @@ export function allowedRoutes(p: ProfileSnapshot | null, areaCount = 0): AppRout
   if (!p) return ['/about'];
   if (statusKind(p) !== null) return ['/status'];
   if (p.verification_status === 'approved') {
-    return areaCount === 0 ? ['/areas'] : ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction'];
+    return areaCount === 0 ? ['/areas'] : ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction', '/settings'];
   }
   // incomplete or needs_changes: identity first; once it is complete, the documents step and those after it.
   return identityComplete(p) ? ['/documents', '/references', '/work', '/about'] : ['/about'];
@@ -82,5 +83,7 @@ export function allowedRoutes(p: ProfileSnapshot | null, areaCount = 0): AppRout
  */
 export function isRouteAllowed(pathname: string, allowed: readonly AppRoute[]): boolean {
   if (allowed.includes(pathname as AppRoute)) return true;
+  // The Settings screens (/settings/personal, /settings/privacy ...) belong to the worker who may open /settings.
+  if (pathname.startsWith('/settings/') && pathname.length > '/settings/'.length) return allowed.includes('/settings');
   return pathname.startsWith('/job/') && pathname.length > '/job/'.length && allowed.includes('/open-jobs');
 }
