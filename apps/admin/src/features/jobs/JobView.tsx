@@ -4,6 +4,7 @@ import { ActionForm } from '@/components/FormKit';
 import { PhotoGrid } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
+import { loadAvatarSrcs } from '@/lib/avatars';
 import { requireSession } from '@/lib/auth';
 import { CANCEL_REASON_TEXT, ago, dateOnly, dateTime, jobStatus, phoneText, PROGRESS_STEPS, progressDone, reportKind, reportStatus, rupees, sentence, telHref, timeOnly, underReviewText } from '@/lib/format';
 import { isUuid } from '@/lib/json';
@@ -25,6 +26,7 @@ export async function JobView({ id }: { id: string }) {
   const d = await loadJobDetail(supabase, id);
   if (!d) notFound();
   const j = d.job;
+  const avatars = await loadAvatarSrcs(supabase, [d.resident?.id, d.worker?.id]);
   const urls = await jobMediaUrls(supabase, [...d.photos, ...(j.voicePath ? [j.voicePath] : [])]);
   const st = jobStatus(j.status);
   const done = progressDone(j.status);
@@ -72,7 +74,7 @@ export async function JobView({ id }: { id: string }) {
               <div className="h3">Resident</div>
               {d.resident ? (
                 <>
-                  <div className="row"><Avatar initials={initials(d.resident.name)} seed={d.resident.id} large /><div><div className="xb" style={{ fontSize: 17 }}>{d.resident.name}</div><div className="mut b" style={{ fontSize: 13 }}>{d.resident.verified ? 'Verified resident' : 'Not verified'} · Phase {j.phase}{d.resident.accountStatus === 'suspended' ? ' · suspended' : ''}</div></div></div>
+                  <div className="row"><Avatar initials={initials(d.resident.name)} seed={d.resident.id} src={avatars[d.resident.id]} large /><div><div className="xb" style={{ fontSize: 17 }}>{d.resident.name}</div><div className="mut b" style={{ fontSize: 13 }}>{d.resident.verified ? 'Verified resident' : 'Not verified'} · Phase {j.phase}{d.resident.accountStatus === 'suspended' ? ' · suspended' : ''}</div></div></div>
                   <div className="row g8 wrap"><CallLink phone={d.resident.phone} label={`Call ${phoneText(d.resident.phone)}`} /><Link className="btn soft sm" href={`/users/${d.resident.id}`}>Profile</Link></div>
                 </>
               ) : <span className="mut">No resident.</span>}
@@ -81,7 +83,7 @@ export async function JobView({ id }: { id: string }) {
               <div className="h3">Worker</div>
               {d.worker ? (
                 <>
-                  <div className="row"><Avatar initials={initials(d.worker.name)} seed={d.worker.id} large /><div><div className="xb" style={{ fontSize: 17 }}>{d.worker.name}</div><div className="mut b" style={{ fontSize: 13 }}>{[d.worker.category, d.worker.ratingCount > 0 && d.worker.ratingAvg !== null ? `${d.worker.ratingAvg.toFixed(1)} rating` : null, `${d.worker.jobsDone} jobs`].filter(Boolean).join(' · ')}{d.worker.accountStatus === 'suspended' ? ' · suspended' : ''}</div></div></div>
+                  <div className="row"><Avatar initials={initials(d.worker.name)} seed={d.worker.id} src={avatars[d.worker.id]} large /><div><div className="xb" style={{ fontSize: 17 }}>{d.worker.name}</div><div className="mut b" style={{ fontSize: 13 }}>{[d.worker.category, d.worker.ratingCount > 0 && d.worker.ratingAvg !== null ? `${d.worker.ratingAvg.toFixed(1)} rating` : null, `${d.worker.jobsDone} jobs`].filter(Boolean).join(' · ')}{d.worker.accountStatus === 'suspended' ? ' · suspended' : ''}</div></div></div>
                   <div className="row g8 wrap"><CallLink phone={d.worker.phone} label={`Call ${phoneText(d.worker.phone)}`} /><Link className="btn soft sm" href={`/users/${d.worker.id}`}>Profile</Link></div>
                 </>
               ) : <span className="mut">No worker yet. {d.counts.interested} interested, {d.counts.quotes} quote{d.counts.quotes === 1 ? '' : 's'}.</span>}

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
+import { loadAvatarSrcs } from '@/lib/avatars';
 import { ClearAllBar } from '@/components/ListBits';
 import { requireSession } from '@/lib/auth';
 import { loadCounts, loadFilters, loadQueue } from './queries';
@@ -35,6 +36,7 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
 
   const [counts, filters, result] = await Promise.all([loadCounts(supabase, role), loadFilters(supabase, role), loadQueue(supabase, { role, tab, q, filter, page })]);
   const { rows, total } = result.queue;
+  const avatars = await loadAvatarSrcs(supabase, rows.map((r) => r.id));
   const last = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isWorker = role === 'worker';
   const activeFilters = [q ? `"${q}"` : null, filter ? (filters.find((x) => x.id === filter)?.label ?? (isWorker ? 'Category' : 'Phase')) : null].filter((x): x is string => x !== null);
@@ -118,7 +120,7 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
                 <tr key={r.id}>
                   <td>
                     <div className="row">
-                      <Avatar initials={initials(r.name)} seed={r.id} />
+                      <Avatar initials={initials(r.name)} seed={r.id} src={avatars[r.id]} />
                       <div>
                         <div className="xb">{r.name ?? 'No name'}</div>
                         {isWorker ? <div className="mut" style={{ fontSize: 12.5 }}>{phoneText(r.phone)}</div> : null}

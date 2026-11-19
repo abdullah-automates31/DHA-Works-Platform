@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
+import { avatarSrc } from '@/lib/avatars';
 import { requireSession } from '@/lib/auth';
 import { DecisionForm } from './DecisionForm';
 import { ReopenForm } from './ReopenForm';
@@ -46,10 +47,8 @@ export async function ReviewView({ role, id }: { role: Role; id: string }) {
   const types = role === 'worker' ? WORKER_DOCS : RESIDENT_DOCS;
   const docOf = (t: DocType) => detail.documents.find((x) => x.type === t);
   const w = detail.worker;
-  const photoUrl = (() => {
-    const p = docOf('profile_photo');
-    return p ? urls[p.path] : undefined;
-  })();
+  // The photo they sent for verification, served through the cached picture route (no expiring link).
+  const photoSrc = avatarSrc(docOf('profile_photo')?.path ?? detail.avatarPath);
 
   return (
     <PortalFrame
@@ -64,12 +63,7 @@ export async function ReviewView({ role, id }: { role: Role; id: string }) {
       <div className="split">
         <div className="col" style={{ gap: 20 }}>
           <div className="card row" style={{ gap: 18 }}>
-            {photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt={detail.name ?? 'Applicant'} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flex: 'none' }} />
-            ) : (
-              <Avatar initials={initials(detail.name)} seed={detail.id} large />
-            )}
+            <Avatar initials={initials(detail.name)} seed={detail.id} src={photoSrc} alt={detail.name ?? 'Applicant'} large />
             <div className="fx">
               <div className="xb" style={{ fontSize: 20 }}>{detail.name ?? 'No name'}</div>
               <div className="mut b" style={{ marginTop: 2 }}>

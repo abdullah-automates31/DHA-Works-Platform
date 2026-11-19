@@ -1,5 +1,6 @@
 // Small presentational pieces shared by the screens. Class names come from the design stylesheet (admin.css).
 import type { ReactNode } from 'react';
+import { AvatarPhoto } from './AvatarPhoto';
 
 export type ChipTone = 'ok' | 'wait' | 'red' | 'blue' | 'pur' | 'gray';
 
@@ -10,9 +11,15 @@ export function Chip({ tone, children }: { tone: ChipTone; children: ReactNode }
 const AVATAR_TONES = ['', 'b', 'g'] as const;
 
 /** Round initials badge. The colour is picked from the id so a person always keeps the same one. */
-export function Avatar({ initials, seed, large }: { initials: string; seed: string; large?: boolean }) {
+/** Round initials; with `src` the person's picture fades in over them (see AvatarPhoto). Same size either way. */
+export function Avatar({ initials, seed, large, src, alt }: { initials: string; seed: string; large?: boolean; src?: string | null; alt?: string }) {
   const tone = AVATAR_TONES[[...seed].reduce((n, c) => n + c.charCodeAt(0), 0) % AVATAR_TONES.length];
-  return <div className={`av ${tone ?? ''}${large ? ' l' : ''}`.trim()}>{initials}</div>;
+  return (
+    <div className={`av ${tone ?? ''}${large ? ' l' : ''}`.trim()}>
+      {initials}
+      {src ? <AvatarPhoto key={src} src={src} alt={alt ?? ''} /> : null}
+    </div>
+  );
 }
 
 export function Icon({ children, size }: { children: ReactNode; size?: number }) {

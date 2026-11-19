@@ -4,6 +4,7 @@ import { ActionForm } from '@/components/FormKit';
 import { LoadError, PagerBar, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip } from '@/components/ui';
+import { avatarSrc } from '@/lib/avatars';
 import { requireSession } from '@/lib/auth';
 import { buildHref, dateOnly, dateTime, jobStatus, lastPage, PAGE_SIZE, pageNumber, rupees } from '@/lib/format';
 import { isUuid } from '@/lib/json';
@@ -24,8 +25,8 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
   const page = pageNumber(params.page);
   const urls = await userDocUrls(supabase, d);
   const suspended = d.accountStatus === 'suspended';
-  const photo = d.documents.find((x) => x.type === 'profile_photo');
-  const photoUrl = photo ? urls[photo.path] : undefined;
+  // The profile picture (what the person sees in the app); the verification photo is the fallback.
+  const photoSrc = avatarSrc(d.avatarPath ?? d.documents.find((x) => x.type === 'profile_photo')?.path);
 
   let reviews: ReturnType<typeof parseReviews> | null = null;
   let reviewsFailed = false;
@@ -64,10 +65,7 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
       <div className="split">
         <div className="col" style={{ gap: 20 }}>
           <div className="card row" style={{ gap: 18, alignItems: 'flex-start' }}>
-            {photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt={d.name} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flex: 'none' }} />
-            ) : <Avatar initials={initials(d.name)} seed={d.id} large />}
+            <Avatar initials={initials(d.name)} seed={d.id} src={photoSrc} alt={d.name} large />
             <dl className="kv" style={{ gridTemplateColumns: '90px minmax(0,1fr) 110px minmax(0,1fr)', flex: 1, margin: 0 }}>
               <dt>Phone</dt><dd>{phoneText(d.phone)}</dd>
               {isWorker ? <><dt>Category</dt><dd>{d.categories.join(', ') || '-'}</dd></> : <><dt>Email</dt><dd style={{ overflowWrap: 'anywhere' }}>{d.email ?? '-'}</dd></>}

@@ -1,7 +1,8 @@
 import { ActionForm, ButtonForm } from '@/components/FormKit';
 import { EmptyRow, LoadError, PagerBar, PillRow, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
-import { Chip } from '@/components/ui';
+import { Avatar, Chip } from '@/components/ui';
+import { loadAvatarSrcs } from '@/lib/avatars';
 import { requireSession } from '@/lib/auth';
 import { buildHref, dateTime, lastPage, pageNumber, phoneText } from '@/lib/format';
 import { PAGE_SIZE } from '@/lib/format';
@@ -33,6 +34,8 @@ export async function RequestsView({ params }: { params: Params }) {
   ]);
   const counts = parseCounts(countsRes.error ? null : countsRes.data);
   const { rows, total } = parseRequests(listRes.error ? null : listRes.data);
+
+  const avatars = await loadAvatarSrcs(supabase, rows.map((r) => r.workerId));
 
   // Short-lived links for the files of the replacement documents shown on this page (staff only: the identity bucket is closed to everyone else).
   const urls: Record<string, string> = {};
@@ -68,14 +71,14 @@ export async function RequestsView({ params }: { params: Params }) {
         {rows.length === 0 ? (
           <table className="tbl"><tbody><EmptyRow cols={1} text={status === 'open' ? 'Nothing is waiting for you.' : 'Nothing closed yet.'} /></tbody></table>
         ) : null}
-        {rows.map((r) => <RequestCard key={r.id} r={r} url={r.path ? urls[r.path] ?? null : null} />)}
+        {rows.map((r) => <RequestCard key={r.id} r={r} url={r.path ? urls[r.path] ?? null : null} avatar={avatars[r.workerId] ?? null} />)}
       </div>
       <PagerBar shown={rows.length} total={total} page={page} last={lastPage(total)} noun="requests" hrefFor={(p) => base({ page: p })} />
     </PortalFrame>
   );
 }
 
-function RequestCard({ r, url }: { r: RequestRow; url: string | null }) {
+function RequestCard({ r, url, avatar }: { r: RequestRow; url: string | null; avatar: string | null }) {
   const chip = STATUS_CHIP[r.status] ?? { tone: 'gray' as const, label: r.status };
   const open = r.status === 'open';
   return (
@@ -85,6 +88,7 @@ function RequestCard({ r, url }: { r: RequestRow; url: string | null }) {
         <Chip tone={chip.tone}>{chip.label}</Chip>
         <span className="mut" style={{ fontSize: 12.5 }}>{dateTime(r.createdAt)}</span>
         <span style={{ flex: 1 }} />
+        <Avatar initials={r.workerName.trim().split(/s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?'} seed={r.workerId} src={avatar} />
         <a className="xb" href={`/workers/${r.workerId}`} style={{ color: 'var(--g)', textDecoration: 'none' }}>{r.workerName}</a>
         <span className="mut" style={{ fontSize: 12.5 }}>{phoneText(r.workerPhone)}</span>
       </div>

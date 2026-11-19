@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ClearAllBar, EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Avatar, Chip } from '@/components/ui';
+import { loadAvatarSrcs } from '@/lib/avatars';
 import { requireSession } from '@/lib/auth';
 import { buildHref, lastPage, pageNumber, phoneText, searchText } from '@/lib/format';
 import { loadFilterOptions } from '../jobs/queries';
@@ -24,6 +25,7 @@ export async function UsersView({ params }: { params: Params }) {
 
   const [counts, options, result] = await Promise.all([loadUserCounts(supabase), loadFilterOptions(supabase), loadUsers(supabase, { role, state, phase, q, page })]);
   const { rows, total } = result.list;
+  const avatars = await loadAvatarSrcs(supabase, rows.map((r) => r.id));
   const activeFilters = [q ? `"${q}"` : null, state !== 'all' ? STATE_LABEL[state] : null, phase ? `Phase ${phase}` : null].filter((x): x is string => x !== null);
   const base = (over: Record<string, string | number | null>) => buildHref('/users', { role: isWorker ? null : 'resident', state: state === 'all' ? null : state, phase, q, ...over });
 
@@ -72,7 +74,7 @@ export async function UsersView({ params }: { params: Params }) {
               <tr key={r.id}>
                 <td>
                   <div className="row">
-                    <Avatar initials={initials(r.name)} seed={r.id} />
+                    <Avatar initials={initials(r.name)} seed={r.id} src={avatars[r.id]} />
                     <div><div className="xb">{r.name}</div><div className="mut" style={{ fontSize: 12.5 }}>{phoneText(r.phone)}</div></div>
                   </div>
                 </td>
