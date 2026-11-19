@@ -86,3 +86,13 @@ function withTimeout<T>(work: PromiseLike<T>, ms: number): Promise<T> {
     );
   });
 }
+
+/** This phone's push token, or null when push is unsupported or unavailable (used to keep this phone when signing the others out). */
+export async function currentDeviceToken(): Promise<string | null> {
+  if (!supported) return null;
+  try {
+    return await withTimeout(deviceToken(), 3000);
+  } catch {
+    return null;
+  }
+}

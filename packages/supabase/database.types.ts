@@ -1874,6 +1874,72 @@ export type Database = {
           },
         ]
       }
+      worker_requests: {
+        Row: {
+          body: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          doc_type: Database["public"]["Enums"]["document_type"] | null
+          id: string
+          kind: string
+          new_value: string | null
+          old_value: string | null
+          staff_reply: string | null
+          status: string
+          storage_path: string | null
+          subject: string | null
+          worker_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          doc_type?: Database["public"]["Enums"]["document_type"] | null
+          id?: string
+          kind: string
+          new_value?: string | null
+          old_value?: string | null
+          staff_reply?: string | null
+          status?: string
+          storage_path?: string | null
+          subject?: string | null
+          worker_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          doc_type?: Database["public"]["Enums"]["document_type"] | null
+          id?: string
+          kind?: string
+          new_value?: string | null
+          old_value?: string | null
+          staff_reply?: string | null
+          status?: string
+          storage_path?: string | null
+          subject?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_requests_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       categories_with_counts: {
@@ -2320,6 +2386,25 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_request_ack: { Args: { p_id: string }; Returns: undefined }
+      admin_request_decide: {
+        Args: { p_decision: string; p_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      admin_request_reply: {
+        Args: { p_id: string; p_reply: string }
+        Returns: undefined
+      }
+      admin_requests_counts: { Args: never; Returns: Json }
+      admin_requests_list: {
+        Args: {
+          p_kind?: string
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+        }
+        Returns: Json
+      }
       admin_reset_totp: { Args: never; Returns: undefined }
       admin_reviews_list: {
         Args: {
@@ -2484,6 +2569,30 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json
       }
+      my_requests: {
+        Args: { p_limit?: number }
+        Returns: {
+          body: string
+          created_at: string
+          decided_at: string
+          doc_type: Database["public"]["Enums"]["document_type"]
+          id: string
+          kind: string
+          staff_reply: string
+          status: string
+          subject: string
+        }[]
+      }
+      my_sessions: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          is_current: boolean
+          last_active: string
+          user_agent: string
+        }[]
+      }
       post_job: { Args: { p_job_id: string }; Returns: undefined }
       push_webhook_secret_matches: {
         Args: { p_secret: string }
@@ -2574,7 +2683,18 @@ export type Database = {
         Args: { p_key: string; p_value: boolean }
         Returns: undefined
       }
+      sign_out_other_sessions: {
+        Args: { p_keep_token?: string }
+        Returns: number
+      }
       start_job: { Args: { p_job_id: string }; Returns: undefined }
+      submit_document_update: {
+        Args: {
+          p_path: string
+          p_type: Database["public"]["Enums"]["document_type"]
+        }
+        Returns: string
+      }
       submit_for_review: { Args: never; Returns: undefined }
       submit_quote: {
         Args: {
@@ -2601,6 +2721,10 @@ export type Database = {
           p_quality: number
         }
         Returns: undefined
+      }
+      submit_support_request: {
+        Args: { p_body: string; p_subject: string }
+        Returns: string
       }
       unregister_device_token: { Args: { p_token: string }; Returns: undefined }
       update_job: {

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/AuthForm';
+import { DocumentUpdates } from '@/components/DocumentUpdates';
 import { Card, LoadError, NavRow, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { ShieldCheckIcon } from '@/components/icons';
@@ -130,6 +131,7 @@ export default function VerificationScreen() {
           <Text style={settingsStyles.body}>{t('settings.verificationScreen.private')}</Text>
 
           {canResubmitDocuments(status) ? <PrimaryButton label={t('settings.verificationScreen.resubmit')} onPress={() => router.push('/documents')} showArrow={false} /> : null}
+          {status === 'approved' ? <DocumentUpdates /> : null}
 
           <SectionTitle>{t('settings.support')}</SectionTitle>
           <Text style={settingsStyles.body}>{t('settings.verificationScreen.help')}</Text>

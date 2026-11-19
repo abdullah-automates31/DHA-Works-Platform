@@ -85,6 +85,7 @@ export default function SettingsScreen() {
         <Card>
           <NavRow title={t('settings.helpAndFaq')} hint={t('settings.helpAndFaqHint')} onPress={() => router.push('/help')} divider />
           <NavRow title={t('settings.verificationHelp')} hint={t('settings.verificationHelpHint')} onPress={() => router.push('/settings/verification')} divider />
+          <NavRow title={t('settings.supportScreen.title')} hint={t('settings.supportScreen.intro')} onPress={() => router.push('/settings/support')} divider />
           {helpline ? <NavRow title={t('settings.callSupport', { number: helpline })} onPress={() => void Linking.openURL(`tel:${helpline}`)} divider /> : null}
           <NavRow title={t('settings.reportProblem')} hint={t('settings.reportProblemHint')} onPress={() => router.push('/report')} />
         </Card>

@@ -205,3 +205,12 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - Reverses two earlier locks on purpose. Phone (0034, Shariq 6 Nov "no change-number feature"): a WORKER's number may change, but only after a code sent to the NEW number is confirmed (`auth.updateUser` then `verifyOtp` type phone_change). The lock still stops customers and staff, clearing a number, and any move to a number no code was sent to. The profile phone follows by trigger and the move is written to the audit log (`worker_changed_phone`).
 - Name: `change_my_name` works at any status; every change is audited (`worker_changed_name`, old and new name) so staff can compare with the CNIC in the admin Audit log. No staff notice or approval step exists yet.
 - Number-change codes go by SMS (GoTrue's default for a phone change); the sign-in code itself stays WhatsApp. Check this when Twilio goes live.
+
+### 19 Nov 2026: worker requests, replacement documents, my phones (migration 0067, owner decision; applied on DEV)
+
+- New table `worker_requests` (no grants; apps reach it only through functions). Four kinds: `support` (worker message, staff answer), `document` (replacement CNIC, certificate or photo from an APPROVED worker), `name_change` and `phone_change` (written automatically by `change_my_name` and the phone trigger from 0066, so staff see every change).
+- Support: worker sends a title and message (max 3 open, 5 a day); staff answer in admin portal > Worker requests; the answer shows in the app and arrives as a `staff_message` notice.
+- Documents after approval: the file is uploaded as `<uid>/update-<type>-...` (the identity bucket now accepts that name from an approved worker); staff approve (the verification file and, for the photo, the profile picture are swapped) or reject with a reason; the old document stays valid until approval. The worker is told either way.
+- Name and number changes: shown as items staff mark "reviewed". There is no approve or undo step.
+- My phones: `my_sessions()` lists the account's sessions (plain labels, no IP or raw user agent); `sign_out_other_sessions(keep_token)` ends the other sessions and removes their push registrations, keeping this phone.
+- Not done: staff do not get a push or email for new requests (the sidebar badge and the page show them); the send-push function was not changed.
