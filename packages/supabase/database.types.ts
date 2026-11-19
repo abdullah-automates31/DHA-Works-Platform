@@ -2425,6 +2425,7 @@ export type Database = {
         Args: { p_job_id: string; p_reason?: string }
         Returns: undefined
       }
+      change_my_name: { Args: { p_name: string }; Returns: undefined }
       check_staff_invite: {
         Args: { p_email: string; p_token: string }
         Returns: boolean

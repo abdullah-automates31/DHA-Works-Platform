@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ProfilePhoto } from '@/components/ProfilePhoto';
-import { Card, InfoRow, Notice, SaveBar, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
+import { Card, InfoRow, NavRow, Notice, SaveBar, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { pickImage, type PickedFile } from '@/features/documents/pick';
 import { dateText } from '@/features/myreports/rules';
 import { normalizeName } from '@/features/profile/validation';
 import { saveProfilePhoto, toDataUri } from '@/features/settings/photo';
-import { canEditName, displayPhone, personalState } from '@/features/settings/rules';
+import { displayPhone, personalState } from '@/features/settings/rules';
 import { useUnsavedGuard } from '@/features/settings/useUnsavedGuard';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
@@ -17,15 +17,14 @@ import { useMyProfile } from '@/lib/profile';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
-// Settings > Personal information. Name is editable only while the application is open (the database locks it after
-// approval); the phone number is the sign-in and is never editable here. The profile picture can be changed at any time:
-// it only changes avatar_path, the photo staff approved stays in verification_documents.
+// Settings > Personal information. The name changes through change_my_name (audited, so staff can compare it with the CNIC);
+// the sign-in phone changes on its own screen after a code sent to the new number. The profile picture can be changed at
+// any time: it only changes avatar_path, the photo staff approved stays in verification_documents.
 export default function PersonalScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { state, refresh } = useMyProfile();
   const profile = state.status === 'ready' ? state.profile : null;
-  const status = profile?.verification_status ?? null;
   const savedName = profile?.full_name ?? '';
 
   const [name, setName] = useState(savedName);
@@ -36,8 +35,7 @@ export default function PersonalScreen() {
   const [since, setSince] = useState<string | null>(null);
 
   const userId = session?.user.id ?? '';
-  const nameLocked = !canEditName(status);
-  const view = personalState({ name: savedName }, { name, photoChosen: photo !== null }, status);
+  const view = personalState({ name: savedName }, { name, photoChosen: photo !== null });
   useUnsavedGuard(view.dirty && !saving);
 
   useEffect(() => {
@@ -93,10 +91,10 @@ export default function PersonalScreen() {
         }
         setPhoto(null);
       }
-      if (!nameLocked && normalizeName(name) !== normalizeName(savedName)) {
-        const { error: rpcError } = await supabase.rpc('update_my_profile', { p_full_name: normalizeName(name) });
+      if (normalizeName(name) !== normalizeName(savedName)) {
+        const { error: rpcError } = await supabase.rpc('change_my_name', { p_name: normalizeName(name) });
         if (rpcError) {
-          setError(/locked/i.test(rpcError.message ?? '') ? t('settings.errors.locked') : t('settings.errors.generic'));
+          setError(t('settings.errors.generic'));
           return;
         }
       }
@@ -128,15 +126,15 @@ export default function PersonalScreen() {
           </View>
 
           <SectionTitle>{t('settings.personalScreen.name')}</SectionTitle>
-          <View style={[styles.inputWrap, view.nameError && styles.inputError, nameLocked && styles.inputLocked]}>
+          <View style={[styles.inputWrap, view.nameError && styles.inputError]}>
             <TextInput
               accessibilityLabel={t('settings.personalScreen.name')}
-              value={nameLocked ? savedName : name}
+              value={name}
               onChangeText={(v) => {
                 setName(v);
                 setDone(false);
               }}
-              editable={!nameLocked && !saving}
+              editable={!saving}
               maxLength={100}
               autoCapitalize="words"
               autoComplete="name"
@@ -146,14 +144,15 @@ export default function PersonalScreen() {
             />
           </View>
           {view.nameError ? <Notice kind="error">{t('settings.errors.name')}</Notice> : null}
-          {nameLocked ? <Text style={settingsStyles.body}>{t('settings.personalScreen.nameLocked')}</Text> : null}
+          <Text style={settingsStyles.body}>{t('settings.personalScreen.nameNote')}</Text>
 
           <SectionTitle>{t('settings.personalScreen.phone')}</SectionTitle>
           <Card>
             <InfoRow title={t('settings.personalScreen.phone')} value={displayPhone(profile?.phone)} divider />
+            <NavRow title={t('settings.personalScreen.changePhone')} onPress={() => router.push('/settings/change-phone')} divider />
             <InfoRow title={t('settings.personalScreen.since')} value={since ? dateText(since) : t('settings.personalScreen.sinceMissing')} />
           </Card>
-          <Text style={settingsStyles.body}>{t('settings.personalScreen.phoneLocked')}</Text>
+          <Text style={settingsStyles.body}>{t('settings.personalScreen.phoneNote')}</Text>
 
           {error ? <Notice kind="error">{error}</Notice> : null}
           {done ? <Notice kind="ok">{t('settings.saved')}</Notice> : null}
@@ -172,6 +171,5 @@ const styles = StyleSheet.create({
   photoNote: { fontFamily: fontFamily.semibold, fontSize: 12, lineHeight: 17, color: colors.muted, textAlign: 'center', paddingHorizontal: 12 },
   inputWrap: { height: 52, borderWidth: 1.5, borderColor: colors.signIn.fieldBorder, borderRadius: 16, backgroundColor: '#fff', paddingHorizontal: 14, justifyContent: 'center' },
   inputError: { borderColor: colors.chip.declined.fg },
-  inputLocked: { backgroundColor: '#F0F4F2' },
   input: { fontFamily: fontFamily.semibold, fontSize: 15, color: colors.ink, padding: 0, height: 48 },
 });

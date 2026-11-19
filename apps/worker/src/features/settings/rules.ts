@@ -7,20 +7,14 @@ import { aboutChanged, parseYears } from '../work/rules.ts';
 export type VerificationStatus = 'incomplete' | 'pending' | 'approved' | 'needs_changes' | 'visit_hq' | 'rejected';
 
 // ---------------------------------------------------------------- personal information
-/** The name is editable only while the application is still open; after approval staff own it. */
-export function canEditName(status: VerificationStatus | null | undefined): boolean {
-  return status === 'incomplete' || status === 'needs_changes';
-}
-
 export type PersonalDraft = { name: string; photoChosen: boolean };
 
 /** Save is enabled only when something really changed and what changed is valid. */
 export function personalState(
   saved: { name: string },
   draft: PersonalDraft,
-  status: VerificationStatus | null | undefined,
 ): { dirty: boolean; nameError: boolean; canSave: boolean } {
-  const nameChanged = canEditName(status) && normalizeName(draft.name) !== normalizeName(saved.name);
+  const nameChanged = normalizeName(draft.name) !== normalizeName(saved.name);
   const nameError = nameChanged && !isValidName(draft.name);
   const dirty = nameChanged || draft.photoChosen;
   return { dirty, nameError, canSave: dirty && !nameError };

@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  canEditName,
   canResubmitDocuments,
   displayPhone,
   documentItems,
@@ -18,30 +17,19 @@ import {
 } from './rules.ts';
 
 // ---- personal information
-test('the name is editable only while the application is open', () => {
-  assert.equal(canEditName('incomplete'), true);
-  assert.equal(canEditName('needs_changes'), true);
-  for (const s of ['pending', 'approved', 'visit_hq', 'rejected'] as const) assert.equal(canEditName(s), false, s);
-  assert.equal(canEditName(null), false);
-});
-
-test('an approved worker cannot change the name, even by typing in the field', () => {
-  const s = personalState({ name: 'Usman Khan' }, { name: 'Someone Else', photoChosen: false }, 'approved');
-  assert.deepEqual(s, { dirty: false, nameError: false, canSave: false });
-});
-
-test('a new photo is a change on its own, also after approval', () => {
-  const s = personalState({ name: 'Usman Khan' }, { name: 'Usman Khan', photoChosen: true }, 'approved');
-  assert.equal(s.canSave, true);
-});
-
 test('Save needs a real change and a valid name', () => {
-  assert.equal(personalState({ name: 'Usman Khan' }, { name: '  Usman   Khan ', photoChosen: false }, 'incomplete').dirty, false);
-  assert.equal(personalState({ name: 'Usman Khan' }, { name: 'Usman Ali', photoChosen: false }, 'incomplete').canSave, true);
-  const bad = personalState({ name: 'Usman Khan' }, { name: '1234', photoChosen: false }, 'incomplete');
+  assert.equal(personalState({ name: 'Usman Khan' }, { name: '  Usman   Khan ', photoChosen: false }).dirty, false);
+  assert.equal(personalState({ name: 'Usman Khan' }, { name: 'Usman Ali', photoChosen: false }).canSave, true);
+  const bad = personalState({ name: 'Usman Khan' }, { name: '1234', photoChosen: false });
   assert.equal(bad.nameError, true);
   assert.equal(bad.canSave, false);
-  assert.equal(personalState({ name: 'Usman Khan' }, { name: '   ', photoChosen: false }, 'incomplete').canSave, false);
+  assert.equal(personalState({ name: 'Usman Khan' }, { name: '   ', photoChosen: false }).canSave, false);
+});
+
+test('a new photo is a change on its own, and can be saved together with a name', () => {
+  assert.equal(personalState({ name: 'Usman Khan' }, { name: 'Usman Khan', photoChosen: true }).canSave, true);
+  assert.equal(personalState({ name: 'Usman Khan' }, { name: 'Usman Ali', photoChosen: true }).canSave, true);
+  assert.equal(personalState({ name: 'Usman Khan' }, { name: '99', photoChosen: true }).canSave, false);
 });
 
 // ---- professional details

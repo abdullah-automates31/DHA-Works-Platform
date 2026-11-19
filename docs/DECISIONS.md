@@ -199,3 +199,9 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - Notifications: migration 0065 adds four switches (new jobs, job updates, report updates, announcements) next to the existing job reminders. They stop only the PUSH (a BEFORE INSERT trigger marks the row handled); the in-app list always shows every notice. Account warnings, verification decisions, suspensions and requests that need an answer are never switchable.
 - Terms and Privacy Policy rows say "Coming soon" with no link. No password or device list screen: sign-in is a one-time code and the server keeps no device list.
 - Migration 0065 applied on DEV 19 Nov (owner asked). pgTAP 43 files, 1,768 assertions; worker 300 tests.
+
+### 19 Nov 2026: worker can change name and sign-in phone (migration 0066, owner decision; applied on DEV)
+
+- Reverses two earlier locks on purpose. Phone (0034, Shariq 6 Nov "no change-number feature"): a WORKER's number may change, but only after a code sent to the NEW number is confirmed (`auth.updateUser` then `verifyOtp` type phone_change). The lock still stops customers and staff, clearing a number, and any move to a number no code was sent to. The profile phone follows by trigger and the move is written to the audit log (`worker_changed_phone`).
+- Name: `change_my_name` works at any status; every change is audited (`worker_changed_name`, old and new name) so staff can compare with the CNIC in the admin Audit log. No staff notice or approval step exists yet.
+- Number-change codes go by SMS (GoTrue's default for a phone change); the sign-in code itself stays WhatsApp. Check this when Twilio goes live.
