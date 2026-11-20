@@ -2499,6 +2499,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_verify_after_reset: { Args: never; Returns: string }
       admin_verify_code: { Args: { p_code: string }; Returns: string }
       attach_material_bill: {
         Args: { p_bill_path: string; p_job_id: string }

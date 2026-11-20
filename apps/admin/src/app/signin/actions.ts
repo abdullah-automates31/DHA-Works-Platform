@@ -58,6 +58,11 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   await startActivity();
   if (parseStatus(status) === 'verified') redirect('/dashboard');
 
+  // Right after a password reset the mailbox was just proved with the reset code: the first password sign-in within
+  // 10 minutes does not ask for the sign-in code again (migration 0069). Anything else gets the emailed code.
+  const { data: skip } = await supabase.rpc('admin_verify_after_reset');
+  if (skip === 'ok') redirect('/dashboard');
+
   const failure = await requestCode();
   redirect(failure ? `/signin/code?s=${encodeURIComponent('notsent')}` : '/signin/code');
 }

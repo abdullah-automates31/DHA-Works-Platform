@@ -25,7 +25,7 @@ const svc = (fn, args) => rpc(fn, args, SERVICE);
 const refused = (r) => r.status === 401 || r.status === 403 || r.status === 404 || (r.body && (r.body.code === '42501' || r.body.code === 'PGRST202'));
 const signIn = (email = ADMIN, password = OLD) => call('/auth/v1/token?grant_type=password', { body: { email, password } });
 const sessionOf = (tok) => JSON.parse(Buffer.from(tok.split('.')[1], 'base64url').toString()).session_id;
-const resetDb = () => psql(`delete from public.admin_reset_challenges; delete from public.admin_factor_challenges; delete from public.audit_log where action like 'admin_%' and false;
+const resetDb = () => psql(`delete from public.admin_reset_signins; delete from public.admin_reset_challenges; delete from public.admin_factor_challenges; delete from public.audit_log where action like 'admin_%' and false;
   update auth.users set encrypted_password = extensions.crypt('${OLD}', extensions.gen_salt('bf', 10)) where id = '${ADMIN_ID}';`);
 
 async function mailFor(to, subjectPart) {
@@ -160,9 +160,41 @@ async function openLink(link) {
   psql(`update public.profiles set account_status = 'active' where id = '${ADMIN_ID}'`);
   check(psql(`select count(*) from information_schema.triggers where trigger_name = 'block_admin_password_change'`) !== '0', 'B27 the password-change lock is installed');
 
+  console.log('--- D. The first sign-in after a reset does not ask for the emailed code (0069)');
+  resetDb();
+  const dStart = psql('select now()'); // the audit log is append-only: count only this run's rows
+  const NEWPW = 'After reset pass 12';
+  const d0 = await signIn();
+  check((await rpc('admin_verify_after_reset', {}, d0.body.access_token)).body === 'none', 'D1 with no reset, a normal password sign-in gets none (it needs the emailed code)');
+  check((await rpc('admin_session_status', {}, d0.body.access_token)).body === 'needs_code', 'D2 and is still waiting for the code');
+  check(refused(await rpc('admin_dashboard', { p_range: 'today' }, d0.body.access_token)), 'D3 and cannot read the dashboard');
+  const dr = await svc('admin_reset_issue', { p_email: ADMIN });
+  check((await svc('admin_reset_confirm', { p_email: ADMIN, p_code: dr.body.code, p_password: NEWPW })).body === 'ok', 'D4 (setup) a reset is completed');
+  check(refused(await rpc('admin_verify_after_reset', {})), 'D5 anon cannot use the marker');
+  const d1 = await signIn(ADMIN, NEWPW);
+  check((await rpc('admin_session_status', {}, d1.body.access_token)).body === 'needs_code', 'D6 the new sign-in starts without the code');
+  check((await rpc('admin_verify_after_reset', {}, d1.body.access_token)).body === 'ok', 'D7 the first password sign-in after the reset is verified without a code');
+  check((await rpc('admin_session_status', {}, d1.body.access_token)).body === 'verified', 'D8 and the portal now sees a verified session');
+  check(!refused(await rpc('admin_dashboard', { p_range: 'today' }, d1.body.access_token)), 'D9 and it can read the dashboard');
+  const d2 = await signIn(ADMIN, NEWPW);
+  check((await rpc('admin_verify_after_reset', {}, d2.body.access_token)).body === 'none', 'D10 the next sign-in needs the emailed code again (one use only)');
+  check(refused(await rpc('admin_dashboard', { p_range: 'today' }, d2.body.access_token)), 'D11 and cannot read the dashboard');
+  const dr2 = await svc('admin_reset_issue', { p_email: ADMIN });
+  psql("update public.admin_reset_challenges set created_at = now() - interval '2 minutes'");
+  const dr3 = await svc('admin_reset_issue', { p_email: ADMIN });
+  check((await svc('admin_reset_confirm', { p_email: ADMIN, p_code: dr3.body.code, p_password: NEWPW + 'x' })).body === 'ok', 'D12 (setup) a second reset');
+  psql("update public.admin_reset_signins set expires_at = now() - interval '1 second'");
+  const d3 = await signIn(ADMIN, NEWPW + 'x');
+  check((await rpc('admin_verify_after_reset', {}, d3.body.access_token)).body === 'none', 'D13 an expired marker (more than 10 minutes later) gives none');
+  const rid2 = psql("select id from public.profiles where role = 'resident' limit 1");
+  check(refused(await rpc('admin_verify_after_reset', {}, d3.body.access_token.slice(0, -3) + 'AAA')), 'D14 a tampered token is refused');
+  check(psql(`select count(*) from public.audit_log where action = 'admin_signed_in_after_reset' and created_at >= '${dStart}'`) === '1', 'D15 the one use is in the audit log');
+  resetDb();
+  psql(`update auth.users set encrypted_password = extensions.crypt('${OLD}', extensions.gen_salt('bf', 10)) where id = '${ADMIN_ID}'`);
+
   console.log('--- C. The Edge Function over HTTP (skipped if it is not being served)');
   const probe = await call('/functions/v1/admin-password-reset', { body: {} });
-  if (probe.status === 404 || probe.status === 0) console.log('SKIP the function is not served (run: supabase functions serve --env-file <file with ADMIN_MAIL_MODE=dev-log>)');
+  if (probe.status === 404 || probe.status === 0 || probe.status === 503) console.log('SKIP the function is not served (run: supabase functions serve --env-file <file with ADMIN_MAIL_MODE=dev-log>)');
   else {
     check((await call('/functions/v1/admin-password-reset', { method: 'GET' })).status === 405, 'C1 GET is refused');
     check((await call('/functions/v1/admin-password-reset', { body: { action: 'request' } })).status === 400, 'C2 a body without an email is refused');

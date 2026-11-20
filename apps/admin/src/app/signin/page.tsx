@@ -9,7 +9,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   return (
     <SignInShell>
       {e === 'invited' ? <div className="note g" role="status" style={{ marginBottom: 12 }}>Your account is ready. Sign in with your email and password. A code is emailed to you on the next step.</div> : null}
-      {e === 'reset' ? <div className="note g" role="status" style={{ marginBottom: 12 }}>Your password was changed. Sign in with your email and the new password. A code is emailed to you on the next step.</div> : null}
+      {e === 'reset' ? <div className="note g" role="status" style={{ marginBottom: 12 }}>Your password was changed. Sign in with your email and the new password.</div> : null}
       {e === 'idle' ? <div className="note g" role="status" style={{ marginBottom: 12 }}>You were signed out after 30 minutes without activity. Sign in again to continue.</div> : null}
       <SignInForm notAdmin={e === 'notadmin'} siteKey={siteKey} nonce={nonce} />
     </SignInShell>
