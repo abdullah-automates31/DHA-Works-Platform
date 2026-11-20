@@ -26,9 +26,9 @@ import {
   type QuoteInput,
 } from '@/features/quote/rules';
 import { useJobInProgress } from '@/features/feed/useJobInProgress';
-import { minutesUntilVisit, needsBusyEstimate, parseBusyMinutes } from '@/features/quote/busy';
+import { minutesUntilVisit, needsBusyEstimate } from '@/features/quote/busy';
 import { claimJob, reviseQuote } from '@/features/quote/submit';
-import { BusyTimeSection, type BusyAnswer } from '@/components/BusyTimeSection';
+import { CurrentJobTimeScreen } from '@/components/CurrentJobTimeScreen';
 import { t, type TranslationKey } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
@@ -93,7 +93,7 @@ export default function QuoteScreen() {
       ) : null}
 
       {job && (job.standing === 'none' || job.standing === 'interested') ? (
-        <QuoteForm jobId={job.id} when={job.when} preferred={job.preferred} onAccepted={() => router.replace(statusHref(job.id))} />
+        <QuoteForm jobId={job.id} when={job.when} preferred={job.preferred} next={{ code: job.code, title: job.title, phase: job.phase }} onAccepted={() => router.replace(statusHref(job.id))} />
       ) : null}
     </View>
   );
@@ -151,20 +151,18 @@ function ChangeQuote({ jobId, when, onDone }: { jobId: string; when: string; onD
 
 type Preferred = { date: string | null; from: string | null };
 
-function QuoteForm({ jobId, when, preferred, onAccepted, revise }: { jobId: string; when: string; preferred?: Preferred; onAccepted: () => void; revise?: Revise }) {
+function QuoteForm({ jobId, when, preferred, next, onAccepted, revise }: { jobId: string; when: string; preferred?: Preferred; next?: { code: string; title: string; phase: number }; onAccepted: () => void; revise?: Revise }) {
+  const router = useRouter();
   const [input, setInput] = useState<QuoteInput>(revise?.input ?? { labour: '', withMaterials: false, items: [{ name: '', price: '' }] });
   const inProgress = useJobInProgress();
   const busy = Boolean(inProgress);
-  const [busyText, setBusyText] = useState('');
-  const [busyAnswer, setBusyAnswer] = useState<BusyAnswer>(null);
   // the database refused for a missing estimate (its window is a setting and may differ from the app's default): ask after all
   const [forced, setForced] = useState(false);
-  // A worker in the middle of another job is asked about the current job (design W12d) only when the customer's visit is soon
-  // (migration 0070). A visit tomorrow needs no question. Changing a sent quote never asks again.
+  // A worker in the middle of another job is asked about the current job (design W12d, its own screen after the price) only when
+  // the customer's visit is soon (migration 0070). A visit tomorrow needs no question. Changing a sent quote never asks again.
   const soon = Boolean(preferred) && needsBusyEstimate(preferred as Preferred, new Date());
   const needsBusyTime = busy && !revise && (soon || forced);
-  const typedMinutes = parseBusyMinutes(busyText);
-  const busyMinutes = busyAnswer === 'yes' ? minutesUntilVisit(preferred ?? { date: null, from: null }, new Date()) : busyAnswer === 'no' ? typedMinutes : null;
+  const [step, setStep] = useState<'price' | 'time'>('price');
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +173,7 @@ function QuoteForm({ jobId, when, preferred, onAccepted, revise }: { jobId: stri
   };
 
   const errors = validateQuote(input);
-  const valid = isQuoteValid(input) && (!needsBusyTime || busyMinutes !== null);
+  const valid = isQuoteValid(input);
   const labour = parseAmount(input.labour);
   const materials = materialsTotal(input);
   const total = computeTotal(input);
@@ -188,7 +186,7 @@ function QuoteForm({ jobId, when, preferred, onAccepted, revise }: { jobId: stri
     set({ items: rest.length > 0 ? rest : [{ name: '', price: '' }] });
   };
 
-  async function accept() {
+  async function accept(busyMinutes: number | null = null) {
     setError(null);
     setSending(true);
     const result = revise
@@ -199,46 +197,40 @@ function QuoteForm({ jobId, when, preferred, onAccepted, revise }: { jobId: stri
       onAccepted(); // claimed: locked to this worker until the customer decides (0043); changed: the customer is told (0044)
       return;
     }
-    if (result.key === 'quote.errors.busyEta') setForced(true);
+    if (result.key === 'quote.errors.busyEta') {
+      setForced(true);
+      setStep('time'); // the database wants the answer after all: show the screen that asks for it
+    }
     setError(t(result.key));
   }
 
-  function onSend() {
-    if (sending) return;
-    setTouched(true);
-    if (!valid) return;
+  function confirmAndSend(busyMinutes: number | null) {
     // Accepting locks the job to this worker, so ask first.
     const ask = revise
       ? { title: t('quote.changeConfirmTitle'), body: t('quote.changeConfirmBody', { total: formatRupees(total) }), yes: t('quote.changeConfirmYes') }
       : { title: t('quote.confirmTitle'), body: t('quote.confirmBody', { total: formatRupees(total) }), yes: t('quote.confirmYes') };
     Alert.alert(ask.title, ask.body, [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: ask.yes, onPress: () => void accept() },
+      { text: ask.yes, onPress: () => void accept(busyMinutes) },
     ]);
+  }
+
+  function onSend() {
+    if (sending) return;
+    setTouched(true);
+    if (!valid) return;
+    if (needsBusyTime) {
+      setError(null);
+      setStep('time'); // the price is filled in: now ask how long the current job will take
+      return;
+    }
+    confirmAndSend(null);
   }
 
   return (
     <>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          {needsBusyTime ? (
-            <BusyTimeSection
-              jobTitle={inProgress?.title ?? ''}
-              visitWhen={when}
-              answer={busyAnswer}
-              onAnswer={(a) => {
-                setBusyAnswer(a);
-                if (error) setError(null);
-              }}
-              text={busyText}
-              onChange={(v) => {
-                setBusyText(v);
-                if (error) setError(null);
-              }}
-              invalid={touched && busyMinutes === null}
-            />
-          ) : null}
-
           <LabeledInput
             label={t('quote.labour')}
             value={input.labour}
@@ -328,8 +320,25 @@ function QuoteForm({ jobId, when, preferred, onAccepted, revise }: { jobId: stri
           {touched && errors.total ? <FieldError>{t('quote.errors.totalHint')}</FieldError> : null}
           {error ? <FieldError>{error}</FieldError> : null}
         </ScrollView>
-        <BottomBar hideArrow label={revise ? t('quote.changeSend') : t('quote.send')} onPress={onSend} loading={sending} disabled={!valid} />
+        <BottomBar hideArrow label={revise ? t('quote.changeSend') : needsBusyTime ? t('common.continue') : t('quote.send')} onPress={onSend} loading={sending} disabled={!valid} />
       </KeyboardAvoidingView>
+
+      {step === 'time' && inProgress && next ? (
+        <CurrentJobTimeScreen
+          current={inProgress}
+          next={{ ...next, when }}
+          visitWhen={when}
+          freeByMinutes={minutesUntilVisit(preferred ?? { date: null, from: null }, new Date())}
+          sending={sending}
+          error={error}
+          onBack={() => {
+            setError(null);
+            setStep('price');
+          }}
+          onOpenCurrent={() => router.push(statusHref(inProgress.id))}
+          onSend={(minutes) => confirmAndSend(minutes)}
+        />
+      ) : null}
     </>
   );
 }

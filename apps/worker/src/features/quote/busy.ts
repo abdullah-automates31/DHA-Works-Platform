@@ -80,3 +80,11 @@ export function minutesUntilVisit(preferred: { date: string | null; from: string
   const minutes = Math.ceil((start - now.getTime()) / 60_000);
   return Math.min(BUSY_ETA_MAX, Math.max(BUSY_ETA_MIN, minutes));
 }
+
+/** "10:40 AM": a stored time shown in the phone's local time (for "Started 10:40 AM"); empty when missing or not a date. */
+export function clockLabel(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return finishTimeLabel(0, d);
+}

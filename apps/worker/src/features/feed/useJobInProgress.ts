@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
 
-export type JobInProgress = { id: string; title: string };
+export type JobInProgress = { id: string; title: string; code: string; phase: number; startedAt: string | null };
 
 /**
  * The job this worker has started and not yet marked complete, or null. While there is one, the database hides every new
@@ -17,14 +17,14 @@ export function useJobInProgress(): JobInProgress | null {
       let live = true;
       void supabase
         .from('worker_jobs')
-        .select('id, title')
+        .select('id, title, code, phase, started_at')
         .eq('is_mine', true)
         .eq('status', 'in_progress')
         .limit(1)
         .then(({ data, error }) => {
           if (!live || error) return;
           const row = data?.[0];
-          setJob(row?.id ? { id: row.id, title: row.title ?? '' } : null);
+          setJob(row?.id ? { id: row.id, title: row.title ?? '', code: row.code ?? '', phase: row.phase ?? 0, startedAt: row.started_at ?? null } : null);
         });
       return () => {
         live = false;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { BUSY_CHIPS, BUSY_ETA_MAX, BUSY_ETA_MIN, BUSY_ETA_QUICK, busyEtaLabel, chipLabel, finishTimeLabel, minutesUntilVisit, needsBusyEstimate, parseBusyMinutes, visitStartMs } from './busy.ts';
+import { BUSY_CHIPS, BUSY_ETA_MAX, BUSY_ETA_MIN, BUSY_ETA_QUICK, busyEtaLabel, chipLabel, clockLabel, finishTimeLabel, minutesUntilVisit, needsBusyEstimate, parseBusyMinutes, visitStartMs } from './busy.ts';
 import { buildSubmitArgs } from './rules.ts';
 
 test('the quick choices are inside what the database accepts', () => {
@@ -76,4 +76,11 @@ test('"free by the visit" is the minutes to the visit, inside 5 minutes to 3 day
   assert.equal(minutesUntilVisit({ date: '2026-11-20', from: '14:02:00' }, now), 5); // too close: raised to the minimum
   assert.equal(minutesUntilVisit({ date: '2026-12-31', from: '16:00:00' }, now), 4320); // far: capped
   assert.equal(minutesUntilVisit({ date: null, from: null }, now), null);
+});
+
+test('clock label for "Started 10:40 AM"', () => {
+  assert.equal(clockLabel(new Date(2026, 10, 20, 10, 40).toISOString()), '10:40 AM');
+  assert.equal(clockLabel(new Date(2026, 10, 20, 0, 5).toISOString()), '12:05 AM');
+  assert.equal(clockLabel(null), '');
+  assert.equal(clockLabel('nope'), '');
 });
