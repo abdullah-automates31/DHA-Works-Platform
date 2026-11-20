@@ -50,7 +50,7 @@ export async function decideAction(_prev: DecideState, formData: FormData): Prom
 
 /**
  * Lets a rejected applicant apply again (migration 0054): the application goes back to "needs changes" with the reason
- * staff wrote. The database checks the verified session, the fresh code, the status and the reason.
+ * staff wrote. The database checks the verified session (the code is asked at sign-in only, migration 0060), the status and the reason.
  */
 export async function reopenAction(_prev: DecideState, formData: FormData): Promise<DecideState> {
   const { supabase } = await requireAdmin();

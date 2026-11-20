@@ -1,5 +1,7 @@
 # Admin portal: QA log for the Saturday 14 Nov 2026 handover
 
+> **Update 21 Nov 2026 (read this first):** since migration 0060 (owner decision, 18 Nov) the emailed six-digit code is asked **only at sign-in**. There is no step-up code any more: approving or rejecting an applicant, cancelling a job, changing settings and the other sensitive actions need a **verified session** (password plus the sign-in code), not a new code. Lines below that mention a step-up, a 15 minute freshness limit or the new-code page describe the state of 11 to 15 Nov and are kept as history. The open point "approving does not ask for a fresh code" is therefore decided: it does not, by choice, and the portal still audits every such action. The confirm page (/confirm) exists but is not reached.
+
 Local stack, real browser, fake `[FAKE]` data only. Updated as each pass is done.
 
 ## Thursday 12 Nov: local walkthrough
