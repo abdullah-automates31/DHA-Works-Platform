@@ -33,7 +33,7 @@ export function SearchBox({ action, q, placeholder, keep }: { action: string; q:
     <form className="srch" action={action} method="get" role="search">
       <Icon>{ICONS.search}</Icon>
       {/* key: a new search (or "Clear all") remounts the box so it never keeps old text. */}
-      <input key={q} name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} maxLength={80} />
+      <input key={q} name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} maxLength={80} autoComplete="off" />
       {Object.entries(keep ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
     </form>
   );
