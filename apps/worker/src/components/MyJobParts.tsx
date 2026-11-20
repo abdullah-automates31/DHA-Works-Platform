@@ -69,21 +69,17 @@ export function whoLine(job: MyJob): string {
     : t('myjobs.customerPhase', { phase: job.phase });
 }
 
-/** One card of W11. The whole card opens the job; the gold button on an "interested" job and "Record cash" go straight to their screens. */
-// Memoised like FeedJobCard: the three handlers take the job id and must be stable functions.
+/** One card of W11. No buttons: the whole card opens the job status screen (W12), where every action lives (create quote, start job, mark complete, record cash). */
+// Memoised like FeedJobCard: the handler takes the job id and must be a stable function.
 export const MyJobCard = memo(function MyJobCard({
   job,
   index,
   onOpen,
-  onQuote,
-  onCash,
   now,
 }: {
   job: MyJob;
   index: number;
   onOpen: (id: string) => void;
-  onQuote: (id: string) => void;
-  onCash: (id: string) => void;
   now: Date;
 }) {
   const kind = jobKind(job);
@@ -124,32 +120,14 @@ export const MyJobCard = memo(function MyJobCard({
         </View>
       ) : null}
 
-      {kind === 'interested' ? (
-        <Pressable accessibilityRole="button" onPress={() => onQuote(job.id)} style={[styles.btn, { backgroundColor: colors.gold }]}>
-          <Text style={[styles.btnText, { color: colors.greenDark }]}>{t('myjobs.createQuote')}</Text>
-        </Pressable>
-      ) : null}
-      {kind === 'scheduled' ? (
-        <View style={styles.btn}>
-          <Text style={styles.btnText}>{t('myjobs.startJob')}</Text>
-        </View>
-      ) : null}
-      {kind === 'in_progress' ? (
-        <View style={styles.btn}>
-          <Text style={styles.btnText}>{t('myjobs.markComplete')}</Text>
-        </View>
-      ) : null}
       {kind === 'completed' && action === 'waiting' ? (
         <View style={styles.visit}>
           <Text style={styles.visitText}>{t('myjobs.cashRecordedWaiting')}</Text>
         </View>
       ) : null}
       {kind === 'completed' && action === 'record_cash' ? (
-        <View style={styles.cashRow}>
+        <View style={styles.visit}>
           <Text style={styles.due}>{t('myjobs.dueInCash', { amount: formatRupees(job.myQuoteTotal ?? 0) })}</Text>
-          <Pressable accessibilityRole="button" onPress={() => onCash(job.id)} style={[styles.btn, { paddingHorizontal: 16 }]}>
-            <Text style={styles.btnText}>{t('myjobs.recordCash')}</Text>
-          </Pressable>
         </View>
       ) : null}
     </Pressable>
@@ -199,9 +177,6 @@ const styles = StyleSheet.create({
   price: { fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.green },
   visit: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   visitText: { fontFamily: fontFamily.bold, fontSize: 13, color: colors.muted },
-  btn: { height: 44, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  btnText: { fontFamily: fontFamily.extrabold, fontSize: 14, color: '#fff' },
-  cashRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   due: { flex: 1, fontFamily: fontFamily.bold, fontSize: 13, color: colors.muted },
   timeline: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16 },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },

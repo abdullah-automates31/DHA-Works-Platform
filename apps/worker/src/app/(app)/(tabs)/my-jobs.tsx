@@ -7,7 +7,7 @@ import { PrimaryButton } from '@/components/AuthForm';
 import { LoadMoreFooter } from '@/components/LoadMoreFooter';
 import { JobCardSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { MyJobCard } from '@/components/MyJobParts';
-import { cashHref, quoteHref, statusHref } from '@/features/job/routes';
+import { statusHref } from '@/features/job/routes';
 import { inTab, jobKind, type MyJobsTab } from '@/features/myjobs/rules';
 import { useMyJobs } from '@/features/myjobs/useMyJobs';
 import { t } from '@/i18n';
@@ -32,8 +32,6 @@ export default function MyJobsScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = useMemo(() => new Date(), [data]);
   const openJob = useCallback((id: string) => router.push(statusHref(id)), [router]);
-  const quoteJob = useCallback((id: string) => router.push(quoteHref(id)), [router]);
-  const cashJob = useCallback((id: string) => router.push(cashHref(id)), [router]);
 
   const jobs = data.status === 'ready' ? data.jobs.filter((j) => inTab(jobKind(j), tab)) : [];
 
@@ -90,7 +88,7 @@ export default function MyJobsScreen() {
 
         {/* Every job the worker engaged with opens its status screen (W12); a rejected quote is a plain record. */}
         {jobs.map((job, index) => (
-          <MyJobCard key={job.id} job={job} index={index} now={now} onOpen={openJob} onQuote={quoteJob} onCash={cashJob} />
+          <MyJobCard key={job.id} job={job} index={index} now={now} onOpen={openJob} />
         ))}
 
         {data.status === 'ready' ? (
