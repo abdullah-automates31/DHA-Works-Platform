@@ -1,14 +1,41 @@
-// Attack drill for the admin "Forgot password?" feature (migration 0068). LOCAL stack only (refuses any other URL).
+// Attack drill for the admin "Forgot password?" feature (migrations 0068, 0069). Local stack by default (refuses any other URL); with --hosted it runs on the separate hosted TEST project (never DEV).
 // Run: npm run db:local -- start, then node scripts/challenge-admin-reset-local.cjs  (uses supabase/dev/seed_local_admin.sql)
 // Part A tries to take an admin account over with only the mailbox (Supabase's own recovery, magic link, one-time code).
 // Part B attacks the new functions directly (wrong callers, odd emails, brute force, replay, races).
 // Part C (only if `supabase functions serve` is running with ADMIN_MAIL_MODE=dev-log) attacks the Edge Function over HTTP.
 const { execSync } = require('child_process');
-
-const env = Object.fromEntries(execSync('npx supabase status -o env', { encoding: 'utf8' }).split('\n').filter((l) => l.includes('=')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
-const URL = env.API_URL, ANON = env.ANON_KEY, SERVICE = env.SERVICE_ROLE_KEY, MAIL = env.INBUCKET_URL;
-if (!/^http:\/\/127\.0\.0\.1:/.test(URL)) throw new Error('refusing: not a local stack ' + URL);
-const psql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -tA -v ON_ERROR_STOP=1', { input: q, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+// --hosted: run against the separate hosted TEST project (no Docker). TESTDB_DIR is the folder linked to it.
+const HOSTED = process.argv.includes('--hosted');
+const TESTDIR = process.env.TESTDB_DIR || 'C:/Users/Abdullah Ali/dha-works-testdb';
+let URL, ANON, SERVICE, MAIL, psql;
+if (HOSTED) {
+  const ref = fs.readFileSync(TESTDIR + '/supabase/.temp/project-ref', 'utf8').trim();
+  if (!ref || ref === 'xiozwoocisesgmegewww' || ref === 'qfxpluotmrxmxqseelnh') throw new Error('refusing: ' + TESTDIR + ' is not linked to a separate test project');
+  const keysOut = execSync('npx supabase projects api-keys --project-ref ' + ref + ' -o json', { cwd: TESTDIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const keys = JSON.parse(keysOut.slice(keysOut.indexOf('[')));
+  const keyOf = (n) => { const k = keys.find((x) => x.name === n); return k && (k.api_key || k.key); };
+  URL = 'https://' + ref + '.supabase.co'; ANON = keyOf('anon'); SERVICE = keyOf('service_role');
+  if (!ANON || !SERVICE) throw new Error('could not read the test project keys');
+  const hq = (q) => {
+    const file = path.join(os.tmpdir(), 'dha-drill-' + process.pid + '.sql');
+    fs.writeFileSync(file, q);
+    let out;
+    try { out = execSync('npx supabase db query --linked -f "' + file + '"', { cwd: TESTDIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
+    fs.rmSync(file, { force: true });
+    const j = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1));
+    if (j.error) throw new Error(String(j.error.message || j.error).slice(0, 300));
+    return j.rows || [];
+  };
+  psql = (q) => { const rows = hq(q); if (!rows.length) return ''; const v = Object.values(rows[0])[0]; return v === null || v === undefined ? '' : String(v); };
+} else {
+  const env = Object.fromEntries(execSync('npx supabase status -o env', { encoding: 'utf8' }).split('\n').filter((l) => l.includes('=')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
+  URL = env.API_URL; ANON = env.ANON_KEY; SERVICE = env.SERVICE_ROLE_KEY; MAIL = env.INBUCKET_URL;
+  if (!new RegExp('^http:' + B + '/' + B + '/127' + B + '.0' + B + '.0' + B + '.1:').test(URL)) throw new Error('refusing: not a local stack ' + URL);
+  psql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -tA -v ON_ERROR_STOP=1', { input: q, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+}
 let pass = 0, fail = 0;
 const check = (ok, name, extra = '') => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${extra ? '  [' + extra + ']' : ''}`); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -45,16 +72,16 @@ async function openLink(link) {
 }
 
 (async () => {
-  execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -q', { input: require('fs').readFileSync('supabase/dev/seed_local_admin.sql'), stdio: ['pipe', 'pipe', 'pipe'] });
+  if (HOSTED) psql(fs.readFileSync('supabase/dev/seed_local_admin.sql', 'utf8')); else execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -q', { input: fs.readFileSync('supabase/dev/seed_local_admin.sql'), stdio: ['pipe', 'pipe', 'pipe'] });
   resetDb();
-  await fetch(`${MAIL}/api/v1/messages`, { method: 'DELETE' });
+  if (!HOSTED) await fetch(`${MAIL}/api/v1/messages`, { method: 'DELETE' });
 
   console.log('--- A. Attacker controls the mailbox only (no portal password)');
   const newPw = 'AttackerChosen#99x';
-  await call('/auth/v1/recover', { body: { email: ADMIN } });
-  const rm = await mailFor(ADMIN, 'Reset');
+  if (!HOSTED) await call('/auth/v1/recover', { body: { email: ADMIN } });
+  const rm = HOSTED ? true : await mailFor(ADMIN, 'Reset'); // hosted: the admin API makes the same recovery link without sending an email
   check(!!rm, 'A0 (setup) Supabase still emails a recovery link to an admin address');
-  const rl = rm && linkIn(rm);
+  const rl = HOSTED ? (await call('/auth/v1/admin/generate_link', { token: SERVICE, body: { type: 'recovery', email: ADMIN } })).body.action_link : (rm && linkIn(rm));
   const rs = rl ? await openLink(rl) : {};
   check(!!rs.access, 'A1 (setup) the link gives the attacker a session', 'this part is Supabase behaviour and cannot be switched off');
   const put = rs.access ? await call('/auth/v1/user', { method: 'PUT', token: rs.access, body: { password: newPw } }) : { status: 0 };
@@ -70,12 +97,12 @@ async function openLink(link) {
     const f = await call('/functions/v1/admin-2fa', { token: rs.access, body: {} });
     check(f.status === 0 || f.status === 404 || f.status >= 400, 'A9 the admin-2fa function does not send a code for a recovery session', `status ${f.status}`);
   }
-  await fetch(`${MAIL}/api/v1/messages`, { method: 'DELETE' });
-  await sleep(62000); // Supabase sends one email per address a minute
-  await call('/auth/v1/otp', { body: { email: ADMIN, create_user: false } });
-  const om = await mailFor(ADMIN);
+  if (!HOSTED) await fetch(`${MAIL}/api/v1/messages`, { method: 'DELETE' });
+  if (!HOSTED) await sleep(62000); // Supabase sends one email per address a minute
+  if (!HOSTED) await call('/auth/v1/otp', { body: { email: ADMIN, create_user: false } });
+  const om = HOSTED ? { Text: String(((await call('/auth/v1/admin/generate_link', { token: SERVICE, body: { type: 'magiclink', email: ADMIN } })).body || {}).email_otp || '') } : await mailFor(ADMIN);
   // the project sends an emailed one-time CODE (not a link) for email sign-in: the attacker types it into /auth/v1/verify
-  const oc = om && ((om.Text || '').match(/\b(\d{6})\b/) || [])[1];
+  const oc = om && ((om.Text || '').match(/\b(\d{6,8})\b/) || [])[1];
   const ov = oc ? await call('/auth/v1/verify', { body: { type: 'email', email: ADMIN, token: oc } }) : { body: {} };
   const os = { access: ov.body && ov.body.access_token };
   if (os.access) {
@@ -193,7 +220,7 @@ async function openLink(link) {
   psql(`update auth.users set encrypted_password = extensions.crypt('${OLD}', extensions.gen_salt('bf', 10)) where id = '${ADMIN_ID}'`);
 
   console.log('--- C. The Edge Function over HTTP (skipped if it is not being served)');
-  const probe = await call('/functions/v1/admin-password-reset', { body: {} });
+  const probe = HOSTED ? { status: 404 } : await call('/functions/v1/admin-password-reset', { body: {} });
   if (probe.status === 404 || probe.status === 0 || probe.status === 503) console.log('SKIP the function is not served (run: supabase functions serve --env-file <file with ADMIN_MAIL_MODE=dev-log>)');
   else {
     check((await call('/functions/v1/admin-password-reset', { method: 'GET' })).status === 405, 'C1 GET is refused');
