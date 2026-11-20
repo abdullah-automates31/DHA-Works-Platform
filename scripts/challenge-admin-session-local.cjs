@@ -4,10 +4,18 @@
 const { execSync } = require('child_process');
 const crypto = require('crypto');
 
-const env = Object.fromEntries(execSync('npx supabase status -o env', { encoding: 'utf8' }).split('\n').filter((l) => l.includes('=')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
-const URL = env.API_URL, ANON = env.ANON_KEY;
-if (!/^http:\/\/127\.0\.0\.1:/.test(URL)) throw new Error('refusing: not a local stack ' + URL);
-const sql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -tA -v ON_ERROR_STOP=1', { input: q, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+// --hosted: run against the separate hosted TEST project instead of the local Docker stack (see scripts/lib/hosted-test.cjs).
+const HOSTED = process.argv.includes('--hosted');
+let URL, ANON, sql;
+if (HOSTED) {
+  const h = require('./lib/hosted-test.cjs').hostedContext();
+  URL = h.url; ANON = h.anon; sql = h.scalar;
+} else {
+  const env = Object.fromEntries(execSync('npx supabase status -o env', { encoding: 'utf8' }).split('\n').filter((l) => l.includes('=')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
+  URL = env.API_URL; ANON = env.ANON_KEY;
+  if (!/^http:\/\/127\.0\.0\.1:/.test(URL)) throw new Error('refusing: not a local stack ' + URL);
+  sql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -tA -v ON_ERROR_STOP=1', { input: q, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+}
 let pass = 0, fail = 0;
 const check = (ok, name, extra = '') => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${extra ? '  [' + extra + ']' : ''}`); };
 
@@ -37,7 +45,8 @@ async function signIn() {
 }
 
 (async () => {
-  execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -q', { input: require('fs').readFileSync('supabase/dev/seed_local_admin.sql'), stdio: ['pipe', 'ignore', 'inherit'] });
+  if (HOSTED) sql(require('fs').readFileSync('supabase/dev/seed_local_admin.sql', 'utf8'));
+  else execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -q', { input: require('fs').readFileSync('supabase/dev/seed_local_admin.sql'), stdio: ['pipe', 'ignore', 'inherit'] });
   sql("delete from auth.mfa_factors where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from public.admin_verified_sessions where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from auth.sessions where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'; delete from public.admin_factor_challenges where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';");
 
   console.log('--- A. Attacker has the password but not the mailbox');

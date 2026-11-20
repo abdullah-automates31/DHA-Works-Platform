@@ -220,8 +220,8 @@ async function openLink(link) {
   psql(`update auth.users set encrypted_password = extensions.crypt('${OLD}', extensions.gen_salt('bf', 10)) where id = '${ADMIN_ID}'`);
 
   console.log('--- C. The Edge Function over HTTP (skipped if it is not being served)');
-  const probe = HOSTED ? { status: 404 } : await call('/functions/v1/admin-password-reset', { body: {} });
-  if (probe.status === 404 || probe.status === 0 || probe.status === 503) console.log('SKIP the function is not served (run: supabase functions serve --env-file <file with ADMIN_MAIL_MODE=dev-log>)');
+  const probe = await call('/functions/v1/admin-password-reset', { body: {} }); // hosted: deployed on the test project with Cloudflare's public always-pass test secret and NO mail secrets
+  if (probe.status === 404 || probe.status === 0 || probe.status === 503) console.log('SKIP the function is not served (local: supabase functions serve --env-file <file with ADMIN_MAIL_MODE=dev-log>; hosted: deploy admin-password-reset and admin-2fa to the test project)');
   else {
     check((await call('/functions/v1/admin-password-reset', { method: 'GET' })).status === 405, 'C1 GET is refused');
     check((await call('/functions/v1/admin-password-reset', { body: { action: 'request' } })).status === 400, 'C2 a body without an email is refused');
@@ -229,14 +229,25 @@ async function openLink(link) {
     const raw = await fetch(URL + '/functions/v1/admin-password-reset', { method: 'POST', headers: { apikey: ANON, authorization: `Bearer ${ANON}` }, body: '{not json' });
     check(raw.status === 400, 'C4 bad JSON is refused');
     const q = await call('/functions/v1/admin-password-reset', { body: { action: 'request', email: ADMIN, turnstile: 'x' } });
-    check(q.status === 200 && q.body.status === 'sent' && !JSON.stringify(q.body).match(/\d{6}/), 'C5 a request for a real admin says sent and never includes the code', JSON.stringify(q.body));
+    // local: the mail is printed to the log and the answer is "sent". hosted: the test project has no mail secrets, so the function must fail closed ("mail_failed", HTTP 502) and still never include the code.
+    if (HOSTED) check(q.status === 502 && q.body.status === 'mail_failed' && !JSON.stringify(q.body).match(/\d{6}/), 'C5 with no mail secrets the request fails closed (mail_failed) and never includes the code', JSON.stringify(q.body));
+    else check(q.status === 200 && q.body.status === 'sent' && !JSON.stringify(q.body).match(/\d{6}/), 'C5 a request for a real admin says sent and never includes the code', JSON.stringify(q.body));
     check((await call('/functions/v1/admin-password-reset', { body: { action: 'request', email: 'nobody@dha-local.test', turnstile: 'x' } })).body.status === 'not_admin', 'C6 an unknown address is told so');
     check((await call('/functions/v1/admin-password-reset', { body: { action: 'confirm', email: ADMIN, code: '12345', password: 'A long new password 1' } })).status === 400, 'C7 a short code is refused before the database');
     // end to end: the function mails the code (dev log), the confirm call sets the password, the auth service accepts it
-    const logs = process.env.FN_LOG ? require('fs').readFileSync(process.env.FN_LOG, 'utf8') : execSync('docker logs --tail 60 supabase_edge_runtime_dha-works', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    // set FN_LOG to the file that `supabase functions serve` writes to
-    const m = [...logs.matchAll(/admin-password-reset dev\] to=(\S+) .*code is (\d{6})/g)].pop();
-    check(!!m && m[1] === ADMIN, 'C8 (setup) the code was mailed to the address on the account', m ? m[1] : 'no log line');
+    let m;
+    if (HOSTED) {
+      // no mail on the test project: age the code the failed request made, then take a fresh one straight from the database
+      psql("update public.admin_reset_challenges set created_at = now() - interval '2 minutes'");
+      const hi = await svc('admin_reset_issue', { p_email: ADMIN });
+      m = hi.body && hi.body.status === 'sent' ? [null, hi.body.email, hi.body.code] : null;
+      check(!!m && m[1] === ADMIN, 'C8 (setup) a code exists for the confirm tests and belongs to the address on the account', m ? m[1] : JSON.stringify(hi.body));
+    } else {
+      const logs = process.env.FN_LOG ? require('fs').readFileSync(process.env.FN_LOG, 'utf8') : execSync('docker logs --tail 60 supabase_edge_runtime_dha-works', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      // set FN_LOG to the file that `supabase functions serve` writes to
+      m = [...logs.matchAll(/admin-password-reset dev\] to=(\S+) .*code is (\d{6})/g)].pop();
+      check(!!m && m[1] === ADMIN, 'C8 (setup) the code was mailed to the address on the account', m ? m[1] : 'no log line');
+    }
     if (m) {
       const wrongC = m[2] === '000000' ? '000001' : '000000';
       check((await call('/functions/v1/admin-password-reset', { body: { action: 'confirm', email: ADMIN, code: wrongC, password: 'End to end password 4' } })).body.status === 'wrong', 'C9 a wrong code is wrong');
@@ -245,11 +256,17 @@ async function openLink(link) {
       check(!!(await signIn(ADMIN, 'End to end password 4')).body.access_token, 'C12 and the real auth service signs in with it');
     }
     // a recovery session cannot ask the admin-2fa function for a code (the function is served now)
-    await fetch(`${MAIL}/api/v1/messages`, { method: 'DELETE' });
-    await sleep(62000);
-    await call('/auth/v1/recover', { body: { email: ADMIN } });
-    const rm2 = await mailFor(ADMIN, 'Reset');
-    const rs2 = rm2 ? await openLink(linkIn(rm2)) : {};
+    let rs2;
+    if (HOSTED) {
+      const gl2 = (await call('/auth/v1/admin/generate_link', { token: SERVICE, body: { type: 'recovery', email: ADMIN } })).body;
+      rs2 = gl2.action_link ? await openLink(gl2.action_link) : {};
+    } else {
+      await fetch(`${MAIL}/api/v1/messages`, { method: 'DELETE' });
+      await sleep(62000);
+      await call('/auth/v1/recover', { body: { email: ADMIN } });
+      const rm2 = await mailFor(ADMIN, 'Reset');
+      rs2 = rm2 ? await openLink(linkIn(rm2)) : {};
+    }
     if (rs2.access) {
       const f2 = await call('/functions/v1/admin-2fa', { token: rs2.access, body: {} });
       check(f2.status === 403 || f2.status === 401, 'C13 admin-2fa refuses to send a code for a recovery session', `status ${f2.status}`);

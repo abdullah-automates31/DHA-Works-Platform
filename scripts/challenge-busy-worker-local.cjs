@@ -8,11 +8,23 @@
 // see supabase/dev/seed_local_attack_lab.sql.
 const { execSync, spawn } = require('child_process');
 const root = process.cwd();
-const env = execSync('npx supabase status -o env', { cwd: root, encoding: 'utf8' });
-const anon = /ANON_KEY="([^"]+)"/.exec(env)[1];
-const api = /API_URL="([^"]+)"/.exec(env)[1];
-if (!/127\.0\.0\.1|localhost/.test(api)) throw new Error('local only');
-const ids = execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -At -c "select id from atk.jobs order by n"', { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);
+// --hosted: run against the separate hosted TEST project instead of the local Docker stack (scripts/lib/hosted-test.cjs).
+// It seeds the lab itself and expects a clean project (node scripts/test-db-hosted.cjs --reset --no-tests first).
+const HOSTED = process.argv.includes('--hosted');
+let anon, api, ids, sql;
+if (HOSTED) {
+  const h = require('./lib/hosted-test.cjs').hostedContext();
+  anon = h.anon; api = h.url; sql = h.scalar;
+  h.rows(require('fs').readFileSync('supabase/dev/seed_local_attack_lab.sql', 'utf8'));
+  ids = h.rows('select id from atk.jobs order by n').map((r) => r.id);
+} else {
+  const env = execSync('npx supabase status -o env', { cwd: root, encoding: 'utf8' });
+  anon = /ANON_KEY="([^"]+)"/.exec(env)[1];
+  api = /API_URL="([^"]+)"/.exec(env)[1];
+  if (!/127\.0\.0\.1|localhost/.test(api)) throw new Error('local only');
+  ids = execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -At -c "select id from atk.jobs order by n"', { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);
+  sql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -At -c "' + q.replace(/"/g, '\\"') + '"', { encoding: 'utf8' }).trim();
+}
 const J = (n) => ids[n - 1]; // 1..40 customer one, 41..50 customer two
 let pass = 0, fail = 0;
 const check = (name, ok, detail) => { ok ? pass++ : fail++; console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : '  <-- ' + detail)); };
@@ -20,7 +32,6 @@ const login = async (e) => (await (await fetch(api + '/auth/v1/token?grant_type=
 const H = (t, x) => ({ apikey: anon, authorization: 'Bearer ' + (t || anon), 'content-type': 'application/json', ...(x || {}) });
 async function rpc(n, b, t) { const r = await fetch(api + '/rest/v1/rpc/' + n, { method: 'POST', headers: H(t), body: JSON.stringify(b || {}) }); const x = await r.text(); let j; try { j = JSON.parse(x); } catch { j = {}; } return { status: r.status, msg: (j && j.message) || '', body: j }; }
 async function rest(p, t, m = 'GET', b) { const r = await fetch(api + '/rest/v1/' + p, { method: m, headers: H(t, { prefer: 'return=representation' }), body: b ? JSON.stringify(b) : undefined }); const x = await r.text(); let j; try { j = JSON.parse(x); } catch { j = x; } return { status: r.status, body: j }; }
-const sql = (q) => execSync('docker exec -i supabase_db_dha-works psql -U postgres -d postgres -At -c "' + q.replace(/"/g, '\\"') + '"', { encoding: 'utf8' }).trim();
 
 // Karachi calendar: a time on day +n at hh:mm, as an ISO timestamp with the +05:00 offset.
 const karachi = (n, hh, mm = 0) => {
