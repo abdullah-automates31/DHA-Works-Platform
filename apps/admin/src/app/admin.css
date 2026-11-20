@@ -2,6 +2,11 @@
 :root{--g:#0F4F31;--gd:#0A3D28;--gold:#E0B43A;--bg:#EEF4F1;--ink:#10261C;--mut:#4B6657;--line:#DCE6E0}
 .app{display:flex;min-height:960px;width:100%;font-family:var(--font-jakarta),'Plus Jakarta Sans',sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.4}
 .nav{width:248px;flex:none;background:var(--gd);color:#fff;display:flex;flex-direction:column;padding:24px 16px;gap:4px}
+.gsrch{display:flex;align-items:center;gap:8px;height:38px;margin:0 4px 10px;padding:0 12px;border-radius:12px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.16);color:#CFE3D6}
+.gsrch input{flex:1;min-width:0;border:0;outline:0;background:none;color:#fff;font:inherit;font-size:13.5px;font-weight:600}
+.gsrch input::placeholder{color:#B9D3C4}
+.gsrch input:focus-visible{outline:0}
+.gsrch:focus-within{background:rgba(255,255,255,.16);border-color:var(--gold)}
 .brand{display:flex;align-items:center;gap:12px;padding:4px 8px 18px}
 .mark{width:40px;height:40px;border-radius:12px;background:var(--gold);color:#241B00;font-weight:800;display:grid;place-items:center;font-size:15px;flex:none}
 .brand b{font-size:16px;font-weight:800;display:block;line-height:1.15}
