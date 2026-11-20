@@ -6,10 +6,10 @@ const crypto = require('crypto');
 
 // --hosted: run against the separate hosted TEST project instead of the local Docker stack (see scripts/lib/hosted-test.cjs).
 const HOSTED = process.argv.includes('--hosted');
-let URL, ANON, sql;
+let URL, ANON, sql, HSVC;
 if (HOSTED) {
   const h = require('./lib/hosted-test.cjs').hostedContext();
-  URL = h.url; ANON = h.anon; sql = h.scalar;
+  URL = h.url; ANON = h.anon; sql = h.scalar; HSVC = h.service;
 } else {
   const env = Object.fromEntries(execSync('npx supabase status -o env', { encoding: 'utf8' }).split('\n').filter((l) => l.includes('=')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }));
   URL = env.API_URL; ANON = env.ANON_KEY;
@@ -114,8 +114,17 @@ async function signIn() {
 
   console.log('--- F. A stranger signs up with an email (email sign-up stays on for staff invites) and tries to become an applicant');
   const mail = `stranger${Date.now()}@evil.test`;
-  const su = await call('/auth/v1/signup', { body: { email: mail, password: 'Stranger#2026x' } });
-  const st = su.body.access_token || (su.body.session && su.body.session.access_token);
+  let su, st;
+  if (HOSTED) {
+    // A hosted project asks new sign-ups to confirm their email first (the local stack does not). Create the stranger already
+    // confirmed, as one who clicked the link would be: everything after this is the same attack.
+    await call('/auth/v1/admin/users', { token: HSVC, body: { email: mail, password: 'Stranger#2026x', email_confirm: true } });
+    su = await call('/auth/v1/token?grant_type=password', { body: { email: mail, password: 'Stranger#2026x' } });
+    st = su.body.access_token;
+  } else {
+    su = await call('/auth/v1/signup', { body: { email: mail, password: 'Stranger#2026x' } });
+    st = su.body.access_token || (su.body.session && su.body.session.access_token);
+  }
   check(!!st, 'F0 (setup) the email sign-up gives a session', `status ${su.status}`);
   if (st) {
     const reg = await rpc('register_profile', { p_role: 'resident', p_full_name: 'Fake Person', p_phone: '+923001234567' }, st);

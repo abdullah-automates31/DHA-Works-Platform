@@ -28,10 +28,12 @@ if (HOSTED) {
 const J = (n) => ids[n - 1]; // 1..40 customer one, 41..50 customer two
 let pass = 0, fail = 0;
 const check = (name, ok, detail) => { ok ? pass++ : fail++; console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : '  <-- ' + detail)); };
-const login = async (e) => (await (await fetch(api + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: anon, 'content-type': 'application/json' }, body: JSON.stringify({ email: e, password: 'Test#12345' }) })).json()).access_token;
+// A network hiccup (a dropped connection) is retried; the drill talks to a hosted project over the internet when run with --hosted.
+const fetchRetry = async (url, init) => { for (let i = 1; i <= 4; i++) { try { return await fetch(url, init); } catch (e) { if (i === 4) throw e; await new Promise((r) => setTimeout(r, 1500 * i)); } } };
+const login = async (e) => (await (await fetchRetry(api + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: anon, 'content-type': 'application/json' }, body: JSON.stringify({ email: e, password: 'Test#12345' }) })).json()).access_token;
 const H = (t, x) => ({ apikey: anon, authorization: 'Bearer ' + (t || anon), 'content-type': 'application/json', ...(x || {}) });
-async function rpc(n, b, t) { const r = await fetch(api + '/rest/v1/rpc/' + n, { method: 'POST', headers: H(t), body: JSON.stringify(b || {}) }); const x = await r.text(); let j; try { j = JSON.parse(x); } catch { j = {}; } return { status: r.status, msg: (j && j.message) || '', body: j }; }
-async function rest(p, t, m = 'GET', b) { const r = await fetch(api + '/rest/v1/' + p, { method: m, headers: H(t, { prefer: 'return=representation' }), body: b ? JSON.stringify(b) : undefined }); const x = await r.text(); let j; try { j = JSON.parse(x); } catch { j = x; } return { status: r.status, body: j }; }
+async function rpc(n, b, t) { const r = await fetchRetry(api + '/rest/v1/rpc/' + n, { method: 'POST', headers: H(t), body: JSON.stringify(b || {}) }); const x = await r.text(); let j; try { j = JSON.parse(x); } catch { j = {}; } return { status: r.status, msg: (j && j.message) || '', body: j }; }
+async function rest(p, t, m = 'GET', b) { const r = await fetchRetry(api + '/rest/v1/' + p, { method: m, headers: H(t, { prefer: 'return=representation' }), body: b ? JSON.stringify(b) : undefined }); const x = await r.text(); let j; try { j = JSON.parse(x); } catch { j = x; } return { status: r.status, body: j }; }
 
 // Karachi calendar: a time on day +n at hh:mm, as an ISO timestamp with the +05:00 offset.
 const karachi = (n, hh, mm = 0) => {
