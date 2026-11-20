@@ -46,3 +46,37 @@ export function chipLabel(minutes: number): string {
   const hours = minutes / 60;
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
+
+// ---- When is the "current job time" question needed? (migration 0070, owner request 20 Nov)
+// Only when the customer's visit is soon enough that the current job could still be running at the visit. The database
+// decides (app_settings busy_estimate_window_hours, default 6) and refuses a quote that lacks the answer; this mirrors the
+// default so the screen shows up first time instead of after a refusal.
+
+export const BUSY_WINDOW_HOURS = 6;
+const KARACHI_UTC_OFFSET_MINUTES = 5 * 60; // Pakistan has no daylight saving
+
+/** The visit start (epoch ms) from the job's date "2026-11-21" and start time "15:00:00" in Karachi time; null when the job has no date. */
+export function visitStartMs(preferred: { date: string | null; from: string | null }): number | null {
+  if (!preferred.date) return null;
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(preferred.date);
+  if (!d) return null;
+  const tm = /^(\d{2}):(\d{2})/.exec(preferred.from ?? '08:00'); // the database reads a missing start as 08:00
+  if (!tm) return null;
+  return Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3]), Number(tm[1]), Number(tm[2])) - KARACHI_UTC_OFFSET_MINUTES * 60_000;
+}
+
+/** True when the visit starts within the window from now (a visit already past is not "soon": the database refuses it anyway). */
+export function needsBusyEstimate(preferred: { date: string | null; from: string | null }, now: Date, windowHours: number = BUSY_WINDOW_HOURS): boolean {
+  const start = visitStartMs(preferred);
+  if (start === null) return false;
+  const ahead = start - now.getTime();
+  return ahead > 0 && ahead <= windowHours * 3_600_000;
+}
+
+/** "Yes, I will be free by the visit": the minutes from now to the visit start, kept inside what the database accepts. */
+export function minutesUntilVisit(preferred: { date: string | null; from: string | null }, now: Date): number | null {
+  const start = visitStartMs(preferred);
+  if (start === null) return null;
+  const minutes = Math.ceil((start - now.getTime()) / 60_000);
+  return Math.min(BUSY_ETA_MAX, Math.max(BUSY_ETA_MIN, minutes));
+}

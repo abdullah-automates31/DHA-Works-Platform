@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { BUSY_CHIPS, BUSY_ETA_MAX, BUSY_ETA_MIN, BUSY_ETA_QUICK, busyEtaLabel, chipLabel, finishTimeLabel, parseBusyMinutes } from './busy.ts';
+import { BUSY_CHIPS, BUSY_ETA_MAX, BUSY_ETA_MIN, BUSY_ETA_QUICK, busyEtaLabel, chipLabel, finishTimeLabel, minutesUntilVisit, needsBusyEstimate, parseBusyMinutes, visitStartMs } from './busy.ts';
 import { buildSubmitArgs } from './rules.ts';
 
 test('the quick choices are inside what the database accepts', () => {
@@ -48,4 +48,32 @@ test('a busy worker sends the minutes with the quote; a free worker sends nothin
   assert.equal(buildSubmitArgs('j', input, 60).p_busy_eta_minutes, 60);
   assert.ok(!('p_busy_eta_minutes' in buildSubmitArgs('j', input)));
   assert.ok(!('p_busy_eta_minutes' in buildSubmitArgs('j', input, null)));
+});
+
+
+test('the visit start is read in Karachi time (UTC+5)', () => {
+  assert.equal(visitStartMs({ date: '2026-11-21', from: '15:00:00' }), Date.UTC(2026, 10, 21, 10, 0));
+  assert.equal(visitStartMs({ date: '2026-11-21', from: null }), Date.UTC(2026, 10, 21, 3, 0)); // missing start counts as 08:00
+  assert.equal(visitStartMs({ date: null, from: '10:00:00' }), null);
+  assert.equal(visitStartMs({ date: 'soon', from: '10:00:00' }), null);
+});
+
+test('the question is needed only when the visit is within 6 hours', () => {
+  const now = new Date(Date.UTC(2026, 10, 20, 9, 0)); // 14:00 in Karachi
+  const at = (hhmm: string, date = '2026-11-20') => ({ date, from: `${hhmm}:00` });
+  assert.equal(needsBusyEstimate(at('16:00'), now), true); // in 2 hours
+  assert.equal(needsBusyEstimate(at('20:00'), now), true); // in exactly 6 hours
+  assert.equal(needsBusyEstimate(at('20:01'), now), false); // just beyond
+  assert.equal(needsBusyEstimate(at('15:00', '2026-11-21'), now), false); // tomorrow
+  assert.equal(needsBusyEstimate(at('13:00'), now), false); // already past
+  assert.equal(needsBusyEstimate({ date: null, from: null }, now), false);
+  assert.equal(needsBusyEstimate(at('22:00'), now, 12), true); // a staff-changed window is respected when given
+});
+
+test('"free by the visit" is the minutes to the visit, inside 5 minutes to 3 days', () => {
+  const now = new Date(Date.UTC(2026, 10, 20, 9, 0));
+  assert.equal(minutesUntilVisit({ date: '2026-11-20', from: '16:00:00' }, now), 120);
+  assert.equal(minutesUntilVisit({ date: '2026-11-20', from: '14:02:00' }, now), 5); // too close: raised to the minimum
+  assert.equal(minutesUntilVisit({ date: '2026-12-31', from: '16:00:00' }, now), 4320); // far: capped
+  assert.equal(minutesUntilVisit({ date: null, from: null }, now), null);
 });

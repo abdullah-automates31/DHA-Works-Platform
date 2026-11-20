@@ -26,9 +26,9 @@ import {
   type QuoteInput,
 } from '@/features/quote/rules';
 import { useJobInProgress } from '@/features/feed/useJobInProgress';
-import { parseBusyMinutes } from '@/features/quote/busy';
+import { minutesUntilVisit, needsBusyEstimate, parseBusyMinutes } from '@/features/quote/busy';
 import { claimJob, reviseQuote } from '@/features/quote/submit';
-import { BusyTimeSection } from '@/components/BusyTimeSection';
+import { BusyTimeSection, type BusyAnswer } from '@/components/BusyTimeSection';
 import { t, type TranslationKey } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
@@ -93,7 +93,7 @@ export default function QuoteScreen() {
       ) : null}
 
       {job && (job.standing === 'none' || job.standing === 'interested') ? (
-        <QuoteForm jobId={job.id} when={job.when} onAccepted={() => router.replace(statusHref(job.id))} />
+        <QuoteForm jobId={job.id} when={job.when} preferred={job.preferred} onAccepted={() => router.replace(statusHref(job.id))} />
       ) : null}
     </View>
   );
@@ -149,14 +149,22 @@ function ChangeQuote({ jobId, when, onDone }: { jobId: string; when: string; onD
   return <QuoteForm jobId={jobId} when={when} onAccepted={onDone} revise={state.revise} />;
 }
 
-function QuoteForm({ jobId, when, onAccepted, revise }: { jobId: string; when: string; onAccepted: () => void; revise?: Revise }) {
+type Preferred = { date: string | null; from: string | null };
+
+function QuoteForm({ jobId, when, preferred, onAccepted, revise }: { jobId: string; when: string; preferred?: Preferred; onAccepted: () => void; revise?: Revise }) {
   const [input, setInput] = useState<QuoteInput>(revise?.input ?? { labour: '', withMaterials: false, items: [{ name: '', price: '' }] });
   const inProgress = useJobInProgress();
   const busy = Boolean(inProgress);
   const [busyText, setBusyText] = useState('');
-  // a worker in the middle of another job must say how much longer it will take (design W12d); changing a sent quote does not ask again
-  const needsBusyTime = busy && !revise;
-  const busyMinutes = parseBusyMinutes(busyText);
+  const [busyAnswer, setBusyAnswer] = useState<BusyAnswer>(null);
+  // the database refused for a missing estimate (its window is a setting and may differ from the app's default): ask after all
+  const [forced, setForced] = useState(false);
+  // A worker in the middle of another job is asked about the current job (design W12d) only when the customer's visit is soon
+  // (migration 0070). A visit tomorrow needs no question. Changing a sent quote never asks again.
+  const soon = Boolean(preferred) && needsBusyEstimate(preferred as Preferred, new Date());
+  const needsBusyTime = busy && !revise && (soon || forced);
+  const typedMinutes = parseBusyMinutes(busyText);
+  const busyMinutes = busyAnswer === 'yes' ? minutesUntilVisit(preferred ?? { date: null, from: null }, new Date()) : busyAnswer === 'no' ? typedMinutes : null;
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,6 +199,7 @@ function QuoteForm({ jobId, when, onAccepted, revise }: { jobId: string; when: s
       onAccepted(); // claimed: locked to this worker until the customer decides (0043); changed: the customer is told (0044)
       return;
     }
+    if (result.key === 'quote.errors.busyEta') setForced(true);
     setError(t(result.key));
   }
 
@@ -215,6 +224,12 @@ function QuoteForm({ jobId, when, onAccepted, revise }: { jobId: string; when: s
           {needsBusyTime ? (
             <BusyTimeSection
               jobTitle={inProgress?.title ?? ''}
+              visitWhen={when}
+              answer={busyAnswer}
+              onAnswer={(a) => {
+                setBusyAnswer(a);
+                if (error) setError(null);
+              }}
               text={busyText}
               onChange={(v) => {
                 setBusyText(v);

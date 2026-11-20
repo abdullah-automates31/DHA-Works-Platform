@@ -5,10 +5,29 @@ import { BUSY_CHIPS, busyEtaLabel, chipLabel, finishTimeLabel, parseBusyMinutes 
 import { t } from '@/i18n';
 import { colors, fontFamily } from '@/theme';
 
-// "Current job time" (design W12d), shown on the Accept job form when the worker is in the middle of another job. The
-// worker says how much longer the current job will take; the customer sees it with the quote and can wait or choose
-// another worker. `text` is the typed minutes (digits); the parent turns it into the request.
-export function BusyTimeSection({ jobTitle, text, onChange, invalid }: { jobTitle: string; text: string; onChange: (text: string) => void; invalid: boolean }) {
+// "Current job time" (design W12d), shown on the Accept job form only when it is needed: the worker is in the middle of
+// another job AND the customer's visit is soon (features/quote/busy.ts, migration 0070). First a yes or no: "Will you be
+// free by then?". Yes needs nothing typed. No asks how much longer the current job will take; the customer sees the
+// time with the quote and can wait or choose another worker. The parent owns the answer (`answer`, `text`).
+export type BusyAnswer = 'yes' | 'no' | null;
+
+export function BusyTimeSection({
+  jobTitle,
+  visitWhen,
+  answer,
+  onAnswer,
+  text,
+  onChange,
+  invalid,
+}: {
+  jobTitle: string;
+  visitWhen: string;
+  answer: BusyAnswer;
+  onAnswer: (answer: BusyAnswer) => void;
+  text: string;
+  onChange: (text: string) => void;
+  invalid: boolean;
+}) {
   const minutes = parseBusyMinutes(text);
   const now = useMemo(() => new Date(), [text]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -16,39 +35,62 @@ export function BusyTimeSection({ jobTitle, text, onChange, invalid }: { jobTitl
       <View style={styles.card}>
         <Text style={styles.small}>{t('quote.busyTitle')}</Text>
         <Text style={styles.job}>{jobTitle || t('quote.busyYourJob')}</Text>
+        {visitWhen ? <Text style={styles.body}>{t('quote.busyVisit', { when: visitWhen })}</Text> : null}
       </View>
 
-      <Text style={styles.question}>{t('quote.busyQuestion')}</Text>
-      <Text style={styles.honest}>{t('quote.busyHonest')}</Text>
-      <View style={styles.chips}>
-        {BUSY_CHIPS.map((m) => {
-          const on = minutes === m;
-          return (
-            <Pressable key={m} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => onChange(String(m))} style={[styles.chip, on && styles.chipOn]}>
-              <Text style={[styles.chipText, on && { color: '#fff' }]}>{chipLabel(m)}</Text>
-            </Pressable>
-          );
-        })}
+      <Text style={styles.question}>{t('quote.busyFreeQuestion')}</Text>
+      <View style={styles.row}>
+        <Pressable accessibilityRole="radio" accessibilityState={{ selected: answer === 'yes' }} onPress={() => onAnswer('yes')} style={[styles.big, answer === 'yes' && styles.bigOn]}>
+          <Text style={[styles.bigText, answer === 'yes' && { color: '#fff' }]}>{t('quote.busyYes')}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="radio" accessibilityState={{ selected: answer === 'no' }} onPress={() => onAnswer('no')} style={[styles.big, answer === 'no' && styles.bigOn]}>
+          <Text style={[styles.bigText, answer === 'no' && { color: '#fff' }]}>{t('quote.busyNo')}</Text>
+        </Pressable>
       </View>
+      {invalid && answer === null ? <Text style={styles.error}>{t('quote.busyRequired')}</Text> : null}
 
-      <Text style={styles.small}>{t('quote.busyOrType')}</Text>
-      <TextInput
-        value={text}
-        onChangeText={(v) => onChange(v.replace(/[^0-9]/g, '').slice(0, 5))}
-        keyboardType="number-pad"
-        placeholder="60"
-        placeholderTextColor={colors.muted}
-        maxLength={5}
-        style={[styles.input, invalid && styles.inputBad]}
-        accessibilityLabel={t('quote.busyOrType')}
-      />
-      {invalid ? <Text style={styles.error}>{t('quote.errors.busyEta')}</Text> : null}
-
-      {minutes !== null ? (
+      {answer === 'yes' ? (
         <View style={styles.card}>
           <Text style={styles.small}>{t('quote.busyCustomerTitle')}</Text>
-          <Text style={styles.body}>{t('quote.busyCustomerBody', { time: busyEtaLabel(minutes), at: finishTimeLabel(minutes, now) })}</Text>
+          <Text style={styles.body}>{t('quote.busyYesCustomer')}</Text>
         </View>
+      ) : null}
+
+      {answer === 'no' ? (
+        <>
+          <Text style={styles.question}>{t('quote.busyQuestion')}</Text>
+          <Text style={styles.honest}>{t('quote.busyHonest')}</Text>
+          <View style={styles.chips}>
+            {BUSY_CHIPS.map((m) => {
+              const on = minutes === m;
+              return (
+                <Pressable key={m} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => onChange(String(m))} style={[styles.chip, on && styles.chipOn]}>
+                  <Text style={[styles.chipText, on && { color: '#fff' }]}>{chipLabel(m)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.small}>{t('quote.busyOrType')}</Text>
+          <TextInput
+            value={text}
+            onChangeText={(v) => onChange(v.replace(/[^0-9]/g, '').slice(0, 5))}
+            keyboardType="number-pad"
+            placeholder="60"
+            placeholderTextColor={colors.muted}
+            maxLength={5}
+            style={[styles.input, invalid && styles.inputBad]}
+            accessibilityLabel={t('quote.busyOrType')}
+          />
+          {invalid ? <Text style={styles.error}>{t('quote.errors.busyEta')}</Text> : null}
+
+          {minutes !== null ? (
+            <View style={styles.card}>
+              <Text style={styles.small}>{t('quote.busyCustomerTitle')}</Text>
+              <Text style={styles.body}>{t('quote.busyCustomerBody', { time: busyEtaLabel(minutes), at: finishTimeLabel(minutes, now) })}</Text>
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       <View style={styles.note}>
@@ -65,6 +107,10 @@ const styles = StyleSheet.create({
   job: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.ink },
   question: { fontFamily: fontFamily.extrabold, fontSize: 17, color: colors.ink, marginTop: 4 },
   honest: { fontFamily: fontFamily.semibold, fontSize: 12, color: colors.muted },
+  row: { flexDirection: 'row', gap: 8 },
+  big: { flex: 1, minHeight: 52, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  bigOn: { backgroundColor: colors.green },
+  bigText: { fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.ink, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#fff', justifyContent: 'center' },
   chipOn: { backgroundColor: colors.green },
