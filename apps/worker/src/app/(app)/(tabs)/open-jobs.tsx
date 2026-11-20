@@ -26,7 +26,8 @@ export default function OpenJobsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state } = useMyProfile();
-  const areas = state.status === 'ready' ? state.areas : [];
+  const profileAreas = state.status === 'ready' ? state.areas : null;
+  const areas = useMemo(() => profileAreas ?? [], [profileAreas]);
   const { data, refresh, refreshing, loadMore, loadingMore, moreFailed } = useFeed(areas.join(','));
   // `now` and the press handler stay the same between renders, so cards that did not change are not redrawn when a
   // page loads or the pull spinner flips. `now` moves on when the list itself is reloaded.

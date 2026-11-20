@@ -28,3 +28,21 @@ export function busyEtaLabel(minutes: number): string {
   const m = rest === 0 ? '' : rest === 1 ? '1 minute' : `${rest} minutes`;
   return [h, m].filter(Boolean).join(' ');
 }
+
+/** The choices of the "Current job time" screen (W12d), in minutes: 30 min, 1 hour, 1.5 hours, 2, 3 and 4 hours. */
+export const BUSY_CHIPS = [30, 60, 90, 120, 180, 240] as const;
+
+/** "12:10 PM": when the current job will be done if it takes `minutes` from `now` (the phone's local time). */
+export function finishTimeLabel(minutes: number, now: Date): string {
+  const done = new Date(now.getTime() + minutes * 60_000);
+  const h = done.getHours();
+  const m = String(done.getMinutes()).padStart(2, '0');
+  return `${h % 12 === 0 ? 12 : h % 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+/** "1.5 hours" style chip text: 30 min, 1 hour, 1.5 hours, 2 hours. */
+export function chipLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = minutes / 60;
+  return hours === 1 ? '1 hour' : `${hours} hours`;
+}
