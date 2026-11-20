@@ -25,7 +25,7 @@ export function phaseCentre(phase: number): Point | null {
 
 /** The distance choices of the sheet, in km; `null` means any distance. */
 export const RADIUS_OPTIONS: readonly (number | null)[] = [1, 3, 5, 10, null];
-export const DEFAULT_RADIUS: number | null = 3;
+export const DEFAULT_RADIUS: number | null = null; // no limit until the worker picks one: an estimate must not hide jobs by itself
 
 export type FeedSort = 'newest' | 'nearest';
 
