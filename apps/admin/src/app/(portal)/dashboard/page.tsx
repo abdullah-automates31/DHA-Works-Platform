@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PillRow } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
+import { ShowMore } from '@/components/ShowMore';
 import { Chip } from '@/components/ui';
 import { parseDashboard } from '@/features/dashboard/parse';
 import {
@@ -159,6 +160,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {d.activity.length === 0 ? (
           <div className="mut" style={{ padding: '14px 0 18px', borderTop: '1px solid var(--line)' }}>Nothing happened {period}.</div>
         ) : null}
+        <ShowMore noun="activity">
         {d.activity.map((a, i) => {
           const chip = ACTIVITY_CHIP[a.kind];
           return (
@@ -172,6 +174,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </Link>
           );
         })}
+        </ShowMore>
       </div>
     </PortalFrame>
   );

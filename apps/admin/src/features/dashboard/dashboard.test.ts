@@ -153,3 +153,13 @@ test('activity items open the right screen and an odd id never builds a link', (
   assert.equal(activityHref({ link: 'job', linkId: '../../x' }), '/dashboard');
   assert.equal(attentionHref({ id: ID, kind: 'suspended_active' }), `/jobs/${ID}`);
 });
+
+test('Show more: 12 first, 12 more each click, never past the total', async () => {
+  const { ACTIVITY_FIRST, nextShown } = await import('./rules.ts');
+  assert.equal(ACTIVITY_FIRST, 12);
+  assert.equal(nextShown(12, 20), 20);
+  assert.equal(nextShown(12, 40), 24);
+  assert.equal(nextShown(24, 30), 30);
+  assert.equal(nextShown(30, 30), 30);
+  assert.equal(nextShown(0, 5), 5);
+});

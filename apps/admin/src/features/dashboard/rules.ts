@@ -120,3 +120,12 @@ export function dateLine(now: Date = new Date()): string {
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
   return `${get('weekday')}, ${get('day')} ${get('month')}`;
 }
+
+/** How many activity rows the dashboard shows first, and how many more each "Show more" adds. */
+export const ACTIVITY_FIRST = 12;
+export const ACTIVITY_STEP = 12;
+
+/** The number of rows to show after "Show more": `step` more, never beyond `total`. */
+export function nextShown(shown: number, total: number, step: number = ACTIVITY_STEP): number {
+  return Math.min(total, Math.max(0, shown) + Math.max(1, step));
+}
