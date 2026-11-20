@@ -22,19 +22,20 @@ import {
 } from './icons';
 
 // One card of W07 Open jobs (worker/screens/w-open.dc.html). Only what the open feed may show: no resident name,
-// phone, plot or address, and no distance (docs/UI-UX.md section 8, docs/DECISIONS.md).
+// phone, plot or address, and the distance is only an estimate to the middle of the phase (features/feed/distance.ts).
 const ICONS = { wrench: WrenchIcon, bolt: BoltIcon, snow: SnowIcon, hammer: HammerIcon, brush: BrushIcon, sparkle: SparkleIcon, flame: FlameIcon, tool: ToolIcon };
 const RED = colors.chip.declined;
 const PHOTO_TINTS = ['#CFE0D6', '#F6E7B4'];
 
 // Memoised: the list re-renders when a page loads or the pull spinner flips, and the cards that did not change are skipped.
 // So `onPress` must be one stable function that receives the job id, and `now` must stay the same between loads.
-export const FeedJobCard = memo(function FeedJobCard({ job, onPress, now }: { job: FeedJob; onPress: (id: string) => void; now: Date }) {
+export const FeedJobCard = memo(function FeedJobCard({ job, onPress, now, distance }: { job: FeedJob; onPress: (id: string) => void; now: Date; distance?: string }) {
   const Icon = ICONS[categoryIconKey(job.categoryId)];
   const when = whenPill(job, now);
+  const where = distance ? t('feed.whereKm', { phase: job.phase, km: distance }) : t('feed.where', { phase: job.phase });
   const urgent = job.urgency === 'asap';
   // One sentence for a screen reader: the card text is hidden behind this label, so it carries the details too.
-  const label = [job.title, t('feed.where', { phase: job.phase, lane: job.lane }), urgent ? t('feed.urgent') : t('feed.open'), when.text, timeAgo(job.postedAt, now)]
+  const label = [job.title, where, urgent ? t('feed.urgent') : t('feed.open'), when.text, timeAgo(job.postedAt, now)]
     .filter(Boolean)
     .join('. ');
 
@@ -48,7 +49,7 @@ export const FeedJobCard = memo(function FeedJobCard({ job, onPress, now }: { jo
           <Text style={styles.title} numberOfLines={2}>
             {job.title}
           </Text>
-          <Text style={styles.sub}>{t('feed.where', { phase: job.phase, lane: job.lane })}</Text>
+          <Text style={styles.sub}>{where}</Text>
         </View>
         {urgent ? (
           <View style={[styles.chip, { backgroundColor: RED.bg }]}>

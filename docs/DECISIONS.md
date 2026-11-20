@@ -236,3 +236,7 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 ### 20 Nov 2026: no Docker (owner)
 
 - "I dont want to use docker anymore." Database tests and drills run on the separate hosted TEST project; the worker app uses hosted DEV. See docs/ADMIN-PORTAL.md.
+
+## 20 Nov 2026: Open jobs gets "Newest / Nearest" and "Within X km" (owner request)
+
+Reverses the 26 Oct line "Distance filter and Nearest are out of the MVP". The worker app Open jobs screen now has the Newest / Nearest switch and a "Within 1, 3, 5, 10 km or any distance" sheet (default 3 km), as in the design. Jobs carry no coordinates (privacy; the customer app does not send any), so the distance is an **estimate** to the middle of the job's DHA phase, from the worker's phone location (asked once, while using the app; ignored if far from Karachi) or, when location is off or refused, from the nearest of the worker's chosen phases. Shown as "Phase 6 · ~0.8 km". The phase centres in `apps/worker/src/features/feed/distance.ts` are approximate and need checking against a map. No database change: sorting and filtering run on the loaded feed (the screen pulls the remaining pages in while Nearest or a km limit is on). Matching is still category + phase. For real distances the customer app would have to send a job location (question for Shariq).

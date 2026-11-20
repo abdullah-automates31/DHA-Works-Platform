@@ -186,3 +186,5 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 - Not yet confirmed by the owner on the live site: the 0069 behaviour (no second code right after a reset) and the worker My jobs cards (needs a new phone build).
 - The hosted TEST project has a odd dashboard name (pasted text); the owner may rename it.
 - Live portal speed (cold starts, Vercel Pro) and a custom domain remain open owner decisions.
+
+- 20 Nov, worker Open jobs: Newest / Nearest and Within X km are built (docs/DECISIONS.md 20 Nov). Distances are phase-level estimates; exact distances need the customer app to send a job location (Shariq). Phase centres in `features/feed/distance.ts` are approximate: please check them. Needs a new native build on Android because of `expo-location` (iPhone Expo Go already has it).

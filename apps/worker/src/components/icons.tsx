@@ -224,3 +224,9 @@ export const UsersIcon = (p: IconProps) => (
     <Path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M17 5a3.5 3.5 0 0 1 0 7M19 15c2 .7 3 2.2 3 4.5" />
   </Icon>
 );
+
+export const ChevronDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <Path d="M6 9l6 6 6-6" />
+  </Icon>
+);

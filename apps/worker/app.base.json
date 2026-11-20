@@ -29,6 +29,12 @@
       "expo-font",
       "expo-secure-store",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "DHA Works uses your location to show the jobs nearest to you."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

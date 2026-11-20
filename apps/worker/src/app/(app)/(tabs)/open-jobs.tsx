@@ -1,23 +1,27 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/AuthForm';
 import { FeedCardSkeleton, SkeletonGroup } from '@/components/Skeleton';
+import { DistanceSheet } from '@/components/DistanceSheet';
 import { FeedJobCard } from '@/components/FeedJobCard';
+import { ChevronDownIcon, PinIcon } from '@/components/icons';
 import { LoadMoreFooter } from '@/components/LoadMoreFooter';
+import { DEFAULT_RADIUS, arrange, chooseOrigin, distanceLabel, radiusLabel, type FeedSort } from '@/features/feed/distance';
 import { feedSubtitle } from '@/features/feed/format';
 import { useFeed } from '@/features/feed/useFeed';
+import { useWorkerLocation } from '@/features/feed/useWorkerLocation';
 import { jobHref } from '@/features/job/routes';
 import { t } from '@/i18n';
 import { nearEnd } from '@/lib/paging';
 import { useMyProfile } from '@/lib/profile';
 import { colors, fontFamily } from '@/theme';
 
-// W07 Open jobs: the worker's matching feed (trade + DHA phase), urgent first, then newest first.
-// By decision there is no "Nearest" sort, no distance filter and no km labels (docs/UI-UX.md section 8), so the
-// design's sort and distance row is not here. Pull down to refresh; the list also reloads each time the tab is shown.
+// W07 Open jobs: the worker's matching feed (trade + DHA phase). "Newest" keeps the server order (urgent first, then newest);
+// "Nearest" sorts by the estimated distance to each job's phase; "Within X km" hides jobs farther away than that
+// (features/feed/distance.ts). Pull down to refresh; the list also reloads each time the tab is shown.
 export default function OpenJobsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -29,6 +33,18 @@ export default function OpenJobsScreen() {
   // `data` is only the trigger (a new load means a new "now"), it is not read inside
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = useMemo(() => new Date(), [data]);
+  const [sort, setSort] = useState<FeedSort>('newest');
+  const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS);
+  const [sheet, setSheet] = useState(false);
+  const location = useWorkerLocation(true);
+  const origin = useMemo(() => chooseOrigin(location.point, areas), [location.point, areas]);
+  // the filter and the sort work on the loaded rows, so while either needs the whole feed, pull the remaining pages in
+  // (the feed is capped at a few dozen open jobs per worker)
+  const needsAll = sort === 'nearest' || radius !== null;
+  useEffect(() => {
+    if (needsAll && data.status === 'ready' && data.hasMore && !loadingMore && !moreFailed) void loadMore();
+  }, [needsAll, data, loadingMore, moreFailed, loadMore]);
+  const rows = useMemo(() => (data.status === 'ready' ? arrange(data.jobs, { sort, radius, origin }) : []), [data, sort, radius, origin]);
   const openJob = useCallback((id: string) => router.push(jobHref(id)), [router]);
 
   const subtitle = data.status === 'ready' ? feedSubtitle(data.trades, areas) : '';
@@ -38,6 +54,24 @@ export default function OpenJobsScreen() {
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.title}>{t('feed.title')}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <View style={styles.controls}>
+          <View style={styles.segment} accessibilityRole="tablist">
+            {(['newest', 'nearest'] as const).map((key) => {
+              const on = sort === key;
+              return (
+                <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setSort(key)} style={[styles.segItem, on && styles.segOn]}>
+                  <Text style={[styles.segText, on && { color: '#fff' }]}>{t(key === 'newest' ? 'feed.newest' : 'feed.nearest')}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={radiusLabel(radius)} onPress={() => setSheet(true)} style={styles.radius}>
+            <PinIcon size={16} color={colors.greenDark} />
+            <Text style={styles.radiusText}>{radiusLabel(radius)}</Text>
+            <ChevronDownIcon size={16} color={colors.greenDark} />
+          </Pressable>
+        </View>
+        {location.denied ? <Text style={styles.hint}>{t('feed.locationOff')}</Text> : null}
       </View>
 
       <ScrollView
@@ -71,16 +105,31 @@ export default function OpenJobsScreen() {
           </View>
         ) : null}
 
-        {data.status === 'ready'
-          ? data.jobs.map((job) => (
-              <FeedJobCard key={job.id} job={job} now={now} onPress={openJob} />
-            ))
-          : null}
+        {data.status === 'ready' && data.jobs.length > 0 && rows.length === 0 && !data.hasMore ? (
+          <View style={styles.message}>
+            <Text style={styles.messageTitle}>{t('feed.noneInRange')}</Text>
+            <Text style={styles.messageBody}>{t('feed.noneInRangeBody')}</Text>
+          </View>
+        ) : null}
+
+        {rows.map(({ job, km }) => (
+          <FeedJobCard key={job.id} job={job} now={now} onPress={openJob} distance={distanceLabel(km)} />
+        ))}
 
         {data.status === 'ready' && data.jobs.length > 0 ? (
           <LoadMoreFooter hasMore={data.hasMore} loading={loadingMore} failed={moreFailed} onLoad={() => void loadMore()} skeleton={<FeedCardSkeleton />} />
         ) : null}
       </ScrollView>
+
+      <DistanceSheet
+        visible={sheet}
+        radius={radius}
+        onPick={(r) => {
+          setRadius(r);
+          setSheet(false);
+        }}
+        onClose={() => setSheet(false)}
+      />
     </View>
   );
 }
@@ -90,6 +139,14 @@ const styles = StyleSheet.create({
   top: { paddingHorizontal: 20, paddingBottom: 8 },
   title: { fontFamily: fontFamily.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.28, color: colors.ink },
   subtitle: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.muted, marginTop: 2 },
+  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },
+  segment: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, padding: 4 },
+  segItem: { height: 36, paddingHorizontal: 18, borderRadius: 16, justifyContent: 'center' },
+  segOn: { backgroundColor: colors.green },
+  segText: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.ink },
+  radius: { height: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  radiusText: { fontFamily: fontFamily.bold, fontSize: 13, color: colors.ink },
+  hint: { fontFamily: fontFamily.semibold, fontSize: 11, color: colors.muted, marginTop: 6 },
   content: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 24, gap: 12 },
   message: { backgroundColor: colors.mint, borderRadius: 18, padding: 16, gap: 8, marginTop: 8 },
   messageTitle: { fontFamily: fontFamily.extrabold, fontSize: 15, color: colors.greenDark },
