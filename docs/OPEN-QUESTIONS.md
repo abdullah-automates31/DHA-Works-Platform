@@ -171,3 +171,10 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 - PR #18's worktree (`C:\Users\Abdullah Ali\dha-tmp-call`) had **uncommitted "no ASAP when posting a job" edits** (PostJob*.kt) from the 16 Nov session. FINISHED and pushed to PR #18 as 9cf3e0d on 17 Nov: the post and edit form always needs a date and one visiting time; the 4 PostJobViewModelTest tests were fixed; all 204 jobs tests pass. An old as-soon-as-possible job opened for edit must get a date before saving. Unused strings (`post_when_day`, `post_when_asap_hint`) were left in strings.xml; `post_when_asap` is still used to label old jobs.
 - The customer app (PR #18) has never been run on a phone; the worker app's Customer details page and call helper need a new EAS build on the phone to be seen.
 - PR #17 should not be merged (new quotes carry no finish-time estimate since 0058).
+
+## 20 Nov 2026: worker Settings, for Shariq
+
+- Settings reverses two earlier locks on purpose (owner decision 19 Nov): a worker may change the sign-in phone (code to the new number; 0034 and Shariq's 6 Nov "no change-number feature") and may edit the name after approval (audited, staff see it under Worker requests). Please confirm.
+- The number-change code goes by SMS (Supabase default) while the sign-in code is WhatsApp: check when Twilio goes live.
+- Terms and Privacy Policy rows are "Coming soon" (no pages exist). Staff get no push or email for new worker requests (badge and page only). Verification status is per application, not per file (no per-file verdict in the database).
+- Nothing in Settings or the portal pictures has been tried on a phone or in a browser yet.

@@ -214,3 +214,8 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 - Name and number changes: shown as items staff mark "reviewed". There is no approve or undo step.
 - My phones: `my_sessions()` lists the account's sessions (plain labels, no IP or raw user agent); `sign_out_other_sessions(keep_token)` ends the other sessions and removes their push registrations, keeping this phone.
 - Not done: staff do not get a push or email for new requests (the sidebar badge and the page show them); the send-push function was not changed.
+
+### 20 Nov 2026: admin portal profile pictures (no migration)
+
+- Customer and worker pictures show in the portal (Users and verification lists, job page, worker and resident detail, Worker requests). One same-origin route `/avatar?p=<path>` (staff only, `worker-media` bucket, image types only, `Cache-Control: private, max-age=604800, immutable`) replaces signed links, which change on every page load (no browser cache) and expire while a page is open. A picture's file name is new for every upload, so the long cache never shows an old picture. `AvatarPhoto` keeps the initials underneath and fades the picture in; a failed picture simply leaves the initials. Paths come from `profiles.avatar_path` in one read per page (`loadAvatarSrcs`).
+- Not browser-tested yet (owner to look). Code: `apps/admin/src/lib/avatars.ts`, `components/AvatarPhoto.tsx`, `app/(portal)/avatar/route.ts`. Dev `2f5a068`; standalone portal repo `29439b5`.
