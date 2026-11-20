@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import Script from 'next/script';
 import { useActionState } from 'react';
 import { PasswordInput } from '@/components/PasswordInput';
+import { Turnstile, useTurnstileReady } from '@/components/Turnstile';
 import { signInAction, type FormState } from './actions';
 
 const initial: FormState = {};
 
 export function SignInForm({ notAdmin, siteKey, nonce }: { notAdmin: boolean; siteKey: string | null; nonce?: string }) {
   const [state, action, pending] = useActionState(signInAction, initial);
+  const check = useTurnstileReady(siteKey);
   return (
-    <form className="si-form" action={action} noValidate>
+    <form className="si-form" action={action} onSubmit={check.onSubmit} noValidate>
       <div>
         <h2>Staff sign in</h2>
         <p>Only DHA staff with an admin account can sign in.</p>
@@ -37,12 +38,16 @@ export function SignInForm({ notAdmin, siteKey, nonce }: { notAdmin: boolean; si
       </p>
       {siteKey ? (
         <>
-          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" nonce={nonce} />
-          <div className="cf-turnstile" data-sitekey={siteKey} data-theme="light" />
+          <Turnstile siteKey={siteKey} nonce={nonce} resetSignal={state} onOk={check.onOk} onGone={check.onGone} />
+          {check.slow && !check.ready ? (
+            <div className="si-alert err" role="status">
+              The security check is taking long. Reload the page, and turn off any ad blocker for this site.
+            </div>
+          ) : null}
         </>
       ) : null}
-      <button className="btn" type="submit" disabled={pending}>
-        {pending ? 'Signing in...' : 'Sign in'}
+      <button className="btn" type="submit" disabled={pending || !check.ready}>
+        {pending ? 'Signing in...' : !check.ready ? 'Checking you are human...' : 'Sign in'}
       </button>
       <p className="si-foot">No account? Ask the DHA Works administrator to add you.</p>
     </form>
