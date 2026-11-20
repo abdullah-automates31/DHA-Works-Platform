@@ -111,7 +111,7 @@ Allowed transitions are enforced in the database (one function per transition), 
 
 | Environment | Backend | Apps | Admin |
 | --- | --- | --- | --- |
-| Local | Supabase local stack (Docker) | Expo Go or dev build on the test phone | localhost |
+| Test | Hosted TEST Supabase project, fake data (Docker retired 20 Nov 2026) | Expo Go or dev build on the test phone | localhost |
 | Shared (free tier) | One hosted Supabase project (the free tier allows two) | EAS preview build (APK for testers) | Vercel preview |
 | Production | Paid Supabase project after funding | EAS production build, Play Store | Vercel production |
 

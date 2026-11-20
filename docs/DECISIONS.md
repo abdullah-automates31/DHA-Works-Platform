@@ -219,3 +219,20 @@ These notes replace the "wait and give a finish time" part of the 15 Nov busy-wo
 
 - Customer and worker pictures show in the portal (Users and verification lists, job page, worker and resident detail, Worker requests). One same-origin route `/avatar?p=<path>` (staff only, `worker-media` bucket, image types only, `Cache-Control: private, max-age=604800, immutable`) replaces signed links, which change on every page load (no browser cache) and expire while a page is open. A picture's file name is new for every upload, so the long cache never shows an old picture. `AvatarPhoto` keeps the initials underneath and fades the picture in; a failed picture simply leaves the initials. Paths come from `profiles.avatar_path` in one read per page (`loadAvatarSrcs`).
 - Not browser-tested yet (owner to look). Code: `apps/admin/src/lib/avatars.ts`, `components/AvatarPhoto.tsx`, `app/(portal)/avatar/route.ts`. Dev `2f5a068`; standalone portal repo `29439b5`.
+
+### 20 Nov 2026: admin Forgot password (migrations 0068 and 0069, owner decisions; applied on DEV)
+
+- Flow: Forgot password link on sign-in, email, six-digit code by email (our own function `admin-password-reset`, sent through Brevo, not Supabase's built-in mail), new password, back to sign-in. The page says plainly when an email is not an admin (owner choice; limits and the bot check keep guessing slow).
+- Rejected by the owner, do not propose again: another admin must approve a reset; a same-message-for-everyone page; emails to other admins; any authenticator app.
+- Safeguards: one code a minute and five an hour per address; five tries per code, ten wrong tries an hour lock; Cloudflare Turnstile; a reset ends every session of that person; audit rows for every step; the password must be 12 to 72 bytes.
+- Takeover paths closed in the database: a trigger refuses any admin password change except through the reset functions (Supabase's own recover link no longer works for admins), and emailed sign-in codes are issued only to sessions that came from a password sign-in (a magic link or recovery session cannot get one).
+- 0069: the first password sign-in after a reset does not ask for the emailed code again (10-minute one-use marker, audit `admin_signed_in_after_reset`). Tradeoff accepted by the owner: knowing the new password within 10 minutes skips the code once.
+- Eye button on every password box; bot-check fixes (`Turnstile` component draws the box explicitly).
+
+### 20 Nov 2026: worker My jobs cards have no buttons
+
+- The cards show the job only; tapping a card opens the job status screen, where the worker starts, quotes, completes and records cash. The cash-due text stays on the card. (apps/worker, dev 7f3d75a; needs a new phone build to be seen.)
+
+### 20 Nov 2026: no Docker (owner)
+
+- "I dont want to use docker anymore." Database tests and drills run on the separate hosted TEST project; the worker app uses hosted DEV. See docs/ADMIN-PORTAL.md.

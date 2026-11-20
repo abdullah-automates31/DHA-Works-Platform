@@ -9,7 +9,7 @@ Dev and prod are **two separate Supabase projects**. Each has its own URL, keys,
 | | Local | DEV | PROD |
 | --- | --- | --- | --- |
 | Purpose | each developer's own stack | shared testing, fake data only | real residents and workers |
-| Supabase | Docker (`npm run db:local -- start`) | hosted project `xiozwoocisesgmegewww` (free tier) | new hosted project (does not exist yet) |
+| Supabase | hosted TEST project `bqjzzjhwcxvomcabpyfm` for tests and drills (fake data; Docker retired 20 Nov 2026) | hosted project `xiozwoocisesgmegewww` (free tier) | new hosted project (does not exist yet) |
 | Git branch | feature work | `dev` | `main` |
 | Data | seed scripts | fake data | real data, backups on |
 | Login codes | static test OTPs | static test OTPs for a few test numbers | real WhatsApp codes only, no test OTPs |

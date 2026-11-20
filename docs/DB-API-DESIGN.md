@@ -255,3 +255,7 @@ A report can be followed by the person who filed it, and DHA staff notices reach
 | `start_job` (0057) | Refuses while another job of the worker is in progress. |
 | `private.expire_busy_eta()` + cron `dw-busy-eta-expiry` (0057) | Withdraws held quotes older than 30 minutes, reopens the job, notifies the worker (`busy_eta_expired`). |
 | `worker_feed` (0057) | Back to showing jobs to a busy worker (0056 had hidden them). |
+
+## Admin password reset functions (20 Nov 2026, migrations 0068 and 0069)
+
+All service-role only unless noted; no grants to anon or authenticated except the last one. `admin_reset_issue(p_email)` makes a 10-minute code (1 a minute, 5 an hour, stores sha256(code || id)). `admin_reset_confirm(p_email, p_code, p_password)` checks the code (5 tries, 10 wrong an hour lock), sets the password (12 to 72 bytes, bcrypt), deletes all sessions of the user, writes audit rows and a 10-minute marker in `admin_reset_signins`. `admin_verify_after_reset()` (authenticated, password session only) consumes the marker, marks the session verified and audits `admin_signed_in_after_reset`. `private.block_admin_password_change()` is a trigger on `auth.users`. `admin_issue_challenge` now needs a password session. Table `admin_reset_challenges` has RLS and no grants.

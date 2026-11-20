@@ -45,3 +45,12 @@ There is no CI yet; run the checks below locally before each change. The databas
 ## Pilot
 
 Small pilot with real DHA residents and workers once staging is clean: seed data, no blocking bugs. The free Supabase tier has no real backups, so use test data only until the upgrade.
+
+## Update 20 Nov 2026: tests without Docker
+
+Docker Desktop and the local Supabase stack are retired (owner decision, 20 Nov 2026). Database tests and attack drills run on the hosted TEST project `bqjzzjhwcxvomcabpyfm` (fake data only): `node scripts/test-db-hosted.cjs [--reset] [--push] [--only name]`, drills with `--hosted`. Details: docs/ADMIN-PORTAL.md, section "Testing without Docker".
+
+- pgTAP: 47 files, 1,940 assertions, all pass on a freshly wiped test project (about 7 s a file). A failing file prints each failing check.
+- Attack drills (all pass with `--hosted`): admin reset 71 checks (parts A to D plus hosted Part C against the deployed functions), admin sign-in session 46, busy worker 71.
+- Deno: `admin-password-reset` 17 tests, `admin-2fa` 15. Portal: `features/auth/reset.test.ts` plus the existing suite.
+- Lessons: `supabase db reset --linked` breaks a hosted project (use `--reset`); hosted OTPs are 8 digits; test a client-side navigation path, not only a fresh page load, after changing anything that loads a third-party script (the Turnstile crash).

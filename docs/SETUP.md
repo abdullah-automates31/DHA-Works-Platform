@@ -7,7 +7,7 @@ Nothing here is installed or created yet. This describes what M0 will set up on 
 - Node.js (LTS) and pnpm
 - Git
 - An Android phone with **Expo Go** (or an Android emulator)
-- Docker Desktop (only if running the local Supabase stack)
+- Docker Desktop is NOT used any more (owner decision, 20 Nov 2026); tests run on a hosted test project (docs/ADMIN-PORTAL.md)
 - A Supabase account (project created only with explicit approval)
 - Expo account for EAS Build
 
@@ -47,7 +47,7 @@ pnpm dev                 # runs apps through Turborepo
 
 ## Supabase CLI workflow (as used, 28 Oct)
 
-- Windows: Supabase CLI 2.109.1 and Docker Desktop. Local stack: `npm run db:local -- start`, `-- db reset` (applies all migrations), `-- test db` (pgTAP), `-- db lint --local` (the wrapper adds the local-only test OTPs; see docs/WORKER-APP.md). The CLI is installed globally; the project is pinned to 2.109.1 in `scripts/supabase-targets.json` and the hosted-config guard fails on any other version. Enable the git hook once per clone: `git config core.hooksPath .githooks`.
+- Windows: Supabase CLI 2.109.1. (Docker Desktop and the local stack were retired on 20 Nov 2026; the local-stack commands in this section are history.) Local stack: `npm run db:local -- start`, `-- db reset` (applies all migrations), `-- test db` (pgTAP), `-- db lint --local` (the wrapper adds the local-only test OTPs; see docs/WORKER-APP.md). The CLI is installed globally; the project is pinned to 2.109.1 in `scripts/supabase-targets.json` and the hosted-config guard fails on any other version. Enable the git hook once per clone: `git config core.hooksPath .githooks`.
 - Hosted project (production-like, free tier): ref `xiozwoocisesgmegewww`, eu-west-1, Postgres 17, account `dhaworks.developments@gmail.com`. The user runs `supabase login`, `supabase link --project-ref xiozwoocisesgmegewww` and `supabase db push` themselves in their own PowerShell. Check with `supabase migration list --linked` and `supabase db lint --linked`.
 - A leftover Relay project (another product, other account) may auto-start in Docker; never touch it. Stop with `supabase stop --project-id Relay`.
 - Concurrency check: `bash supabase/tests/concurrency/accept_race.sh` then `supabase db reset`.
@@ -96,3 +96,7 @@ trigger and a 10-minute retry cron (migrations `20261107100229`, `20261107100423
 `push_function_url` and `push_webhook_secret`, the Edge Function secret `FIREBASE_SERVICE_ACCOUNT`, and
 `supabase functions deploy send-push --no-verify-jwt`. Types: regenerate `packages/supabase/database.types.ts`
 after schema changes (`supabase gen types typescript --linked`).
+
+## 20 Nov 2026: no Docker
+
+Docker Desktop and the local Supabase stack are retired (owner decision, 20 Nov 2026). Database tests and attack drills run on the hosted TEST project `bqjzzjhwcxvomcabpyfm` (fake data only): `node scripts/test-db-hosted.cjs [--reset] [--push] [--only name]`, drills with `--hosted`. Details: docs/ADMIN-PORTAL.md, section "Testing without Docker". The worker app (`apps/worker/.env`) and the admin portal run against hosted DEV. A leftover Relay project may exist on this PC; never touch it.

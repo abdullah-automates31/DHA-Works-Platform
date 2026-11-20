@@ -66,3 +66,13 @@ Open pull requests on 19 Nov: #9 dev and prod builds, #15 no sign-in flash, #17 
 3. Current phone builds of both apps; one full job end to end.
 4. Custom domain, monitoring, store listings.
 5. Everything marked (pilot).
+
+## Progress update, 20 Nov 2026
+
+- [x] Admin Forgot password with emailed code, limits, audit and session kill (0068); first sign-in after a reset skips the code once (0069). Live on the portal; the owner saw the reset work.
+- [x] Eye (show/hide) button on every password box in the portal.
+- [x] Admin takeover paths through Supabase recover and magic links closed in the database.
+- [x] Worker app My jobs: cards open the job screen, no buttons (needs a new phone build to see it).
+- [x] Tests no longer need Docker: hosted test project, 47 pgTAP files (1,940 assertions) and three attack drills pass.
+- [ ] Each admin turns on 2-Step Verification for their email (the safety guide is written, not yet shared). Owner.
+- [ ] Production Supabase project, paid plan, Twilio Verify and the other items in section 0 are unchanged.

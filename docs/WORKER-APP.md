@@ -87,6 +87,8 @@ Hosted DEV is at 0030 (0016, 0017 and 0020 pushed on 31 Oct; 0021 to 0026 on 3 N
 
 ## Run it locally
 
+**Update 20 Nov 2026:** Docker and the local stack are retired (no Docker). The steps below are history; the apps use hosted DEV and tests use the hosted test project (see docs/ADMIN-PORTAL.md, "Testing without Docker").
+
 1. Docker Desktop running, then `npm run db:local -- start` (API `http://127.0.0.1:55321`, Mailpit `:55324`, Studio `:55323`). After changing `[auth.sms]`, run `npm run db:local -- stop` and `-- start` so Auth reloads it. Do not use a plain `supabase start`: it has no test OTPs.
 2. `apps/worker/.env` (gitignored) holds `EXPO_PUBLIC_SUPABASE_URL` (the PC's LAN address, port 55321) and the local anon key. Windows Wi-Fi must be a Private network with firewall rules for ports 8081 and 55321.
 3. From `apps/worker`: `npx expo start --lan`; open the QR code in Expo Go. Enter one of the local numbers below and its fixed code. No WhatsApp message is sent locally.

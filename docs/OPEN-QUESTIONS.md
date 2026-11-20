@@ -178,3 +178,11 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 - The number-change code goes by SMS (Supabase default) while the sign-in code is WhatsApp: check when Twilio goes live.
 - Terms and Privacy Policy rows are "Coming soon" (no pages exist). Staff get no push or email for new worker requests (badge and page only). Verification status is per application, not per file (no per-file verdict in the database).
 - Nothing in Settings or the portal pictures has been tried on a phone or in a browser yet.
+
+## 20 Nov 2026: admin password reset and test setup (owner items)
+
+- Give the admin safety guide to every admin and have them turn on 2-Step Verification for their email (the main protection for the shared-inbox weakness).
+- Production Supabase project still does not exist; DEV is the only real database (free tier, fake data). When it is created: apply all migrations, deploy `admin-2fa`, `admin-password-reset` and `send-push`, set `TURNSTILE_SECRET_KEY`, `ADMIN_MAIL_API_KEY`, `ADMIN_MAIL_FROM`.
+- Not yet confirmed by the owner on the live site: the 0069 behaviour (no second code right after a reset) and the worker My jobs cards (needs a new phone build).
+- The hosted TEST project has a odd dashboard name (pasted text); the owner may rename it.
+- Live portal speed (cold starts, Vercel Pro) and a custom domain remain open owner decisions.

@@ -83,3 +83,7 @@ Lower priority, not done: every detail-page view writes an audit row (duplicates
 - A mail provider key for `admin-2fa` (rotate the exposed Brevo key first); prove a real email arrives.
 - First sign-in on hosted DEV with a real admin email; repeat the walkthrough there.
 - Confirm documents and voice notes load from real uploads on hosted DEV.
+
+## 20 Nov 2026: Forgot password checks
+
+Database: pgTAP `admin_password_reset` and `admin_reset_skip_code`. Functions: 17 Deno tests. Drill `scripts/challenge-admin-reset-local.cjs --hosted`: 71 checks, all pass (limits, locks, replay, built-in recover and magic links refused, direct password change refused, session kill, bot check, first sign-in after a reset). Live: reset worked on the Vercel site (owner, 20 Nov); Turnstile box checked by clicking forgot and sign-in back and forth.
