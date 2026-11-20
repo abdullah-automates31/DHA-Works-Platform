@@ -350,13 +350,14 @@ export function timeline(i: TimelineInput): TimelineStep[] {
 export type Note = { headline: string; body: string };
 
 /** Wording follows the design, with the decided corrections: no contact before acceptance, no re-quote after a rejection. */
-export function noteFor(job: MyJob, kind: JobKind, now: Date = new Date()): Note {
+export function noteFor(job: MyJob, kind: JobKind, now: Date = new Date(), canChangeQuote = false): Note {
   const who = job.residentName ? shortName(job.residentName) : t('myjobs.note.theCustomer');
   switch (kind) {
     case 'interested':
       return { headline: t('myjobs.note.interestedHead'), body: t('myjobs.note.interestedBody') };
     case 'quoted':
-      return { headline: t('myjobs.note.quotedHead'), body: t('myjobs.note.quotedBody') };
+      // the worker may change a sent quote once before the customer decides (revise_quote), so the text must not say it cannot be edited
+      return { headline: t('myjobs.note.quotedHead'), body: t(canChangeQuote ? 'myjobs.note.quotedBodyChange' : 'myjobs.note.quotedBody') };
     case 'scheduled': {
       const day = dayWord(job.scheduledStart, now);
       const when = day ? t('myjobs.note.visit', { day, window: windowText(job.scheduledStart, job.scheduledEnd) }) : t('myjobs.note.visitTbc');

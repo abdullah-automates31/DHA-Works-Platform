@@ -275,8 +275,8 @@ export default function JobStatusScreen() {
             </View>
 
             <View style={[styles.note, (kind === 'cancelled' || kind === 'disputed' || kind === 'expired') && { backgroundColor: colors.chip.declined.bg }]}>
-              <Text style={styles.noteHead}>{noteFor(job, kind, now).headline}</Text>
-              <Text style={styles.noteBody}>{noteFor(job, kind, now).body}</Text>
+              <Text style={styles.noteHead}>{noteFor(job, kind, now, canChangeQuote).headline}</Text>
+              <Text style={styles.noteBody}>{noteFor(job, kind, now, canChangeQuote).body}</Text>
               {visitLine ? <Text style={styles.noteHead}>{t('visit.yours', { when: visitLine })}</Text> : null}
               {kind === 'in_progress' && ready.extras.materials > 0 && !ready.extras.billAttached ? <Text style={styles.noteBody}>{t('myjobs.billNeeded')}</Text> : null}
             </View>

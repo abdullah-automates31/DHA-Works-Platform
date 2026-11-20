@@ -203,6 +203,9 @@ test('the note card uses the corrected wording and reveals the address only afte
   assert.match(noTime.body, /Call the customer to agree when you will come\./);
   const quoted = noteFor(j({ status: 'quoted', isMine: false, myQuoteStatus: 'sent', residentName: null }), 'quoted', now);
   assert.ok(!/call/i.test(quoted.body) && !/she|he /.test(quoted.body), 'no call advice and no gendered pronoun');
+  assert.ok(/change your quote once/i.test(noteFor(j({ status: 'quoted', isMine: false, myQuoteStatus: 'sent', residentName: null }), 'quoted', now, true).body), 'while a change is still possible the note says so');
+  assert.ok(!/cannot be edited/i.test(noteFor(j({ status: 'quoted', isMine: false, myQuoteStatus: 'sent', residentName: null }), 'quoted', now, true).body));
+  assert.ok(/cannot be changed again/i.test(quoted.body), 'after the one change it says it is final');
   assert.ok(!/call the customer/i.test(noteFor(base, 'interested', now).headline + noteFor(base, 'interested', now).body));
   assert.equal(noteFor(base, 'completed', now).body, 'Enter the amount Hira F. paid you in cash. This closes the job.');
   assert.equal(noteFor(j({ residentName: null }), 'cash_collected', now).body.startsWith('The customer will rate'), true);
