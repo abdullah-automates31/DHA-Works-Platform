@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState } from 'react';
+import { PasswordInput } from '@/components/PasswordInput';
 import { confirmResetAction, type ResetState } from '../reset-actions';
 
 const initial: ResetState = {};
@@ -35,11 +36,11 @@ export function ResetForm({ email }: { email: string }) {
       </label>
       <label className="fld">
         New password
-        <input className="inp" type="password" name="password" placeholder="At least 12 characters" autoComplete="new-password" maxLength={200} required />
+        <PasswordInput name="password" placeholder="At least 12 characters" autoComplete="new-password" maxLength={200} required />
       </label>
       <label className="fld">
         New password again
-        <input className="inp" type="password" name="confirm" placeholder="Type it again" autoComplete="new-password" maxLength={200} required />
+        <PasswordInput name="confirm" placeholder="Type it again" autoComplete="new-password" maxLength={200} required />
       </label>
       <button className="btn" type="submit" disabled={pending}>
         {pending ? 'Saving...' : 'Save new password'}

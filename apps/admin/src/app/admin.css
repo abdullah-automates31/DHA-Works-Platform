@@ -217,3 +217,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
   .snav .sitem.on{border-color:var(--g)}
 }
 @media (max-width:700px){.rrow{grid-template-columns:minmax(0,1fr)}.srow{flex-wrap:wrap}}
+
+/* Password box with a show/hide eye button (components/PasswordInput.tsx) */
+.pwbox{position:relative;display:block;width:100%}
+.pwbox .inp{padding-right:48px}
+.pwbtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;border-radius:50%;background:transparent;color:var(--mut);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pwbtn:hover{background:#EEF3EF;color:var(--ink)}
+.pwbtn:focus-visible{outline:2px solid var(--g);outline-offset:1px}

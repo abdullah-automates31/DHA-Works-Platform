@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Script from 'next/script';
 import { useActionState } from 'react';
+import { PasswordInput } from '@/components/PasswordInput';
 import { signInAction, type FormState } from './actions';
 
 const initial: FormState = {};
@@ -27,7 +28,7 @@ export function SignInForm({ notAdmin, siteKey, nonce }: { notAdmin: boolean; si
       </label>
       <label className="fld">
         Password
-        <input className="inp" type="password" name="password" placeholder="Enter your password" autoComplete="current-password" maxLength={200} required />
+        <PasswordInput name="password" placeholder="Enter your password" autoComplete="current-password" maxLength={200} required />
       </label>
       <p className="si-foot" style={{ textAlign: 'right', marginTop: -6 }}>
         <Link className="si-link" href="/signin/forgot">
