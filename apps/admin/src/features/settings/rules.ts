@@ -155,6 +155,10 @@ const ACTION_LABEL: Record<string, string> = {
   report_viewed: 'Report viewed',
   verification_reopened: 'Applicant reopened',
   cancelled_by_staff: 'Job cancelled by staff',
+  admin_reset_requested: 'Password reset code requested',
+  admin_password_reset: 'Password reset',
+  admin_reset_code_wrong: 'Wrong password reset code',
+  admin_reset_locked: 'Password reset locked',
 };
 
 export function actionLabel(action: string): string {

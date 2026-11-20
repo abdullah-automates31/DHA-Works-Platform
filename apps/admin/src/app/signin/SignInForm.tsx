@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import Script from 'next/script';
 import { useActionState } from 'react';
 import { signInAction, type FormState } from './actions';
@@ -28,6 +29,11 @@ export function SignInForm({ notAdmin, siteKey, nonce }: { notAdmin: boolean; si
         Password
         <input className="inp" type="password" name="password" placeholder="Enter your password" autoComplete="current-password" maxLength={200} required />
       </label>
+      <p className="si-foot" style={{ textAlign: 'right', marginTop: -6 }}>
+        <Link className="si-link" href="/signin/forgot">
+          Forgot password?
+        </Link>
+      </p>
       {siteKey ? (
         <>
           <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" nonce={nonce} />

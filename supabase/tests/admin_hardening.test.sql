@@ -3,6 +3,9 @@ begin;
 select no_plan();
 
 create schema tests;
+-- Since 0068 only a session that started with the password may ask for an admin code (auth.mfa_amr_claims): these fake sessions stand for password sign-ins.
+create function tests.add_password_amr() returns trigger language plpgsql as $$ begin insert into auth.mfa_amr_claims (session_id, created_at, updated_at, authentication_method, id) values (new.id, now(), now(), 'password', gen_random_uuid()); return new; end $$;
+create trigger tests_add_password_amr after insert on auth.sessions for each row execute function tests.add_password_amr();
 grant usage on schema tests to authenticated, anon;
 create function tests.act(p_uid uuid, p_session uuid) returns void language plpgsql as $$
 begin

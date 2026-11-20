@@ -444,3 +444,10 @@ entrypoint = "./functions/send-push/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/admin-2fa/index.ts"
+
+# Admin "Forgot password?" (migration 0068): the person is not signed in, so there is no JWT to check. The handler
+# verifies the Cloudflare Turnstile token itself and the database enforces the limits (see handler.ts).
+[functions.admin-password-reset]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/admin-password-reset/index.ts"
