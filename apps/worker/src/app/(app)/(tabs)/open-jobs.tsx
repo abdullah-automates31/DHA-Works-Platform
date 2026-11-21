@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/AuthForm';
 import { FeedCardSkeleton, SkeletonGroup } from '@/components/Skeleton';
-import { DistanceSheet } from '@/components/DistanceSheet';
+import { DistanceMenu } from '@/components/DistanceMenu';
 import { FeedJobCard } from '@/components/FeedJobCard';
 import { ChevronDownIcon, PinIcon } from '@/components/icons';
 import { LoadMoreFooter } from '@/components/LoadMoreFooter';
@@ -36,7 +36,23 @@ export default function OpenJobsScreen() {
   const now = useMemo(() => new Date(), [data]);
   const [sort, setSort] = useState<FeedSort>('newest');
   const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS);
-  const [sheet, setSheet] = useState(false);
+  const [sheet, setSheet] = useState(false); // the distance dropdown is open
+  const [menuTop, setMenuTop] = useState(0);
+  const rootRef = useRef<ViewInstance>(null);
+  const pillRef = useRef<ViewInstance>(null);
+  // open the dropdown right under the distance button: measure the button against the screen, then show it
+  const toggleMenu = () => {
+    if (sheet) {
+      setSheet(false);
+      return;
+    }
+    pillRef.current?.measureInWindow((_x, y, _w, h) => {
+      rootRef.current?.measureInWindow((_rx, rootY) => {
+        setMenuTop(y - rootY + h + 6);
+        setSheet(true);
+      });
+    });
+  };
   const location = useWorkerLocation(true);
   const origin = useMemo(() => chooseOrigin(location.point, areas), [location.point, areas]);
   // the filter and the sort work on the loaded rows, so while either needs the whole feed, pull the remaining pages in
@@ -51,7 +67,7 @@ export default function OpenJobsScreen() {
   const subtitle = data.status === 'ready' ? feedSubtitle(data.trades, areas) : '';
 
   return (
-    <View style={styles.root}>
+    <View ref={rootRef} collapsable={false} style={styles.root}>
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.title}>{t('feed.title')}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -66,11 +82,15 @@ export default function OpenJobsScreen() {
               );
             })}
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={radiusLabel(radius)} onPress={() => setSheet(true)} style={styles.radius}>
-            <PinIcon size={16} color={colors.greenDark} />
-            <Text style={styles.radiusText}>{radiusLabel(radius)}</Text>
-            <ChevronDownIcon size={16} color={colors.greenDark} />
-          </Pressable>
+          <View ref={pillRef} collapsable={false}>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: sheet }} accessibilityLabel={radiusLabel(radius)} onPress={toggleMenu} style={styles.radius}>
+              <PinIcon size={16} color={colors.greenDark} />
+              <Text style={styles.radiusText}>{radiusLabel(radius)}</Text>
+              <View style={sheet ? { transform: [{ rotate: '180deg' }] } : undefined}>
+                <ChevronDownIcon size={16} color={colors.greenDark} />
+              </View>
+            </Pressable>
+          </View>
         </View>
         {location.denied ? <Text style={styles.hint}>{t('feed.locationOff')}</Text> : null}
       </View>
@@ -122,22 +142,28 @@ export default function OpenJobsScreen() {
         ) : null}
       </ScrollView>
 
-      <DistanceSheet
-        visible={sheet}
-        radius={radius}
-        onPick={(r) => {
-          setRadius(r);
-          setSheet(false);
-        }}
-        onClose={() => setSheet(false)}
-      />
+      {/* tap anywhere outside the dropdown to close it; it sits above the list and below the header */}
+      {sheet ? <Pressable accessibilityLabel={t('common.cancel')} onPress={() => setSheet(false)} style={styles.backdrop} /> : null}
+      {sheet ? (
+        <View style={[styles.menuHolder, { top: menuTop }]}>
+          <DistanceMenu
+            radius={radius}
+            onPick={(r) => {
+              setRadius(r);
+              setSheet(false);
+            }}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  top: { paddingHorizontal: 20, paddingBottom: 8 },
+  top: { paddingHorizontal: 20, paddingBottom: 8, zIndex: 10, elevation: 10 },
+  backdrop: { ...StyleSheet.absoluteFill, zIndex: 5, elevation: 5 },
+  menuHolder: { position: 'absolute', right: 20, zIndex: 20, elevation: 20 },
   title: { fontFamily: fontFamily.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.28, color: colors.ink },
   subtitle: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.muted, marginTop: 2 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },

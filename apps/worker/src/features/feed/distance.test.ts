@@ -67,7 +67,7 @@ test('labels', () => {
   assert.equal(distanceLabel(12.4), '~12 km');
   assert.equal(radiusLabel(3), 'Within 3 km');
   assert.equal(radiusLabel(null), 'Any distance');
-  assert.deepEqual(RADIUS_OPTIONS, [1, 3, 5, 10, null]);
+  assert.deepEqual(RADIUS_OPTIONS, [1, 2, 3, 5, 10, null]);
 });
 
 test('newest keeps the server order, nearest sorts by distance and keeps ties and unknowns stable', () => {
