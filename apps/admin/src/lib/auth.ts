@@ -1,3 +1,4 @@
+import 'server-only'; // the guards (requireAdmin, requireSession) can only run on the server
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { parseStatus, statusFailure } from './status.ts';

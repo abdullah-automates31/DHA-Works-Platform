@@ -1,3 +1,4 @@
+import 'server-only'; // a client component that imports this fails the build, so session and keys never reach the browser
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@dha/supabase';
