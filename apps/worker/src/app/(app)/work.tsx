@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AboutBox } from '@/components/AboutBox';
 import { TextLink } from '@/components/AuthForm';
@@ -133,7 +133,7 @@ function WorkForm({ work, userId, refresh, onBack }: { work: Ready; userId: stri
   return (
     <View style={styles.root}>
       <OnboardingTop step={3} onBack={onBack} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Stepper current={3} />
           <View style={styles.heading}>

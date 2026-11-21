@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BottomBar, FieldError, GenderSegment, InfoNote, LabeledInput, OnboardingTop, PhoneField, Stepper } from '@/components/onboarding';
 import { TextLink } from '@/components/AuthForm';
@@ -100,7 +100,7 @@ export default function AboutScreen() {
   return (
     <View style={styles.root}>
       <OnboardingTop step={1} onBack={onBack} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Linking, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/AuthForm';
 import { Card, NavRow, Notice, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
@@ -60,7 +60,7 @@ export default function SupportScreen() {
   return (
     <View style={settingsStyles.root}>
       <SettingsTop title={t('settings.supportScreen.title')} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={settingsStyles.content} keyboardShouldPersistTaps="handled">
           <Text style={settingsStyles.body}>{t('settings.supportScreen.intro')}</Text>
           {helpline ? (

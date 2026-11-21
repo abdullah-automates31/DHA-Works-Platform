@@ -100,7 +100,7 @@ export default function ReportProblemScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.root}>
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} onPress={goBack} style={styles.back}>
           <ChevronLeftIcon size={22} color={colors.greenDark} />

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { Card, InfoRow, NavRow, Notice, SaveBar, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
@@ -115,7 +115,7 @@ export default function PersonalScreen() {
   return (
     <View style={settingsStyles.root}>
       <SettingsTop title={t('settings.personal')} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={settingsStyles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.photoBlock}>
             {photo ? <Image source={{ uri: toDataUri(photo.bytes, photo.mime) }} style={styles.preview} contentFit="cover" accessibilityLabel={t('settings.personalScreen.photo')} /> : <ProfilePhoto size={96} />}

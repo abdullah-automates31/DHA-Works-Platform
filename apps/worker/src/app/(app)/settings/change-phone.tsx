@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AuthPhoneField, ErrorText, Field, FieldLabel, PrimaryButton, TextLink } from '@/components/AuthForm';
 import { Card, InfoRow, SettingsTop, settingsStyles } from '@/components/SettingsParts';
@@ -87,7 +87,7 @@ export default function ChangePhoneScreen() {
   return (
     <View style={settingsStyles.root}>
       <SettingsTop title={t('settings.personalScreen.changePhone')} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={settingsStyles.content} keyboardShouldPersistTaps="handled">
           {step === 'enter' ? (
             <>

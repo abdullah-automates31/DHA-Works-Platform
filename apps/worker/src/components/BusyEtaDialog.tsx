@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BUSY_ETA_QUICK, busyEtaLabel, parseBusyMinutes } from '@/features/quote/busy';
 import { t } from '@/i18n';
@@ -30,7 +30,7 @@ export function BusyEtaDialog({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onLater}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.scrim}>
+      <KeyboardAvoidingView behavior="padding" style={styles.scrim}>
         <View style={styles.sheet} accessibilityViewIsModal>
           <Text style={styles.title}>{t('quote.busyDialogTitle')}</Text>
           <Text style={styles.body}>{t('quote.busyDialogBody', { title: currentJobTitle || t('quote.busyYourJob') })}</Text>

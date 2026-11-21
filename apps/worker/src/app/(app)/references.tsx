@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BottomBar, FieldError, LabeledInput, OnboardingTop } from '@/components/onboarding';
 import { referenceErrors, validateReferences, type ReferenceInput } from '@/features/documents/references';
@@ -59,7 +59,7 @@ export default function ReferencesScreen() {
   return (
     <View style={styles.root}>
       <OnboardingTop step={2} onBack={() => router.back()} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <View style={styles.heading}>
             <Text style={styles.title}>{t('references.title')}</Text>

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AboutBox } from '@/components/AboutBox';
 import { LoadError, Notice, SaveBar, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
@@ -91,7 +91,7 @@ function Form({ work }: { work: Ready }) {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <ScrollView contentContainerStyle={settingsStyles.content} keyboardShouldPersistTaps="handled">
         <SectionTitle>{t('settings.professionalScreen.skills')}</SectionTitle>
         <Text style={settingsStyles.body}>{t('settings.professionalScreen.skillsHint')}</Text>

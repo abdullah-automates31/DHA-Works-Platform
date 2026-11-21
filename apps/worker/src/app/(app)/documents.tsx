@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { TextLink } from '@/components/AuthForm';
 import { ProfilePhotoCard, UploadBox } from '@/components/documents';
@@ -83,7 +83,7 @@ export default function DocumentsScreen() {
   return (
     <View style={styles.root}>
       <OnboardingTop step={2} onBack={() => router.replace('/about')} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content}>
           <Stepper current={2} />
           <View style={styles.heading}>
