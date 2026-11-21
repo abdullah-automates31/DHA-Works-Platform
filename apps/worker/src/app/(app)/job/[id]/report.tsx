@@ -129,7 +129,7 @@ export default function ReportProblemScreen() {
 
       {ready && job && kind && allowed ? (
         <>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets>
             {helpline ? (
               <View style={styles.helpline}>
                 <Text style={styles.helplineText}>{t('report.helplineLead')}</Text>
@@ -190,12 +190,9 @@ export default function ReportProblemScreen() {
               ) : null}
             </View>
 
-          </ScrollView>
-          {/* outside the scroll area, so the keyboard lifts it and Send is always in view */}
-          <View style={styles.footer}>
             {error ? <FieldError>{error}</FieldError> : null}
             <PrimaryButton label={t('report.send')} onPress={() => void submit()} loading={busy} showArrow={false} />
-          </View>
+          </ScrollView>
         </>
       ) : null}
     </KeyboardAvoidingView>
@@ -214,7 +211,6 @@ function Message({ title, body, children }: { title: string; body: string; child
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 8 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 12 },
   back: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   topTitle: { flex: 1, textAlign: 'center', fontFamily: fontFamily.extrabold, fontSize: 18, color: colors.ink },

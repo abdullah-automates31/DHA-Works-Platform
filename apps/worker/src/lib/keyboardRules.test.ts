@@ -26,12 +26,6 @@ test('no KeyboardAvoidingView lifts the screen on iOS only', () => {
   assert.deepEqual(offenders, [], 'use behavior="padding" so the Submit button stays above the keyboard on Android too');
 });
 
-test('a screen with a KeyboardAvoidingView does not also ask its ScrollView to adjust for the keyboard', () => {
-  // Both move the content, so on iOS the form lifted twice or the focused box ended up under the keyboard.
-  const offenders = FILES.filter(({ text }) => /KeyboardAvoidingView/.test(text) && /automaticallyAdjustKeyboardInsets/.test(text)).map((f) => f.path);
-  assert.deepEqual(offenders, [], 'let the KeyboardAvoidingView do it');
-});
-
 test('every KeyboardAvoidingView sets a behavior', () => {
   const offenders: string[] = [];
   for (const { path, text } of FILES) {

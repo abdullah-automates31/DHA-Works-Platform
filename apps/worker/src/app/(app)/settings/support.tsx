@@ -103,6 +103,10 @@ export default function SupportScreen() {
             style={styles.area}
           />
           <Text style={styles.counter}>{t('settings.supportScreen.counter', { count: body.length, max: BODY_MAX })}</Text>
+          {error ? <Notice kind="error">{error}</Notice> : null}
+          {done ? <Notice kind="ok">{t('settings.supportScreen.sent')}</Notice> : null}
+          <PrimaryButton label={t('settings.supportScreen.send')} onPress={() => void onSend()} loading={sending} disabled={!state.canSend} showArrow={false} />
+
           <SectionTitle>{t('settings.supportScreen.yourMessages')}</SectionTitle>
           {failed && list === null ? <Notice kind="error">{t('settings.loadFailedBody')}</Notice> : null}
           {list !== null && list.length === 0 ? <Text style={settingsStyles.body}>{t('settings.supportScreen.empty')}</Text> : null}
@@ -127,19 +131,12 @@ export default function SupportScreen() {
             </View>
           ))}
         </ScrollView>
-        {/* outside the scroll area, so the keyboard lifts it and Send is always in view */}
-        <View style={styles.footer}>
-          {error ? <Notice kind="error">{error}</Notice> : null}
-          {done ? <Notice kind="ok">{t('settings.supportScreen.sent')}</Notice> : null}
-          <PrimaryButton label={t('settings.supportScreen.send')} onPress={() => void onSend()} loading={sending} disabled={!state.canSend} showArrow={false} />
-        </View>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 8 },
   inputWrap: { height: 52, borderWidth: 1.5, borderColor: colors.signIn.fieldBorder, borderRadius: 16, backgroundColor: '#fff', paddingHorizontal: 14, justifyContent: 'center' },
   input: { fontFamily: fontFamily.semibold, fontSize: 15, color: colors.ink, padding: 0, height: 48 },
   area: { minHeight: 120, borderWidth: 1.5, borderColor: colors.signIn.fieldBorder, borderRadius: 16, backgroundColor: '#fff', padding: 14, fontFamily: fontFamily.semibold, fontSize: 15, color: colors.ink },
