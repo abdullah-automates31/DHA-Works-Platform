@@ -149,6 +149,70 @@ export type Database = {
           },
         ]
       }
+      admin_reset_challenges: {
+        Row: {
+          code_hash: string
+          consumed: boolean
+          created_at: string
+          expires_at: string
+          id: string
+          tries: number
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          consumed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          tries?: number
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          consumed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          tries?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_reset_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_reset_signins: {
+        Row: {
+          created_at: string
+          expires_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_reset_signins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_totp_factors: {
         Row: {
           factor_id: string
@@ -459,6 +523,73 @@ export type Database = {
           {
             foreignKeyName: "device_tokens_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dues_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          id: string
+          method: string
+          note: string | null
+          reference: string | null
+          status: string
+          worker_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          method: string
+          note?: string | null
+          reference?: string | null
+          status?: string
+          worker_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          method?: string
+          note?: string | null
+          reference?: string | null
+          status?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dues_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dues_payments_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dues_payments_worker_id_fkey"
+            columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1113,6 +1244,7 @@ export type Database = {
           busy_eta_pending: boolean
           created_at: string
           decided_at: string | null
+          dha_fee: number
           id: string
           job_id: string
           labour: number
@@ -1136,6 +1268,7 @@ export type Database = {
           busy_eta_pending?: boolean
           created_at?: string
           decided_at?: string | null
+          dha_fee?: number
           id?: string
           job_id: string
           labour: number
@@ -1159,6 +1292,7 @@ export type Database = {
           busy_eta_pending?: boolean
           created_at?: string
           decided_at?: string | null
+          dha_fee?: number
           id?: string
           job_id?: string
           labour?: number
@@ -1842,6 +1976,109 @@ export type Database = {
           },
         ]
       }
+      worker_dues: {
+        Row: {
+          accrued_at: string
+          amount: number
+          due_at: string
+          id: string
+          job_id: string
+          quote_id: string | null
+          waive_reason: string | null
+          waived_at: string | null
+          waived_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          accrued_at?: string
+          amount: number
+          due_at: string
+          id?: string
+          job_id: string
+          quote_id?: string | null
+          waive_reason?: string | null
+          waived_at?: string | null
+          waived_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          accrued_at?: string
+          amount?: number
+          due_at?: string
+          id?: string
+          job_id?: string
+          quote_id?: string | null
+          waive_reason?: string | null
+          waived_at?: string | null
+          waived_by?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_dues_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "resident_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "worker_feed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "worker_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "resident_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "worker_jobs"
+            referencedColumns: ["my_quote_id"]
+          },
+          {
+            foreignKeyName: "worker_dues_waived_by_fkey"
+            columns: ["waived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_dues_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_references: {
         Row: {
           address: string | null
@@ -2297,6 +2534,45 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_dues_counts: { Args: never; Returns: Json }
+      admin_dues_list: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_tab?: string
+        }
+        Returns: Json
+      }
+      admin_dues_pay_to_save: { Args: { p_text: string }; Returns: undefined }
+      admin_dues_payment_decide: {
+        Args: {
+          p_amount?: number
+          p_confirm: boolean
+          p_payment: string
+          p_reason?: string
+        }
+        Returns: undefined
+      }
+      admin_dues_record_payment: {
+        Args: {
+          p_amount: number
+          p_method: string
+          p_note?: string
+          p_reference?: string
+          p_worker: string
+        }
+        Returns: string
+      }
+      admin_dues_waive: {
+        Args: { p_due: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_dues_warn: {
+        Args: { p_text: string; p_worker: string }
+        Returns: undefined
+      }
+      admin_dues_worker: { Args: { p_worker: string }; Returns: Json }
       admin_enroll_proof_status: { Args: never; Returns: boolean }
       admin_helpline_callback_done: {
         Args: { p_call: string }
@@ -2405,6 +2681,11 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_reset_confirm: {
+        Args: { p_code: string; p_email: string; p_password: string }
+        Returns: string
+      }
+      admin_reset_issue: { Args: { p_email: string }; Returns: Json }
       admin_reset_totp: { Args: never; Returns: undefined }
       admin_reviews_list: {
         Args: {
@@ -2566,6 +2847,7 @@ export type Database = {
         Args: { p_ids?: string[] }
         Returns: undefined
       }
+      my_dues: { Args: { p_limit?: number }; Returns: Json }
       my_reports: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json
@@ -2694,6 +2976,10 @@ export type Database = {
           p_path: string
           p_type: Database["public"]["Enums"]["document_type"]
         }
+        Returns: string
+      }
+      submit_dues_payment: {
+        Args: { p_amount: number; p_method: string; p_reference: string }
         Returns: string
       }
       submit_for_review: { Args: never; Returns: undefined }

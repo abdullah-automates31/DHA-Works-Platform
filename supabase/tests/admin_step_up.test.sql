@@ -143,6 +143,10 @@ select isnt(tests.msg($$select public.admin_report_decide('00000000-0000-0000-00
 select isnt(tests.msg($$select public.admin_set_review_hidden('00000000-0000-0000-0000-000000000001', true, 'because')$$), 'confirm with a new code', 'admin_set_review_hidden: no new code needed after sign-in (0060)');
 select isnt(tests.msg($$select public.admin_job_resume('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_job_resume: no new code needed after sign-in (0060)');
 select isnt(tests.msg($$select public.admin_send_message('00000000-0000-0000-0000-000000000001', 'hello')$$), 'confirm with a new code', 'admin_send_message: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_dues_payment_decide('00000000-0000-0000-0000-000000000001', true, null, null)$$), 'confirm with a new code', 'admin_dues_payment_decide: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_dues_record_payment('00000000-0000-0000-0000-0000000000b1', 100, 'office_cash', null, null)$$), 'confirm with a new code', 'admin_dues_record_payment: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_dues_waive('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_dues_waive: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_dues_warn('00000000-0000-0000-0000-0000000000b1', 'please pay')$$), 'confirm with a new code', 'admin_dues_warn: no new code needed after sign-in (0060)');
 select tests.back();
 
 select * from finish();

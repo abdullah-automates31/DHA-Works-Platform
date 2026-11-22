@@ -31,6 +31,8 @@ const json = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+const numberOf = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
 const text = (
   v: unknown,
 ): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -179,6 +181,11 @@ Deno.serve(async (req) => {
       outcome: text(row.payload?.outcome) ??
         (row.payload?.expired === true ? "expired" : null),
       until: text(row.payload?.until),
+      // DHA dues notices carry whole-rupee amounts and, for a decided payment, its status.
+      owed: numberOf(row.payload?.owed),
+      overdue: numberOf(row.payload?.overdue),
+      amount: numberOf(row.payload?.amount),
+      status: text(row.payload?.status),
     });
     if (!message) {
       skipped++;

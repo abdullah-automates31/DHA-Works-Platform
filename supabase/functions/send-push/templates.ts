@@ -20,6 +20,12 @@ export interface PushContext {
   until?: string | null;
   /** For a verification decision: approve, ask_for_changes, visit_hq or reject. */
   decision?: string | null;
+  /** DHA dues (migration 0071), in whole rupees: what the worker owes, how much of it is overdue, a payment amount. */
+  owed?: number | null;
+  overdue?: number | null;
+  amount?: number | null;
+  /** For a payment DHA decided: confirmed or rejected. */
+  status?: string | null;
 }
 
 export interface PushText {
@@ -45,7 +51,9 @@ const resident: Record<string, Template> = {
   quote_revised: (c) => ({
     title: `${c.worker} updated the quote`,
     body: c.total != null
-      ? `New price ${rupees(c.total)}. Check the price and visit time for ${c.job}.`
+      ? `New price ${
+        rupees(c.total)
+      }. Check the price and visit time for ${c.job}.`
       : `Check the new price and visit time for ${c.job}.`,
   }),
   new_interest: (c) => ({ title: "A worker is interested", body: c.job }),
@@ -111,11 +119,13 @@ const worker: Record<string, Template> = {
   }),
   busy_eta_needed: (c) => ({
     title: "Tell the customer how long you need",
-    body: `You took ${c.job} while another job is in progress. Tap to say how long it will take.`,
+    body:
+      `You took ${c.job} while another job is in progress. Tap to say how long it will take.`,
   }),
   busy_eta_expired: (c) => ({
     title: "Your quote was withdrawn",
-    body: `${c.job} is open again, because you did not say how long your current job will take.`,
+    body:
+      `${c.job} is open again, because you did not say how long your current job will take.`,
   }),
   quote_not_selected: (c) => ({
     title: "Job went to another worker",
@@ -151,10 +161,16 @@ const worker: Record<string, Template> = {
 // Notices from DHA staff, the same wording for residents and workers (report tracking and suspensions, 0053).
 // A report notice never says what was done to the other person.
 const day = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Karachi" });
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Karachi",
+  });
 
 // A push shows about two lines; the full text stays in the app.
-const short = (text: string, max = 160) => text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
+const short = (text: string, max = 160) =>
+  text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 
 const staff: Record<string, Template> = {
   // The decision on a worker or resident application. The reason is what staff wrote for the applicant to read.
@@ -162,13 +178,25 @@ const staff: Record<string, Template> = {
     const why = (fallback: string) => c.message ? short(c.message) : fallback;
     switch (c.decision) {
       case "approve":
-        return { title: "Your application is approved", body: "DHA staff approved your application." };
+        return {
+          title: "Your application is approved",
+          body: "DHA staff approved your application.",
+        };
       case "ask_for_changes":
-        return { title: "Changes needed", body: why("Open the app to see what to fix.") };
+        return {
+          title: "Changes needed",
+          body: why("Open the app to see what to fix."),
+        };
       case "visit_hq":
-        return { title: "Please visit the DHA office", body: why("Open the app for details.") };
+        return {
+          title: "Please visit the DHA office",
+          body: why("Open the app for details."),
+        };
       default:
-        return { title: "Application not approved", body: why("Open the app to see why.") };
+        return {
+          title: "Application not approved",
+          body: why("Open the app to see why."),
+        };
     }
   },
   report_received: () => ({
@@ -197,7 +225,9 @@ const staff: Record<string, Template> = {
     title: "Your account is suspended",
     body: [
       c.message ? `Reason: ${c.message}.` : "Contact DHA staff.",
-      c.until ? `It ends on ${day(c.until)}.` : "DHA staff will tell you when it ends.",
+      c.until
+        ? `It ends on ${day(c.until)}.`
+        : "DHA staff will tell you when it ends.",
     ].join(" "),
   }),
   account_reactivated: (c) => ({
@@ -207,8 +237,40 @@ const staff: Record<string, Template> = {
       : "DHA staff reactivated your account. You can use the app again.",
   }),
 };
+// DHA dues (migration 0071) are for workers only: a customer never owes DHA anything.
+const duesForWorker: Record<string, Template> = {
+  dues_reminder: (c) => ({
+    title: "DHA dues reminder",
+    body: (c.overdue ?? 0) > 0
+      ? `You have ${
+        rupees(c.overdue ?? 0)
+      } overdue to DHA. Pay it in My Dues now.`
+      : `You owe DHA ${
+        rupees(c.owed ?? 0)
+      }. Pay it in My Dues before it is due.`,
+  }),
+  dues_payment_decided: (c) =>
+    c.status === "rejected"
+      ? {
+        title: "Payment not accepted",
+        body: c.message
+          ? `DHA could not confirm your payment of ${
+            rupees(c.amount ?? 0)
+          }: ${c.message}`
+          : `DHA could not confirm your payment of ${rupees(c.amount ?? 0)}.`,
+      }
+      : {
+        title: "Payment confirmed",
+        body: `DHA confirmed your payment of ${rupees(c.amount ?? 0)}.`,
+      },
+  dues_warning: (c) => ({
+    title: "Warning from DHA",
+    body: c.message || "Open My Dues to see what you owe.",
+  }),
+};
 Object.assign(resident, staff);
 Object.assign(worker, staff);
+Object.assign(worker, duesForWorker);
 
 const byRole: Record<Role, Record<string, Template>> = { resident, worker };
 
