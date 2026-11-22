@@ -59,12 +59,15 @@ export const RULE_HELP: Record<string, { unit: string; hint: string }> = {
   stuck_cash_hours: { unit: 'hours', hint: 'A finished job without both cash entries after this long is flagged for staff.' },
   top_rated_min_jobs: { unit: 'jobs', hint: 'A worker needs at least this many completed jobs to be shown as Top rated.' },
   top_rated_min_rating: { unit: 'stars', hint: 'And an average rating of at least this (one decimal, for example 4.5).' },
+  dha_fee_percent: { unit: '% of labour', hint: 'DHA’s share of the worker’s LABOUR price (not materials), taken out of the quote: the customer pays the quote only. 0 switches the fee off.' },
+  dha_fee_min: { unit: 'Rs', hint: 'The smallest fee on a job that has a labour price (never more than the labour price). 0 means no minimum.' },
+  dues_due_days: { unit: 'days', hint: 'How long a worker has to pay each due after they record the cash. Staff suspend by hand when it runs out.' },
 };
 
 export type RuleValues = Record<string, string>;
 
 /** The first problem with the typed values, or null when all of them are fine. Mirrors admin_rules_save. */
-export function checkRules(group: 'jobs' | 'workers', rules: Rule[], values: RuleValues): string | null {
+export function checkRules(group: 'jobs' | 'workers' | 'dues', rules: Rule[], values: RuleValues): string | null {
   for (const r of rules) {
     const raw = (values[r.key] ?? '').trim();
     if (raw === '' || !/^[0-9]+(\.[0-9]+)?$/.test(raw)) return `${r.label}: enter a number.`;
@@ -88,7 +91,7 @@ export function rulesDirty(rules: Rule[], values: RuleValues): boolean {
 }
 
 // ---- The settings sections: one place for the navigation, the search and the page titles ----
-export type SectionKey = 'helpline' | 'categories' | 'areas' | 'jobs' | 'workers' | 'admins' | 'security' | 'audit' | 'system' | 'danger';
+export type SectionKey = 'helpline' | 'categories' | 'areas' | 'jobs' | 'workers' | 'dues' | 'admins' | 'security' | 'audit' | 'system' | 'danger';
 export const SECTION_GROUPS: { title: string; items: { key: SectionKey; label: string; keywords: string }[] }[] = [
   {
     title: 'Platform',
@@ -103,6 +106,7 @@ export const SECTION_GROUPS: { title: string; items: { key: SectionKey; label: s
     items: [
       { key: 'jobs', label: 'Jobs and booking', keywords: 'job expiry expire reminder photos stuck cash material bill cancellation quote' },
       { key: 'workers', label: 'Workers', keywords: 'top rated rating completed jobs documents cnic police certificate photo verification suspension' },
+      { key: 'dues', label: 'DHA fee and dues', keywords: 'fee commission percent dues pay jazzcash easypaisa bank account title minimum days overdue suspend' },
     ],
   },
   {

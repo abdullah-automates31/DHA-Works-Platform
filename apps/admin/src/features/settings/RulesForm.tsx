@@ -14,7 +14,7 @@ const initial: ActionState = {};
  * Changing a box marks it and brings up one Save bar; "Reset to default" only fills the box, nothing is saved until
  * Save changes is pressed. The database checks every value again and writes the audit row.
  */
-export function RulesForm({ group, rules }: { group: 'jobs' | 'workers'; rules: Rule[] }) {
+export function RulesForm({ group, rules }: { group: 'jobs' | 'workers' | 'dues'; rules: Rule[] }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(rules.map((r) => [r.key, String(r.value)])));
   const [state, run, pending] = useActionState(saveRulesAction, initial);
   const dirty = rulesDirty(rules, values);

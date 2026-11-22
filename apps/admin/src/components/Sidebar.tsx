@@ -8,7 +8,7 @@ import { Avatar, Icon, ICONS } from './ui';
 
 type Item = { href: string; label: string; icon: keyof typeof ICONS; badge?: number; red?: boolean };
 
-export function Sidebar({ name, workers, residents, reports, requests = 0 }: { name: string | null; workers: number; residents: number; reports: number; requests?: number }) {
+export function Sidebar({ name, workers, residents, reports, requests = 0, dues = 0 }: { name: string | null; workers: number; residents: number; reports: number; requests?: number; dues?: number }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const groups: { title?: string; items: Item[] }[] = [
@@ -27,6 +27,7 @@ export function Sidebar({ name, workers, residents, reports, requests = 0 }: { n
         { href: '/reports', label: 'Reports', icon: 'reports', badge: reports, red: true },
         { href: '/helpline', label: 'Helpline log', icon: 'helpline' },
         { href: '/requests', label: 'Worker requests', icon: 'users', badge: requests },
+        { href: '/dues', label: 'Dues', icon: 'jobs', badge: dues },
         { href: '/reviews', label: 'Reviews', icon: 'reviews' },
       ],
     },

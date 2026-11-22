@@ -135,13 +135,13 @@ export async function acceptInviteAction(_prev: ActionState, formData: FormData)
 }
 
 /**
- * Saves one section of rules (jobs or workers). The page only forwards the numbers: the database checks every value,
+ * Saves one section of rules (jobs, workers or dues). The page only forwards the numbers: the database checks every value,
  * keeps the audit row with the old and new values, and refuses anything out of range with a plain sentence.
  */
 export async function saveRulesAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase } = await requireAdmin();
   const group = field(formData, 'group', 10);
-  if (group !== 'jobs' && group !== 'workers') return BAD_REQUEST;
+  if (group !== 'jobs' && group !== 'workers' && group !== 'dues') return BAD_REQUEST;
   const values: Record<string, number> = {};
   for (const [name, raw] of formData.entries()) {
     if (name === 'group' || name.startsWith('$ACTION')) continue;

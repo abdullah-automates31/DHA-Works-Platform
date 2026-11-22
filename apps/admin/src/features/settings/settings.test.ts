@@ -108,7 +108,7 @@ test('parse: system status, with the scheduler unreadable or readable', () => {
 });
 
 test('sections: every key opens, an unknown one falls back to Service categories', () => {
-  assert.equal(SECTION_KEYS.length, 10);
+  assert.equal(SECTION_KEYS.length, 11);
   for (const k of SECTION_KEYS) assert.equal(parseSection(k), k);
   for (const bad of [undefined, null, '', 'nope', ['jobs'], 5]) assert.equal(parseSection(bad), 'categories');
 });
@@ -142,4 +142,18 @@ test('sizes read in plain units', () => {
   assert.equal(formatBytes(2048), '2 KB');
   assert.equal(formatBytes(12 * 1024 * 1024), '12 MB');
   assert.equal(formatBytes(1.5 * 1024 * 1024 * 1024), '1.5 GB');
+});
+
+test("the dues section: found by its words and its rules are checked like the others", () => {
+  assert.ok(matchSections("jazzcash").has("dues"));
+  assert.ok(matchSections("commission").has("dues"));
+  assert.equal(parseSection("dues"), "dues");
+  const rules = [
+    { key: "dha_fee_percent", label: "DHA fee", value: 20, def: 20, min: 0, max: 60, integer: false, changedAt: null, changedBy: null },
+    { key: "dues_due_days", label: "Days to pay", value: 5, def: 5, min: 1, max: 30, integer: true, changedAt: null, changedBy: null },
+  ];
+  assert.equal(checkRules("dues", rules, { dha_fee_percent: "12.5", dues_due_days: "7" }), null);
+  assert.match(checkRules("dues", rules, { dha_fee_percent: "61", dues_due_days: "7" }) ?? "", /between 0 and 60/);
+  assert.match(checkRules("dues", rules, { dha_fee_percent: "12.55", dues_due_days: "7" }) ?? "", /one decimal/);
+  assert.match(checkRules("dues", rules, { dha_fee_percent: "20", dues_due_days: "0" }) ?? "", /between 1 and 30/);
 });

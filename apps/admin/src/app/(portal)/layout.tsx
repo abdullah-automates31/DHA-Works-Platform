@@ -7,15 +7,19 @@ import { requireAdmin } from '@/lib/auth';
 /** The sidebar numbers load on their own so they never hold up the page. The layout stays mounted between pages. */
 async function SidebarWithCounts() {
   const { supabase, user } = await requireAdmin();
-  const [profile, workers, residents, reports, requests] = await Promise.all([
+  const [profile, workers, residents, reports, requests, dues] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
     loadCounts(supabase, 'worker'),
     loadCounts(supabase, 'resident'),
     loadReportCounts(supabase),
     supabase.rpc('admin_requests_counts'),
+    supabase.rpc('admin_dues_counts'),
   ]);
   const openRequests = Number((requests.data as { open?: number } | null)?.open ?? 0);
-  return <Sidebar name={profile.data?.full_name ?? null} workers={workers.pending ?? 0} residents={residents.pending ?? 0} reports={reports.open} requests={openRequests} />;
+  // payments waiting for staff, plus workers who are overdue (both need someone to act)
+  const duesCounts = dues.data as { pending?: number; overdue_workers?: number } | null;
+  const openDues = Number(duesCounts?.pending ?? 0) + Number(duesCounts?.overdue_workers ?? 0);
+  return <Sidebar name={profile.data?.full_name ?? null} workers={workers.pending ?? 0} residents={residents.pending ?? 0} reports={reports.open} requests={openRequests} dues={openDues} />;
 }
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {

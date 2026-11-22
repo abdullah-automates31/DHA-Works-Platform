@@ -10,6 +10,7 @@ import { buildHref, dateOnly, dateTime, jobStatus, lastPage, PAGE_SIZE, pageNumb
 import { isUuid } from '@/lib/json';
 import { parseReviews } from '../reviews/parse';
 import { ReviewsTable } from '../reviews/ReviewsTable';
+import { WorkerDuesPanel } from '../dues/WorkerDuesPanel';
 import { DOC_LABEL, initials, phasesText, phoneText, type DocType } from '../verification/rules';
 import { addStaffNoteAction, sendMessageAction, setAccountStatusAction } from './actions';
 import { loadUserDetail, userDocUrls } from './queries';
@@ -21,7 +22,7 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
   const d = await loadUserDetail(supabase, id);
   if (!d) notFound();
   const isWorker = d.role === 'worker';
-  const tab = isWorker && params.tab === 'reviews' ? 'reviews' : 'overview';
+  const tab = isWorker && params.tab === 'reviews' ? 'reviews' : isWorker && params.tab === 'dues' ? 'dues' : 'overview';
   const page = pageNumber(params.page);
   const urls = await userDocUrls(supabase, d);
   const suspended = d.accountStatus === 'suspended';
@@ -86,11 +87,14 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
               tabs={[
                 { key: 'overview', label: 'Overview', href: `/users/${d.id}` },
                 { key: 'reviews', label: 'Reviews', count: reviews?.total, href: `/users/${d.id}?tab=reviews` },
+                { key: 'dues', label: 'Dues', href: `/users/${d.id}?tab=dues` },
               ]}
             />
           ) : null}
 
-          {tab === 'reviews' && reviews ? (
+          {tab === 'dues' && isWorker ? (
+            <WorkerDuesPanel supabase={supabase} workerId={d.id} workerName={d.name} />
+          ) : tab === 'reviews' && reviews ? (
             <>
               {reviewsFailed ? <LoadError /> : null}
               <ReviewsTable rows={reviews.rows} showWorker={false} empty="No reviews for this worker yet." />

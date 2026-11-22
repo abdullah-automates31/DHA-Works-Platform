@@ -47,7 +47,7 @@ export function parseStaff(json: unknown): Staff {
 
 // ---- Rules (migration 0064: admin_rules_get) ----
 export type Rule = { key: string; label: string; value: number; def: number; min: number; max: number; integer: boolean; changedAt: string | null; changedBy: string | null };
-export type RuleGroup = 'jobs' | 'workers';
+export type RuleGroup = 'jobs' | 'workers' | 'dues';
 export type Rules = Record<RuleGroup, Rule[]>;
 
 function parseRuleList(v: unknown): Rule[] {
@@ -67,7 +67,8 @@ export function parseRules(json: unknown): Rules | null {
   if (!o) return null;
   const jobs = parseRuleList(o.jobs);
   const workers = parseRuleList(o.workers);
-  return jobs.length === 0 && workers.length === 0 ? null : { jobs, workers };
+  const dues = parseRuleList(o.dues);
+  return jobs.length === 0 && workers.length === 0 && dues.length === 0 ? null : { jobs, workers, dues };
 }
 
 // ---- Staff activity (admin_staff_activity) ----

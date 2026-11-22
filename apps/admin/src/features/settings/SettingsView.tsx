@@ -6,6 +6,7 @@ import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { ago, dateOnly, dateTime } from '@/lib/format';
 import { initials } from '../verification/rules';
+import { savePayToAction } from '../dues/actions';
 import { addCategoryAction, inviteStaffAction, removeStaffAction, revokeInviteAction, setCategoryAction, setPhaseAction, signOutOthersAction } from './actions';
 import { AuditView, type AuditParams } from './AuditView';
 import { HelplineForm } from './HelplineForm';
@@ -21,6 +22,7 @@ const I: Record<SectionKey, ReactNode> = {
   areas: <><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" /></>,
   jobs: ICONS.jobs,
   workers: ICONS.workers,
+  dues: <path d="M12 3v18M16.5 7.5c-.8-1.2-2.3-2-4.5-2-2.6 0-4 1.3-4 3s1.4 2.5 4 3 4 1.3 4 3-1.4 3-4 3c-2.2 0-3.7-.8-4.5-2" />,
   admins: ICONS.users,
   security: <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" />,
   audit: <path d="M5 4h14v16H5zM9 9h6M9 13h6M9 17h4" />,
@@ -46,6 +48,7 @@ const HEAD: Record<SectionKey, { title: string; sub: string }> = {
   areas: { title: 'Areas', sub: 'The DHA phases the platform serves.' },
   jobs: { title: 'Jobs and booking', sub: 'How long jobs stay open and when staff are alerted. The fixed rules are listed below.' },
   workers: { title: 'Workers', sub: 'When a worker counts as Top rated, and how workers are verified.' },
+  dues: { title: 'DHA fee and dues', sub: 'DHA’s share of each job, how long workers have to pay it, and where they pay.' },
   admins: { title: 'Admin accounts', sub: 'Who can use this portal, when they last signed in and where they are signed in now.' },
   security: { title: 'Security', sub: 'How sign-in is protected today.' },
   audit: { title: 'Audit log', sub: 'Every change and sensitive action: who did it and when.' },
@@ -78,18 +81,20 @@ export async function SettingsView({ tab, params = {} }: { tab?: string; params?
   const active = parseSection(tab);
   const { supabase, user } = await requireSession();
   const needsSettings = active === 'categories' || active === 'areas' || active === 'helpline';
-  const needsRules = active === 'jobs' || active === 'workers';
+  const needsRules = active === 'jobs' || active === 'workers' || active === 'dues';
   const needsStaff = active === 'admins';
-  const [s, r, st, act] = await Promise.all([
+  const [s, r, st, act, payTo] = await Promise.all([
     needsSettings ? supabase.rpc('admin_settings_get') : null,
     needsRules ? supabase.rpc('admin_rules_get') : null,
     needsStaff ? supabase.rpc('admin_staff_list') : null,
     needsStaff ? supabase.rpc('admin_staff_activity') : null,
+    active === 'dues' ? supabase.from('app_settings').select('value').eq('key', 'dues_pay_to').maybeSingle() : null,
   ]);
   const settings = s ? parseSettings(s.error ? null : s.data) : null;
   const rules = r ? parseRules(r.error ? null : r.data) : null;
   const staff = parseStaff(st && !st.error ? st.data : null);
   const activity = parseStaffActivity(act && !act.error ? act.data : null);
+  const payToText = typeof payTo?.data?.value === 'string' ? payTo.data.value : '';
   const turnstile = !!process.env.TURNSTILE_SECRET_KEY && !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const head = HEAD[active];
 
@@ -196,6 +201,30 @@ export async function SettingsView({ tab, params = {} }: { tab?: string; params?
                   { label: 'Verification decisions', text: 'Staff approve, ask for changes, ask the person to visit HQ, or reject. A rejected applicant can be let in to apply again from their review page.' },
                   { label: 'Suspension', text: 'Staff suspend from a report decision or the Users screen, for a number of days (1 to 365) or until reactivated. The worker is told and signed out.' },
                   { label: 'Ratings', text: 'Only residents rate workers, after a job is done.' },
+                ]}
+              />
+            </div>
+          ) : null}
+
+          {active === 'dues' && rules ? (
+            <div className="col" style={{ gap: 20, maxWidth: 860 }}>
+              <div className="note"><span><b>The fee comes out of the quote.</b> The customer pays the quote and nothing more. The worker collects it in cash, then owes DHA the fee. With 20% and a Rs 50 minimum, a job with Rs 400 labour costs the worker Rs 80 (20% is more than the minimum). Set the percent and the minimum to 0 to switch the fee off. A change applies to new quotes and to quotes a worker changes; accepted quotes keep the fee they had.</span></div>
+              <RulesForm group="dues" rules={rules.dues} />
+              <div className="card col" style={{ gap: 12 }}>
+                <div>
+                  <h2 className="h2">Where workers pay DHA</h2>
+                  <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>Shown in My Dues in the worker app, for example: JazzCash 0300 1234567, account title DHA Works. Workers pay here, then enter the transaction ID.</div>
+                </div>
+                <ActionForm action={savePayToAction} submit="Save" fields={[{ name: 'text', label: 'Payment details', kind: 'textarea', defaultValue: payToText, maxLength: 500, rows: 3 }]} resetOnOk={false} />
+              </div>
+              <Facts
+                title="Fixed rules"
+                items={[
+                  { label: 'Who pays', text: 'The worker. The fee is not added to what the customer pays.' },
+                  { label: 'Base', text: 'The worker’s labour price. Materials are the worker’s own cost and are never charged.' },
+                  { label: 'When a due appears', text: 'When the worker records the cash of the finished job. A job with no labour price creates no due.' },
+                  { label: 'Paying', text: 'The worker pays by JazzCash, Easypaisa or bank and enters the transaction ID. Staff confirm it on the Dues page, or record office cash.' },
+                  { label: 'Suspension', text: 'By hand for now. A suspended worker can still open My Dues to pay, and is reactivated from their profile once the dues are cleared.' },
                 ]}
               />
             </div>
