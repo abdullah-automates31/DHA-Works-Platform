@@ -2,11 +2,12 @@
 // screen, checks the "I have paid" form, and maps the database's refusals to friendly messages. The database is the authority
 // for every amount and every rule; nothing here decides who owes what.
 import { t } from '../../i18n/index.ts';
+import { MAX_FILE_BYTES } from '../documents/files.ts';
 import { formatRupees } from '../home/format.ts';
 import { dateText } from '../myreports/rules.ts';
 
 export type DueStatus = 'due' | 'overdue' | 'paid' | 'waived';
-export type PaymentMethod = 'jazzcash' | 'easypaisa' | 'bank';
+export type PaymentMethod = 'jazzcash' | 'easypaisa' | 'bank' | 'sadapay' | 'nayapay' | 'other';
 export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
 export type ChipTone = 'wait' | 'scheduled' | 'inProgress' | 'done' | 'declined';
 
@@ -149,6 +150,12 @@ export function methodLabel(method: string): string {
       return t('dues.methodEasypaisa');
     case 'bank':
       return t('dues.methodBank');
+    case 'sadapay':
+      return t('dues.methodSadapay');
+    case 'nayapay':
+      return t('dues.methodNayapay');
+    case 'other':
+      return t('dues.methodOther');
     case 'office_cash':
       return t('dues.methodOffice');
     default:
@@ -158,18 +165,25 @@ export function methodLabel(method: string): string {
 
 // ---- the "I have paid" form ----------------------------------------------------------------------------------------------------
 
-export const METHODS: readonly PaymentMethod[] = ['jazzcash', 'easypaisa', 'bank'];
+export const METHODS: readonly PaymentMethod[] = ['jazzcash', 'easypaisa', 'bank', 'sadapay', 'nayapay', 'other'];
 export const REFERENCE_MIN = 3;
 export const REFERENCE_MAX = 60;
 
-export type PaymentInput = { amount: string; method: PaymentMethod | null; reference: string };
-export type PaymentArgs = { p_amount: number; p_method: PaymentMethod; p_reference: string };
-export type PaymentCheck = { ok: true; args: PaymentArgs } | { ok: false; field: 'amount' | 'method' | 'reference'; key: DuesErrorKey };
+/** The screenshot of the payment: the picked photo, already re-encoded by the picker. */
+export type ProofPhoto = { bytes: ArrayBuffer; mime: string };
+export type PaymentInput = { amount: string; method: PaymentMethod | null; reference: string; proof: ProofPhoto | null };
+export type PaymentArgs = { p_amount: number; p_method: PaymentMethod; p_reference: string; p_proof_path: string };
+export type PaymentCheck =
+  | { ok: true; args: Omit<PaymentArgs, 'p_proof_path'>; proof: ProofPhoto }
+  | { ok: false; field: 'amount' | 'method' | 'reference' | 'proof'; key: DuesErrorKey };
 
 export type DuesErrorKey =
   | 'dues.errors.amount'
   | 'dues.errors.method'
   | 'dues.errors.reference'
+  | 'dues.errors.proof'
+  | 'dues.errors.proofFile'
+  | 'dues.errors.proofUpload'
   | 'dues.errors.tooMuch'
   | 'dues.errors.nothing'
   | 'dues.errors.pending'
@@ -186,7 +200,18 @@ export function checkPayment(input: PaymentInput, owed: number): PaymentCheck {
   if (!input.method) return { ok: false, field: 'method', key: 'dues.errors.method' };
   const reference = input.reference.trim();
   if (reference.length < REFERENCE_MIN || reference.length > REFERENCE_MAX) return { ok: false, field: 'reference', key: 'dues.errors.reference' };
-  return { ok: true, args: { p_amount: amount, p_method: input.method, p_reference: reference } };
+  if (!input.proof) return { ok: false, field: 'proof', key: 'dues.errors.proof' };
+  if (!PROOF_EXTENSIONS[input.proof.mime.toLowerCase()] || input.proof.bytes.byteLength <= 0 || input.proof.bytes.byteLength > MAX_FILE_BYTES) {
+    return { ok: false, field: 'proof', key: 'dues.errors.proofFile' };
+  }
+  return { ok: true, args: { p_amount: amount, p_method: input.method, p_reference: reference }, proof: input.proof };
+}
+
+const PROOF_EXTENSIONS: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+/** Where the screenshot goes: the worker's own folder of the dues-proof bucket (the database checks the same shape). */
+export function buildProofPath(userId: string, mime: string, now: number = Date.now(), random: string = Math.random().toString(16).slice(2, 10)): string {
+  return `${userId}/dues/${now}-${random}.${PROOF_EXTENSIONS[mime.toLowerCase()] ?? 'jpg'}`;
 }
 
 /** The database's plain-English refusals (submit_dues_payment) as the app's own messages. */
@@ -199,14 +224,25 @@ export function duesErrorKey(message: string | null | undefined): DuesErrorKey {
   if (m.includes('choose how you paid')) return 'dues.errors.method';
   if (m.includes('transaction id')) return 'dues.errors.reference';
   if (m.includes('amount you paid')) return 'dues.errors.amount';
+  if (m.includes('screenshot')) return 'dues.errors.proof';
   return 'dues.errors.generic';
 }
 
-export type PaymentClient = { submit: (args: PaymentArgs) => PromiseLike<{ error: { message: string } | null }> };
+export type PaymentClient = {
+  upload: (path: string, bytes: ArrayBuffer, mime: string) => PromiseLike<{ error: { message: string } | null }>;
+  submit: (args: PaymentArgs) => PromiseLike<{ error: { message: string } | null }>;
+};
 
-export async function sendPayment(client: PaymentClient, args: PaymentArgs): Promise<{ ok: true } | { ok: false; key: DuesErrorKey }> {
+/** Uploads the screenshot, then sends the payment with its path. A screenshot that cannot be uploaded stops everything: nothing is sent. */
+export async function sendPayment(
+  client: PaymentClient,
+  input: { userId: string; args: Omit<PaymentArgs, 'p_proof_path'>; proof: ProofPhoto; now?: number; random?: string },
+): Promise<{ ok: true } | { ok: false; key: DuesErrorKey }> {
   try {
-    const { error } = await client.submit(args);
+    const path = buildProofPath(input.userId, input.proof.mime, input.now, input.random);
+    const up = await client.upload(path, input.proof.bytes, input.proof.mime.toLowerCase());
+    if (up.error) return { ok: false, key: 'dues.errors.proofUpload' };
+    const { error } = await client.submit({ ...input.args, p_proof_path: path });
     return error ? { ok: false, key: duesErrorKey(error.message) } : { ok: true };
   } catch {
     return { ok: false, key: 'dues.errors.network' };
@@ -226,4 +262,54 @@ export function whatsappLink(number: string | null | undefined): string | null {
 /** The text on the profile row and the suspended screen. */
 export function owedText(summary: DuesSummary): string {
   return summary.owed > 0 ? formatRupees(summary.owed) : '';
+}
+
+// ---- one due in full (my_due_detail, migration 0074) -------------------------------------------------------------------------
+
+export type DueDetail = {
+  due: { id: string; fee: number; paid: number; remaining: number; accruedAt: string; dueAt: string; status: DueStatus; waiveReason: string };
+  job: { id: string; code: string; title: string; description: string; category: string; phase: number; lane: string; completedAt: string | null; scheduledStart: string | null };
+  money: { labour: number; materials: number; total: number; fee: number; earned: number; cashRecorded: number | null; cashRecordedAt: string | null };
+  owedTotal: number;
+};
+
+/** Reads the answer of my_due_detail(). Anything that does not look right makes the whole answer null. */
+export function parseDueDetail(json: unknown): DueDetail | null {
+  const o = obj(json);
+  const d = obj(o?.due);
+  const j = obj(o?.job);
+  const m = obj(o?.money);
+  if (!o || !d || !j || !m || typeof d.id !== 'string' || typeof j.id !== 'string') return null;
+  const status = d.status;
+  if (status !== 'due' && status !== 'overdue' && status !== 'paid' && status !== 'waived') return null;
+  return {
+    due: { id: d.id, fee: num(d.fee), paid: num(d.paid), remaining: num(d.remaining), accruedAt: str(d.accrued_at), dueAt: str(d.due_at), status, waiveReason: str(d.waive_reason) },
+    job: {
+      id: j.id,
+      code: str(j.code),
+      title: str(j.title),
+      description: str(j.description),
+      category: str(j.category),
+      phase: num(j.phase),
+      lane: str(j.lane),
+      completedAt: typeof j.completed_at === 'string' ? j.completed_at : null,
+      scheduledStart: typeof j.scheduled_start === 'string' ? j.scheduled_start : null,
+    },
+    money: {
+      labour: num(m.labour),
+      materials: num(m.materials),
+      total: num(m.total),
+      fee: num(m.fee),
+      earned: num(m.earned),
+      cashRecorded: typeof m.cash_recorded === 'number' ? m.cash_recorded : null,
+      cashRecordedAt: typeof m.cash_recorded_at === 'string' ? m.cash_recorded_at : null,
+    },
+    owedTotal: num(o.owed_total),
+  };
+}
+
+/** "Phase 6, Lane 8" (the lane is left out when the job has none). */
+export function whereText(phase: number, lane: string): string {
+  const p = t('dues.detail.phase', { phase: String(phase) });
+  return lane.trim() === '' ? p : `${p}, ${t('dues.detail.lane', { lane: lane.trim() })}`;
 }

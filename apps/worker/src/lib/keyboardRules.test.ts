@@ -41,7 +41,7 @@ test('every screen with a text field is wrapped so the keyboard lifts it', () =>
   // itself, or use a layout that does (AuthScreen).
   const FIELDS = /<(TextInput|LabeledInput|PhoneField|NumberField|AuthPhoneField|AboutBox|Field)\b/;
   const WRAPPED = /KeyboardAvoidingView|<AuthScreen\b/;
-  const SHARED = new Set(['components/onboarding.tsx', 'components/AuthForm.tsx', 'components/AboutBox.tsx']); // draw the fields; their screens wrap them
+  const SHARED = new Set(['components/onboarding.tsx', 'components/AuthForm.tsx', 'components/AboutBox.tsx', 'components/DuesPayForm.tsx']); // draw the fields; their screens wrap them
   const offenders = FILES.filter(({ path, text }) => path.replaceAll('\\', '/').startsWith('app/') || path.replaceAll('\\', '/').startsWith('components/'))
     .filter(({ path }) => !SHARED.has(path.replaceAll('\\', '/')))
     .filter(({ text }) => FIELDS.test(text) && !WRAPPED.test(text))

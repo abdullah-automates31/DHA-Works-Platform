@@ -120,3 +120,13 @@ test('Settings and its sub-screens are for approved workers only', () => {
     assert.equal(isRouteAllowed('/settings/personal', allowedRoutes(with_({ verification_status: s }), 2)), false, s);
   }
 });
+
+test('one due (/dues/<id>) opens for an approved and for a suspended worker, and for nobody else', () => {
+  const approved = allowedRoutes(with_({ verification_status: 'approved' }), 3);
+  const suspended = allowedRoutes(with_({ verification_status: 'approved', account_status: 'suspended' }), 3);
+  assert.equal(isRouteAllowed('/dues/9b1f2c3d-0000-4000-8000-000000000001', approved), true);
+  assert.equal(isRouteAllowed('/dues/9b1f2c3d-0000-4000-8000-000000000001', suspended), true);
+  assert.equal(isRouteAllowed('/dues/', approved), false, 'an empty id is not a due');
+  assert.equal(isRouteAllowed('/dues/x', allowedRoutes(with_({ verification_status: 'pending' }))), false);
+  assert.equal(isRouteAllowed('/dues/x', allowedRoutes(with_({ role: 'resident' }))), false);
+});

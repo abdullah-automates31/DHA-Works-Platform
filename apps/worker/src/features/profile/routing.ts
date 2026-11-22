@@ -88,5 +88,7 @@ export function isRouteAllowed(pathname: string, allowed: readonly AppRoute[]): 
   if (allowed.includes(pathname as AppRoute)) return true;
   // The Settings screens (/settings/personal, /settings/privacy ...) belong to the worker who may open /settings.
   if (pathname.startsWith('/settings/') && pathname.length > '/settings/'.length) return allowed.includes('/settings');
+  // One due (/dues/<id>) belongs to the worker who may open My Dues, a suspended worker too.
+  if (pathname.startsWith('/dues/') && pathname.length > '/dues/'.length) return allowed.includes('/dues');
   return pathname.startsWith('/job/') && pathname.length > '/job/'.length && allowed.includes('/open-jobs');
 }

@@ -301,7 +301,9 @@ function QuoteForm({ jobId, when, preferred, next, onAccepted, revise }: { jobId
           ) : null}
 
           {revise ? <Text style={styles.warning}>{t('quote.changeWarning')}</Text> : null}
-          {busy ? <Text style={styles.warning}>{t('quote.busyVisitNote')}</Text> : null}
+          {/* The booked-time note is true only for a job with a real date; an old as-soon-as-possible job says so instead. */}
+          {busy && preferred?.date ? <Text style={styles.warning}>{t('quote.busyVisitNote')}</Text> : null}
+          {busy && preferred && !preferred.date ? <Text style={styles.warning}>{t('quote.busyAsapNote')}</Text> : null}
           <View style={styles.visitBox} accessibilityLabel={t('quote.visitTitle')}>
             <Text style={styles.visitBoxTitle}>{t('quote.visitTitle')}</Text>
             <Text style={styles.visitBoxTime}>{when || t('quote.visitNone')}</Text>

@@ -3,15 +3,19 @@ import { test } from 'node:test';
 
 import {
   amountDigits,
+  buildProofPath,
   checkPayment,
   dueView,
   duesErrorKey,
+  METHODS,
   methodLabel,
+  parseDueDetail,
   parseMyDues,
   paymentView,
   sendPayment,
   spanText,
   whatsappLink,
+  whereText,
   type DueRow,
 } from './rules.ts';
 
@@ -89,9 +93,11 @@ test('a payment says Waiting, Confirmed or Not accepted', () => {
   assert.equal(methodLabel('office_cash'), 'Paid at DHA office');
 });
 
-test('the form: amount, method and transaction ID are checked before anything is sent', () => {
-  const ok = { amount: '250', method: 'jazzcash' as const, reference: ' TX-1001 ' };
-  assert.deepEqual(checkPayment(ok, 550), { ok: true, args: { p_amount: 250, p_method: 'jazzcash', p_reference: 'TX-1001' } });
+const SHOT = { bytes: new ArrayBuffer(2048), mime: 'image/jpeg' };
+
+test('the form: amount, method, transaction ID and screenshot are checked before anything is sent', () => {
+  const ok = { amount: '250', method: 'jazzcash' as const, reference: ' TX-1001 ', proof: SHOT };
+  assert.deepEqual(checkPayment(ok, 550), { ok: true, args: { p_amount: 250, p_method: 'jazzcash', p_reference: 'TX-1001' }, proof: SHOT });
   assert.deepEqual(checkPayment({ ...ok, amount: '' }, 550), { ok: false, field: 'amount', key: 'dues.errors.amount' });
   assert.deepEqual(checkPayment({ ...ok, amount: '0' }, 550), { ok: false, field: 'amount', key: 'dues.errors.amount' });
   assert.deepEqual(checkPayment({ ...ok, amount: '551' }, 550), { ok: false, field: 'amount', key: 'dues.errors.tooMuch' });
@@ -99,6 +105,28 @@ test('the form: amount, method and transaction ID are checked before anything is
   assert.deepEqual(checkPayment({ ...ok, reference: 'ab' }, 550), { ok: false, field: 'reference', key: 'dues.errors.reference' });
   assert.deepEqual(checkPayment({ ...ok, reference: 'x'.repeat(61) }, 550), { ok: false, field: 'reference', key: 'dues.errors.reference' });
   assert.equal(amountDigits('Rs 1,250.50'), '125050', 'only digits are kept');
+});
+
+test('the screenshot is required, and it must be a real photo under 5 MB', () => {
+  const base = { amount: '50', method: 'bank' as const, reference: 'TX-9' };
+  assert.deepEqual(checkPayment({ ...base, proof: null }, 100), { ok: false, field: 'proof', key: 'dues.errors.proof' });
+  assert.deepEqual(checkPayment({ ...base, proof: { bytes: new ArrayBuffer(10), mime: 'application/pdf' } }, 100), { ok: false, field: 'proof', key: 'dues.errors.proofFile' });
+  assert.deepEqual(checkPayment({ ...base, proof: { bytes: new ArrayBuffer(0), mime: 'image/png' } }, 100), { ok: false, field: 'proof', key: 'dues.errors.proofFile' });
+  assert.deepEqual(checkPayment({ ...base, proof: { bytes: new ArrayBuffer(5 * 1024 * 1024 + 1), mime: 'image/png' } }, 100), { ok: false, field: 'proof', key: 'dues.errors.proofFile' });
+  assert.equal(checkPayment({ ...base, proof: { bytes: new ArrayBuffer(10), mime: 'IMAGE/WEBP' } }, 100).ok, true, 'the type is read without regard to case');
+});
+
+test('every way to pay has a name, and Other, SadaPay and NayaPay are among them', () => {
+  assert.deepEqual([...METHODS], ['jazzcash', 'easypaisa', 'bank', 'sadapay', 'nayapay', 'other']);
+  assert.equal(methodLabel('sadapay'), 'SadaPay');
+  assert.equal(methodLabel('nayapay'), 'NayaPay');
+  assert.equal(methodLabel('other'), 'Other');
+});
+
+test('the screenshot goes to the own dues folder of the worker', () => {
+  assert.equal(buildProofPath('u1', 'image/jpeg', 1700000000000, 'abc123'), 'u1/dues/1700000000000-abc123.jpg');
+  assert.equal(buildProofPath('u1', 'image/png', 5, 'z'), 'u1/dues/5-z.png');
+  assert.equal(buildProofPath('u1', 'image/webp', 5, 'z'), 'u1/dues/5-z.webp');
 });
 
 test("the database's refusals become the app's own messages", () => {
@@ -113,11 +141,41 @@ test("the database's refusals become the app's own messages", () => {
   assert.equal(duesErrorKey(null), 'dues.errors.generic');
 });
 
-test('sending a payment: success, a refusal and a lost connection', async () => {
-  const args = { p_amount: 10, p_method: 'bank' as const, p_reference: 'TX-9' };
-  assert.deepEqual(await sendPayment({ submit: async () => ({ error: null }) }, args), { ok: true });
-  assert.deepEqual(await sendPayment({ submit: async () => ({ error: { message: 'this transaction ID was already sent' } }) }, args), { ok: false, key: 'dues.errors.used' });
-  assert.deepEqual(await sendPayment({ submit: () => Promise.reject(new Error('offline')) }, args), { ok: false, key: 'dues.errors.network' });
+test('sending a payment: the screenshot is uploaded first, then the payment is sent with its path', async () => {
+  const input = { userId: 'u1', args: { p_amount: 10, p_method: 'bank' as const, p_reference: 'TX-9' }, proof: SHOT, now: 123, random: 'r' };
+  const calls: string[] = [];
+  const ok = {
+    upload: async (path: string) => {
+      calls.push('upload ' + path);
+      return { error: null };
+    },
+    submit: async (a: { p_proof_path: string }) => {
+      calls.push('submit ' + a.p_proof_path);
+      return { error: null };
+    },
+  };
+  assert.deepEqual(await sendPayment(ok, input), { ok: true });
+  assert.deepEqual(calls, ['upload u1/dues/123-r.jpg', 'submit u1/dues/123-r.jpg'], 'upload first, then the same path in the payment');
+});
+
+test('sending a payment: a failed upload sends nothing; a refusal and a lost connection are named', async () => {
+  const input = { userId: 'u1', args: { p_amount: 10, p_method: 'bank' as const, p_reference: 'TX-9' }, proof: SHOT };
+  let submitted = 0;
+  const submit = async () => {
+    submitted++;
+    return { error: null };
+  };
+  assert.deepEqual(await sendPayment({ upload: async () => ({ error: { message: 'x' } }), submit }, input), { ok: false, key: 'dues.errors.proofUpload' });
+  assert.equal(submitted, 0, 'nothing is sent when the screenshot did not upload');
+  assert.deepEqual(
+    await sendPayment({ upload: async () => ({ error: null }), submit: async () => ({ error: { message: 'this transaction ID was already sent' } }) }, input),
+    { ok: false, key: 'dues.errors.used' },
+  );
+  assert.deepEqual(
+    await sendPayment({ upload: async () => ({ error: null }), submit: async () => ({ error: { message: 'attach a screenshot of your payment' } }) }, input),
+    { ok: false, key: 'dues.errors.proof' },
+  );
+  assert.deepEqual(await sendPayment({ upload: () => Promise.reject(new Error('offline')), submit }, input), { ok: false, key: 'dues.errors.network' });
 });
 
 test('a WhatsApp link only for a mobile number', () => {
@@ -127,4 +185,34 @@ test('a WhatsApp link only for a mobile number', () => {
   assert.equal(whatsappLink('1092'), null, 'a short helpline has no WhatsApp');
   assert.equal(whatsappLink(''), null);
   assert.equal(whatsappLink(null), null);
+});
+
+const detailAnswer = {
+  due: { id: 'd1', fee: 200, paid: 50, remaining: 150, accrued_at: hours(-72), due_at: hours(48), status: 'due', waive_reason: null },
+  job: { id: 'j1', code: 'DW-2101', title: 'Kitchen tap', description: 'Leaks', category: 'Plumbing', phase: 6, lane: '8', completed_at: hours(-80), scheduled_start: hours(-90) },
+  money: { labour: 1000, materials: 0, total: 1000, fee: 200, earned: 800, cash_recorded: 1000, cash_recorded_at: hours(-79) },
+  owed_total: 550,
+};
+
+test('one due in full is read into plain values', () => {
+  const d = parseDueDetail(detailAnswer);
+  assert.ok(d);
+  assert.deepEqual([d.due.fee, d.due.paid, d.due.remaining, d.due.status], [200, 50, 150, 'due']);
+  assert.deepEqual([d.job.code, d.job.title, d.job.category, d.job.phase, d.job.lane], ['DW-2101', 'Kitchen tap', 'Plumbing', 6, '8']);
+  assert.deepEqual([d.money.total, d.money.fee, d.money.earned, d.money.cashRecorded], [1000, 200, 800, 1000]);
+  assert.equal(d.owedTotal, 550);
+  assert.ok(d.job.completedAt);
+});
+
+test('an answer that is not a due, or has an unknown state, is refused', () => {
+  assert.equal(parseDueDetail(null), null);
+  assert.equal(parseDueDetail({}), null);
+  assert.equal(parseDueDetail({ ...detailAnswer, due: { ...detailAnswer.due, status: 'weird' } }), null);
+  assert.equal(parseDueDetail({ ...detailAnswer, job: { code: 'x' } }), null);
+  assert.equal(parseDueDetail({ ...detailAnswer, money: { ...detailAnswer.money, cash_recorded: null } })?.money.cashRecorded, null, 'no cash recorded yet is allowed');
+});
+
+test('where the job was reads as phase and lane', () => {
+  assert.equal(whereText(6, '8'), 'Phase 6, Lane 8');
+  assert.equal(whereText(7, '  '), 'Phase 7');
 });

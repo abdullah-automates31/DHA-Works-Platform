@@ -1,30 +1,15 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { PrimaryButton } from '@/components/AuthForm';
-import { FieldError, LabeledInput, Pill } from '@/components/onboarding';
+import { DuesPayForm } from '@/components/DuesPayForm';
 import { Card, LoadError, Notice, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
-import {
-  amountDigits,
-  checkPayment,
-  dueView,
-  methodLabel,
-  METHODS,
-  paymentView,
-  sendPayment,
-  spanText,
-  type DuesPayment,
-  type DueRow,
-  type MyDues,
-  type PaymentInput,
-} from '@/features/dues/rules';
+import { dueView, methodLabel, paymentView, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
 import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
 import { dateText } from '@/features/myreports/rules';
 import { t } from '@/i18n';
-import { supabase } from '@/lib/supabase';
-import { showToast } from '@/lib/toast';
 import { colors, fontFamily } from '@/theme';
 
 // My Dues (migration 0071): what this worker owes DHA, where to pay, and a form to say "I have paid" with the transaction
@@ -100,7 +85,7 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
         </View>
       </Card>
 
-      {summary.owed > 0 ? <PayForm owed={summary.owed} onSent={onSent} /> : null}
+      {summary.owed > 0 ? <DuesPayForm owed={summary.owed} onSent={onSent} /> : null}
 
       {dues.payments.length > 0 ? (
         <>
@@ -118,77 +103,6 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
         <DueCard key={d.id} due={d} now={now} />
       ))}
     </>
-  );
-}
-
-function PayForm({ owed, onSent }: { owed: number; onSent: () => Promise<void> }) {
-  const [input, setInput] = useState<PaymentInput>({ amount: '', method: null, reference: '' });
-  const [touched, setTouched] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const check = checkPayment(input, owed);
-  const fieldError = (field: 'amount' | 'method' | 'reference') => (touched && !check.ok && check.field === field ? t(check.key) : null);
-
-  const set = (patch: Partial<PaymentInput>) => {
-    setInput((current) => ({ ...current, ...patch }));
-    if (error) setError(null);
-  };
-
-  async function send() {
-    if (sending) return;
-    setTouched(true);
-    if (!check.ok) return;
-    setSending(true);
-    setError(null);
-    const result = await sendPayment({ submit: (args) => supabase.rpc('submit_dues_payment', args) }, check.args);
-    setSending(false);
-    if (!result.ok) {
-      setError(t(result.key));
-      return;
-    }
-    setInput({ amount: '', method: null, reference: '' });
-    setTouched(false);
-    showToast(t('dues.sent'));
-    await onSent();
-  }
-
-  return (
-    <Card>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle}>{t('dues.formTitle')}</Text>
-        <Text style={settingsStyles.body}>{t('dues.formHint')}</Text>
-        <LabeledInput
-          label={t('dues.amount')}
-          value={input.amount}
-          onChangeText={(v) => set({ amount: amountDigits(v) })}
-          keyboardType="number-pad"
-          placeholder={String(owed)}
-          maxLength={8}
-          error={fieldError('amount')}
-          onCard
-        />
-        <Text style={settingsStyles.label}>{t('dues.method')}</Text>
-        <View style={styles.pills}>
-          {METHODS.map((m) => (
-            <Pill key={m} label={methodLabel(m)} on={input.method === m} onPress={() => set({ method: m })} />
-          ))}
-        </View>
-        {fieldError('method') ? <FieldError>{fieldError('method') ?? ''}</FieldError> : null}
-        <LabeledInput
-          label={t('dues.reference')}
-          value={input.reference}
-          onChangeText={(v) => set({ reference: v.slice(0, 60) })}
-          placeholder={t('dues.referencePlaceholder')}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          maxLength={60}
-          error={fieldError('reference')}
-          onCard
-        />
-        {error ? <FieldError>{error}</FieldError> : null}
-        <PrimaryButton label={t('dues.send')} onPress={() => void send()} loading={sending} showArrow={false} />
-      </View>
-    </Card>
   );
 }
 
@@ -213,10 +127,16 @@ function PaymentCard({ payment }: { payment: DuesPayment }) {
 }
 
 function DueCard({ due, now }: { due: DueRow; now: Date }) {
+  const router = useRouter();
   const view = dueView(due, now);
   const chip = colors.chip[view.tone];
   return (
-    <View style={styles.item} accessible accessibilityLabel={`${due.jobTitle}. ${t('dues.feeLine')} ${formatRupees(due.amount)}. ${view.label}. ${view.hint}`}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${due.jobTitle}. ${t('dues.feeLine')} ${formatRupees(due.amount)}. ${view.label}. ${view.hint}`}
+      onPress={() => router.push({ pathname: '/dues/[id]', params: { id: due.id } })}
+      style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
+    >
       <View style={styles.itemHead}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={styles.itemTitle} numberOfLines={2}>
@@ -229,7 +149,8 @@ function DueCard({ due, now }: { due: DueRow; now: Date }) {
         </View>
       </View>
       <Text style={styles.itemNote}>{view.hint}</Text>
-    </View>
+      <Text style={styles.itemSub}>{t('dues.openDue')}</Text>
+    </Pressable>
   );
 }
 
@@ -242,6 +163,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.ink },
   payTo: { fontFamily: fontFamily.bold, fontSize: 14, lineHeight: 21, color: colors.ink },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  proofBtn: { minHeight: 48, borderRadius: 14, backgroundColor: colors.mint, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.green, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  proofOn: { borderStyle: 'solid', backgroundColor: '#E6F3EC' },
+  proofText: { fontFamily: fontFamily.extrabold, fontSize: 14, color: colors.greenDark },
   item: { backgroundColor: '#fff', borderRadius: 18, padding: 14, gap: 6 },
   itemHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   itemTitle: { fontFamily: fontFamily.extrabold, fontSize: 15, color: colors.ink },

@@ -27,7 +27,7 @@ export function SettingsTop({ title }: { title: string }) {
       <Text style={styles.topTitle} accessibilityRole="header">
         {title}
       </Text>
-      <View style={styles.back} />
+      <View style={{ width: 44, height: 44 }} />
     </View>
   );
 }
