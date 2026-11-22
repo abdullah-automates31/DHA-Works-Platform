@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { DuesPayForm } from '@/components/DuesPayForm';
 import { DuesPayTo } from '@/components/DuesPayTo';
 import { Card, LoadError, Notice, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
+import { SearchIcon } from '@/components/icons';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
-import { clearableDues, clearablePayments, dueView, methodLabel, paymentView, showClearAll, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
+import { dueView, methodLabel, paymentView, SEARCH_FROM, searchText, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
+import { useDuesSearch } from '@/features/dues/useDuesSearch';
 import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
 import { dateText } from '@/features/myreports/rules';
@@ -17,7 +19,7 @@ import { colors, fontFamily } from '@/theme';
 // ID. DHA staff confirm it in the admin portal. The fee comes out of each job's quote: the worker collects the full quote in
 // cash and pays DHA its share here. It also opens for a suspended worker, who pays here to get the account back.
 export default function DuesScreen() {
-  const { state, reload, clearHistory, restoreHistory } = useMyDues();
+  const { state, reload } = useMyDues();
   const [pulling, setPulling] = useState(false);
 
   async function pull() {
@@ -49,50 +51,21 @@ export default function DuesScreen() {
           keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={pulling} onRefresh={() => void pull()} tintColor={colors.green} />}
         >
-          <Body dues={state.dues} onSent={reload} onClear={clearHistory} onRestore={restoreHistory} />
+          <Body dues={state.dues} onSent={reload} />
         </ScrollView>
       ) : null}
     </KeyboardAvoidingView>
   );
 }
 
-function Body({
-  dues,
-  onSent,
-  onClear,
-  onRestore,
-}: {
-  dues: MyDues;
-  onSent: () => Promise<void>;
-  onClear: (which: 'dues' | 'payments') => Promise<boolean>;
-  onRestore: (which: 'dues' | 'payments') => Promise<boolean>;
-}) {
+function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
   const now = new Date();
   const { summary } = dues;
   const suspended = dues.accountStatus === 'suspended';
-
-  function confirmClear(which: 'dues' | 'payments') {
-    Alert.alert(t(which === 'dues' ? 'dues.clearDuesTitle' : 'dues.clearPaymentsTitle'), t(which === 'dues' ? 'dues.clearDuesBody' : 'dues.clearPaymentsBody'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('dues.clearAll'),
-        style: 'destructive',
-        onPress: () => {
-          void onClear(which).then((ok) => {
-            if (!ok) Alert.alert(t('dues.clearFailed'));
-          });
-        },
-      },
-    ]);
-  }
-  function restore(which: 'dues' | 'payments') {
-    void onRestore(which).then((ok) => {
-      if (!ok) Alert.alert(t('dues.restoreFailed'));
-    });
-  }
-  const clearDues = showClearAll(dues.dues.length, clearableDues(dues.dues));
-  const clearPayments = showClearAll(dues.payments.length, clearablePayments(dues.payments));
-
+  const [query, setQuery] = useState('');
+  const searching = searchText(query) !== '';
+  const found = useDuesSearch(query);
+  const showSearch = searching || dues.dues.length + dues.payments.length >= SEARCH_FROM;
   return (
     <>
       {suspended ? <Notice kind="error">{t('dues.suspendedNotice')}</Notice> : summary.overdue > 0 ? <Notice kind="error">{t('dues.overdueNotice')}</Notice> : null}
@@ -122,51 +95,83 @@ function Body({
         </>
       ) : null}
 
-      <View style={styles.sectionRow}>
-        <View style={{ flex: 1 }}>
-          <SectionTitle>{t('dues.duesTitle')}</SectionTitle>
-        </View>
-        {clearDues ? <ClearAllButton onPress={() => confirmClear('dues')} /> : null}
-      </View>
-      {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t(dues.clearedDues > 0 ? 'dues.allCleared' : 'dues.emptyDues')}</Text> : null}
-      {dues.dues.map((d) => (
-        <DueCard key={d.id} due={d} now={now} />
-      ))}
-      {dues.clearedDues > 0 ? <ShowClearedButton count={dues.clearedDues} onPress={() => restore('dues')} /> : null}
+      {showSearch ? <SearchBox value={query} onChange={setQuery} /> : null}
 
-      {dues.payments.length > 0 || dues.clearedPayments > 0 ? (
+      {searching ? (
+        <SearchResults state={found} query={searchText(query)} now={now} />
+      ) : (
         <>
-          <View style={styles.sectionRow}>
-            <View style={{ flex: 1 }}>
-              <SectionTitle>{t('dues.paymentsTitle')}</SectionTitle>
-            </View>
-            {clearPayments ? <ClearAllButton onPress={() => confirmClear('payments')} /> : null}
-          </View>
-          {dues.payments.length === 0 ? <Text style={settingsStyles.body}>{t('dues.allClearedPayments')}</Text> : null}
-          {dues.payments.map((p) => (
-            <PaymentCard key={p.id} payment={p} />
+          <SectionTitle>{t('dues.duesTitle')}</SectionTitle>
+          {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t('dues.emptyDues')}</Text> : null}
+          {dues.dues.map((d) => (
+            <DueCard key={d.id} due={d} now={now} />
           ))}
-          {dues.clearedPayments > 0 ? <ShowClearedButton count={dues.clearedPayments} onPress={() => restore('payments')} /> : null}
+
+          {dues.payments.length > 0 ? (
+            <>
+              <SectionTitle>{t('dues.paymentsTitle')}</SectionTitle>
+              {dues.payments.map((p) => (
+                <PaymentCard key={p.id} payment={p} />
+              ))}
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
     </>
   );
 }
 
-function ClearAllButton({ onPress }: { onPress: () => void }) {
+function SearchBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={t('dues.clearAll')} onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.clearBtn, pressed && { opacity: 0.6 }]}>
-      <Text style={styles.clearText}>{t('dues.clearAll')}</Text>
-    </Pressable>
+    <View style={styles.searchWrap}>
+      <SearchIcon size={18} color={colors.muted} />
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={t('dues.searchPlaceholder')}
+        placeholderTextColor={colors.muted}
+        accessibilityLabel={t('dues.searchPlaceholder')}
+        accessibilityHint={t('dues.searchHint')}
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="search"
+        maxLength={40}
+        style={styles.searchInput}
+      />
+      {value !== '' ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={t('dues.searchClear')} onPress={() => onChange('')} hitSlop={10} style={styles.searchClear}>
+          <Text style={styles.searchClearText}>{'\u2715'}</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
-function ShowClearedButton({ count, onPress }: { count: number; onPress: () => void }) {
-  const label = t('dues.showCleared', { n: String(count) });
+function SearchResults({ state, query, now }: { state: ReturnType<typeof useDuesSearch>; query: string; now: Date }) {
+  if (state.status === 'error') return <Notice kind="error">{t('dues.searchError')}</Notice>;
+  if (state.status !== 'ready') {
+    return (
+      <SkeletonGroup>
+        <DetailSkeleton />
+      </SkeletonGroup>
+    );
+  }
+  const total = state.dues.length + state.payments.length;
+  if (total === 0) return <Text style={settingsStyles.body}>{t('dues.searchNone', { q: query })}</Text>;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.showCleared, pressed && { opacity: 0.6 }]}>
-      <Text style={styles.showClearedText}>{label}</Text>
-    </Pressable>
+    <>
+      <Text style={styles.searchCount} accessibilityLiveRegion="polite">
+        {t('dues.searchCount', { n: String(total) })}
+      </Text>
+      {state.dues.length > 0 ? <SectionTitle>{t('dues.duesTitle')}</SectionTitle> : null}
+      {state.dues.map((d) => (
+        <DueCard key={d.id} due={d} now={now} />
+      ))}
+      {state.payments.length > 0 ? <SectionTitle>{t('dues.paymentsTitle')}</SectionTitle> : null}
+      {state.payments.map((p) => (
+        <PaymentCard key={p.id} payment={p} />
+      ))}
+    </>
   );
 }
 
@@ -237,10 +242,10 @@ const styles = StyleSheet.create({
   itemNote: { fontFamily: fontFamily.semibold, fontSize: 12.5, lineHeight: 18, color: colors.ink },
   chip: { borderRadius: 13, paddingHorizontal: 10, paddingVertical: 5 },
   chipText: { fontFamily: fontFamily.extrabold, fontSize: 11.5 },
-  sectionRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  clearBtn: { paddingHorizontal: 4, paddingVertical: 6 },
-  clearText: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.chip.declined.fg },
-  showCleared: { alignSelf: 'center', paddingHorizontal: 10, paddingVertical: 10 },
-  showClearedText: { fontFamily: fontFamily.extrabold, fontSize: 13.5, color: colors.greenDark },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, minHeight: 50 },
+  searchInput: { flex: 1, fontFamily: fontFamily.semibold, fontSize: 15, color: colors.ink, paddingVertical: 10 },
+  searchClear: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  searchClearText: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.greenDark },
+  searchCount: { fontFamily: fontFamily.semibold, fontSize: 12.5, color: colors.muted },
   arrow: { fontFamily: fontFamily.bold, fontSize: 22, lineHeight: 24, color: colors.muted },
 });

@@ -57,9 +57,6 @@ export type MyDues = {
   helpline: string | null;
   dues: DueRow[];
   payments: DuesPayment[];
-  /** How many cards the worker has cleared from each list (they can bring them back). */
-  clearedDues: number;
-  clearedPayments: number;
 };
 
 const DAY = 86_400_000;
@@ -69,14 +66,10 @@ const obj = (v: unknown): Record<string, unknown> | null => (v !== null && typeo
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
-/** Reads the answer of my_dues(). A row that does not look right is skipped, never guessed at. */
-export function parseMyDues(json: unknown): MyDues | null {
-  const o = obj(json);
-  const s = obj(o?.summary);
-  const a = obj(o?.account);
-  if (!o || !s || !a) return null;
+/** The due cards of an answer (my_dues or search_my_dues). A row that does not look right is skipped. */
+export function parseDueList(json: unknown): DueRow[] {
   const dues: DueRow[] = [];
-  for (const raw of Array.isArray(o.dues) ? o.dues : []) {
+  for (const raw of Array.isArray(json) ? json : []) {
     const r = obj(raw);
     const status = r?.status;
     if (!r || typeof r.id !== 'string' || (status !== 'due' && status !== 'overdue' && status !== 'paid' && status !== 'waived')) continue;
@@ -92,17 +85,45 @@ export function parseMyDues(json: unknown): MyDues | null {
       status,
     });
   }
+  return dues;
+}
+
+/** The payment cards of an answer. */
+export function parsePaymentList(json: unknown): DuesPayment[] {
   const payments: DuesPayment[] = [];
-  for (const raw of Array.isArray(o.payments) ? o.payments : []) {
+  for (const raw of Array.isArray(json) ? json : []) {
     const r = obj(raw);
     const status = r?.status;
     if (!r || typeof r.id !== 'string' || (status !== 'pending' && status !== 'confirmed' && status !== 'rejected')) continue;
     payments.push({ id: r.id, amount: num(r.amount), method: str(r.method), reference: str(r.reference), status, createdAt: str(r.created_at), reason: str(r.reason), byStaff: r.by_staff === true });
   }
-  const cleared = obj(o.cleared);
+  return payments;
+}
+
+/** From this many cards (dues and payments together) My Dues shows a search box. */
+export const SEARCH_FROM = 5;
+
+/** What is sent to the search: spaces tidied, at most 40 characters. */
+export function searchText(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim().slice(0, 40);
+}
+
+/** Reads the answer of search_my_dues(): the matching dues and payments. */
+export function parseSearch(json: unknown): { dues: DueRow[]; payments: DuesPayment[] } | null {
+  const o = obj(json);
+  if (!o) return null;
+  return { dues: parseDueList(o.dues), payments: parsePaymentList(o.payments) };
+}
+
+/** Reads the answer of my_dues(). A row that does not look right is skipped, never guessed at. */
+export function parseMyDues(json: unknown): MyDues | null {
+  const o = obj(json);
+  const s = obj(o?.summary);
+  const a = obj(o?.account);
+  if (!o || !s || !a) return null;
+  const dues = parseDueList(o.dues);
+  const payments = parsePaymentList(o.payments);
   return {
-    clearedDues: num(cleared?.dues),
-    clearedPayments: num(cleared?.payments),
     accountStatus: a.status === 'suspended' ? 'suspended' : 'active',
     suspensionReason: str(a.reason),
     suspendedUntil: typeof a.until === 'string' ? a.until : null,
@@ -172,22 +193,6 @@ export function paymentView(p: DuesPayment): { label: string; tone: ChipTone } {
   if (p.status === 'confirmed') return { label: t('dues.payConfirmed'), tone: 'done' };
   if (p.status === 'rejected') return { label: t('dues.payRejected'), tone: 'declined' };
   return { label: t('dues.payPending'), tone: 'wait' };
-}
-
-/** From this many cards in a list, My Dues offers "Clear all" for it. */
-export const CLEAR_ALL_AT = 20;
-
-/** Cards that "Clear all" would hide: a due that is paid or waived, a payment DHA confirmed or rejected. Owed dues and waiting payments stay. */
-export function clearableDues(list: DueRow[]): number {
-  return list.filter((d) => d.status === 'paid' || d.status === 'waived').length;
-}
-export function clearablePayments(list: DuesPayment[]): number {
-  return list.filter((p) => p.status === 'confirmed' || p.status === 'rejected').length;
-}
-
-/** Show the Clear all button for a list: it has reached 20 cards and at least one of them is settled. */
-export function showClearAll(total: number, clearable: number): boolean {
-  return total >= CLEAR_ALL_AT && clearable > 0;
 }
 
 export function methodLabel(method: string): string {

@@ -5,10 +5,9 @@ import {
   amountDigits,
   buildProofPath,
   checkPayment,
-  clearableDues,
-  clearablePayments,
-  showClearAll,
-  type DuesPayment,
+  parseSearch,
+  SEARCH_FROM,
+  searchText,
   dueView,
   duesErrorKey,
   METHODS,
@@ -242,18 +241,14 @@ test('DHA accounts are read and named for the worker', () => {
   assert.deepEqual(parsePayAccounts(undefined), []);
 });
 
-test('Clear all is offered from 20 cards, and only settled cards count as clearable', () => {
-  const due = (status: DueRow['status']): DueRow => ({ id: status, jobCode: 'DW-1', jobTitle: 'x', amount: 50, paid: 0, remaining: 0, accruedAt: '2026-11-22T00:00:00Z', dueAt: '2026-11-27T00:00:00Z', status });
-  const pay = (status: DuesPayment['status']): DuesPayment => ({ id: status, amount: 50, method: 'bank', reference: 'ABC123', status, createdAt: '2026-11-22T00:00:00Z', reason: '', byStaff: false });
-  assert.equal(clearableDues([due('paid'), due('waived'), due('due'), due('overdue')]), 2);
-  assert.equal(clearablePayments([pay('confirmed'), pay('rejected'), pay('pending')]), 2);
-  assert.equal(showClearAll(19, 19), false);
-  assert.equal(showClearAll(20, 20), true);
-  assert.equal(showClearAll(25, 0), false);
-});
-
-test('My Dues reads how many cards were cleared (zero when the answer has none)', () => {
-  assert.equal(parseMyDues({ ...answer, cleared: { dues: 16, payments: 3 } })?.clearedDues, 16);
-  assert.equal(parseMyDues({ ...answer, cleared: { dues: 16, payments: 3 } })?.clearedPayments, 3);
-  assert.equal(parseMyDues(answer)?.clearedDues, 0);
+test('the search text is tidied and cut, and its answer is read like My Dues', () => {
+  assert.equal(searchText('  sink   leak  '), 'sink leak');
+  assert.equal(searchText('x'.repeat(100)).length, 40);
+  assert.equal(searchText('   '), '');
+  const found = parseSearch({ dues: [{ id: 'd1', status: 'paid', job_code: 'DW-1', job_title: 'Sink', amount: 50, paid: 50, remaining: 0, accrued_at: '2026-11-22T00:00:00Z', due_at: '2026-11-27T00:00:00Z' }, { id: 'bad', status: 'weird' }], payments: [{ id: 'p1', status: 'confirmed', amount: 50, method: 'bank', reference: 'TX1' }, 7] });
+  assert.equal(found?.dues.length, 1);
+  assert.equal(found?.dues[0]?.jobTitle, 'Sink');
+  assert.equal(found?.payments.length, 1);
+  assert.equal(parseSearch('nonsense'), null);
+  assert.equal(SEARCH_FROM, 5);
 });

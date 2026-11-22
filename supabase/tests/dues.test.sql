@@ -467,63 +467,40 @@ select tests.back();
 select is(has_column_privilege('authenticated', 'public.quotes', 'dha_fee', 'select'), false, 'authenticated has no grant on the fee column');
 select is(has_column_privilege('authenticated', 'public.quotes', 'total', 'select'), true, 'but still has the other quote columns');
 
--- 14. A worker clears the settled cards from My Dues (migration 0077) ---------------------------------------------------------------
-create temp table pre14 as select
-  (select count(*) from private.dues_rows('00000000-0000-0000-0000-0000000000b1') r where r.remaining = 0)::int as settled_dues,
-  (select count(*) from private.dues_rows('00000000-0000-0000-0000-0000000000b1') r where r.remaining > 0)::int as open_dues,
-  (select count(*) from public.dues_payments p where p.worker_id = '00000000-0000-0000-0000-0000000000b1' and p.status in ('confirmed', 'rejected'))::int as settled_pays,
-  (select count(*) from public.dues_payments p where p.worker_id = '00000000-0000-0000-0000-0000000000b1' and p.status = 'pending')::int as waiting_pays,
-  (select count(*) from public.worker_dues)::int as all_dues,
-  (select count(*) from public.dues_payments)::int as all_pays;
-grant select on pre14 to authenticated;
-select ok((select settled_dues from pre14) >= 2 and (select open_dues from pre14) >= 1, 'the worker has paid and unpaid dues to start with');
-select ok((select settled_pays from pre14) >= 2, 'and settled payments');
+-- 14. Searching My Dues (migration 0079) ------------------------------------------------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-create temp table m14 as select public.my_dues() as j;
-grant select on m14 to authenticated;
-select is((select jsonb_array_length(j -> 'dues') from m14), (select settled_dues + open_dues from pre14), 'all the dues are listed before clearing');
-select is(public.clear_my_dues_history('dues'), (select settled_dues from pre14), 'clearing dues hides exactly the settled ones');
-select is(jsonb_array_length(public.my_dues() -> 'dues'), (select open_dues from pre14), 'only the dues still owed are left');
-select is((select count(*) from jsonb_array_elements(public.my_dues() -> 'dues') x where x ->> 'status' in ('paid', 'waived')), 0::bigint, 'no paid or waived card is left');
-select is(public.my_dues() -> 'summary', (select j -> 'summary' from m14), 'the totals (owed, paid so far) do not change');
-select is(public.clear_my_dues_history('dues'), 0, 'clearing again clears nothing');
-select lives_ok($$select public.my_due_detail((select id from dids where amount = 200))$$, 'a cleared due can still be opened (a link, a notice)');
-select is(public.clear_my_dues_history('payments'), (select settled_pays from pre14), 'clearing payments hides the confirmed and rejected ones');
-select is(jsonb_array_length(public.my_dues() -> 'payments'), (select waiting_pays from pre14), 'payments waiting for DHA are never cleared');
-select throws_ok($$select public.clear_my_dues_history('everything')$$, 'P0001', 'choose dues or payments', 'only dues or payments');
-select throws_ok($$select public.clear_my_dues_history(null)$$, 'P0001', 'choose dues or payments', 'not nothing');
+create temp table s0 as select public.my_dues() as j;
+grant select on s0 to authenticated;
+select is(jsonb_array_length(public.search_my_dues('') -> 'dues'), (select jsonb_array_length(j -> 'dues') from s0), 'an empty search lists every due');
+select is(jsonb_array_length(public.search_my_dues('   ') -> 'payments'), (select jsonb_array_length(j -> 'payments') from s0), 'and every payment');
+select is(jsonb_array_length(public.search_my_dues(null) -> 'dues'), (select jsonb_array_length(j -> 'dues') from s0), 'also when nothing is sent');
+select is(jsonb_array_length(public.search_my_dues('fee job one') -> 'dues'), 1, 'words are matched in the job title (any case)');
+select is(public.search_my_dues('FEE JOB ONE') -> 'dues' -> 0 ->> 'job_title', 'Fee job one', 'and the right card comes back');
+select is(jsonb_array_length(public.search_my_dues('one fee') -> 'dues'), 1, 'the words can be in any order');
+select is(jsonb_array_length(public.search_my_dues('fee job one nothing') -> 'dues'), 0, 'every word must match');
+select is(jsonb_array_length(public.search_my_dues((select j -> 'dues' -> 0 ->> 'job_code' from s0)) -> 'dues'), 1, 'a job code finds its due');
+select is(jsonb_array_length(public.search_my_dues('paid') -> 'dues'), (select count(*)::int from s0, jsonb_array_elements(j -> 'dues') x where x ->> 'status' = 'paid'), 'the state is searchable (paid)');
+select is(jsonb_array_length(public.search_my_dues('waived') -> 'dues'), (select count(*)::int from s0, jsonb_array_elements(j -> 'dues') x where x ->> 'status' = 'waived'), 'and waived');
+select is(jsonb_array_length(public.search_my_dues('200') -> 'dues'), (select count(*)::int from s0, jsonb_array_elements(j -> 'dues') x where (x ->> 'amount') like '%200%' or lower(x ->> 'job_title') like '%200%' or lower(x ->> 'job_code') like '%200%'), 'an amount is searchable');
+select is(jsonb_array_length(public.search_my_dues('%') -> 'dues'), 0, 'a % is plain text, not a pattern');
+select is(jsonb_array_length(public.search_my_dues('_') -> 'dues'), 0, 'and so is an underscore');
+select is(jsonb_array_length(public.search_my_dues('tx-1001') -> 'payments'), 2, 'a transaction ID finds its payments (the rejected try and the confirmed one)');
+select is(jsonb_array_length(public.search_my_dues('rejected') -> 'payments'), 1, 'a payment state is searchable');
+select is(jsonb_array_length(public.search_my_dues('office') -> 'payments'), 1, 'and the way of paying');
+select is(jsonb_array_length(public.search_my_dues('zzzz') -> 'payments'), 0, 'nothing found gives an empty list');
+select is(jsonb_array_length(public.search_my_dues(repeat('a', 500)) -> 'dues'), 0, 'a very long search is cut and harmless');
+select is((select count(*) from jsonb_object_keys(public.search_my_dues('fee job one') -> 'dues' -> 0) k where k in ('resident_id', 'phone', 'plot_no')), 0::bigint, 'a result carries nothing about the customer');
 select tests.act('00000000-0000-0000-0000-0000000000b2');
-select is(public.clear_my_dues_history('dues'), 0, 'another worker has nothing to clear (and cannot clear someone else''s)');
+select is(jsonb_array_length(public.search_my_dues('fee') -> 'dues'), 0, 'another worker finds none of this worker''s dues');
+select is(jsonb_array_length(public.search_my_dues('tx') -> 'payments'), 0, 'nor payments');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
-select throws_ok($$select public.clear_my_dues_history('dues')$$, '42501', 'not available', 'a resident cannot clear');
+select throws_ok($$select public.search_my_dues('fee')$$, '42501', 'not available', 'a resident cannot search');
 select tests.back();
-select is((select count(*) from public.worker_dues)::int, (select all_dues from pre14), 'nothing was deleted: every due is still stored');
-select is((select count(*) from public.dues_payments)::int, (select all_pays from pre14), 'nor any payment');
-select is(has_function_privilege('anon', 'public.clear_my_dues_history(text)', 'execute'), false, 'anon cannot run it');
-select tests.act('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-00000000c101');
-select is(jsonb_array_length(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'dues'), (select settled_dues + open_dues from pre14), 'staff still see every due');
-select is(jsonb_array_length(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'payments'), (select settled_pays + waiting_pays from pre14), 'and every payment');
-select tests.back();
-
--- 15. ... and brings them back (migration 0078) --------------------------------------------------------------------------------------
-select tests.act('00000000-0000-0000-0000-0000000000b1');
-select is((public.my_dues() -> 'cleared' ->> 'dues')::int, (select settled_dues from pre14), 'My Dues says how many dues are cleared');
-select is((public.my_dues() -> 'cleared' ->> 'payments')::int, (select settled_pays from pre14), 'and how many payments');
-select is(public.restore_my_dues_history('dues'), (select settled_dues from pre14), 'bringing the dues back restores exactly the cleared ones');
-select is(jsonb_array_length(public.my_dues() -> 'dues'), (select settled_dues + open_dues from pre14), 'every due is listed again');
-select is((public.my_dues() -> 'cleared' ->> 'dues')::int, 0, 'none are cleared any more');
-select is(public.my_dues() -> 'summary', (select j -> 'summary' from m14), 'the totals still do not change');
-select is(public.restore_my_dues_history('dues'), 0, 'bringing back again changes nothing');
-select is(public.restore_my_dues_history('payments'), (select settled_pays from pre14), 'the payments come back too');
-select is(jsonb_array_length(public.my_dues() -> 'payments'), (select settled_pays + waiting_pays from pre14), 'every payment is listed again');
-select is(public.clear_my_dues_history('dues'), (select settled_dues from pre14), 'and they can be cleared again');
-select throws_ok($$select public.restore_my_dues_history('everything')$$, 'P0001', 'choose dues or payments', 'only dues or payments');
-select tests.act('00000000-0000-0000-0000-0000000000b2');
-select is(public.restore_my_dues_history('dues'), 0, 'another worker restores nothing of someone else''s');
-select tests.act('00000000-0000-0000-0000-0000000000a1');
-select throws_ok($$select public.restore_my_dues_history('dues')$$, '42501', 'not available', 'a resident cannot');
-select tests.back();
-select is(has_function_privilege('anon', 'public.restore_my_dues_history(text)', 'execute'), false, 'anon cannot run it');
+select is(has_function_privilege('anon', 'public.search_my_dues(text)', 'execute'), false, 'anon cannot search');
+select is(has_function_privilege('authenticated', 'private.due_items(uuid, text, integer)', 'execute'), false, 'the helper that builds the cards is not callable by an app user');
+select is((select count(*) from pg_proc where proname in ('clear_my_dues_history', 'restore_my_dues_history')), 0::bigint, 'Clear all is gone');
+select is((select count(*) from information_schema.columns where column_name = 'worker_hidden_at'), 0::bigint, 'and so is the hidden stamp');
+select is((select j ? 'cleared' from s0), false, 'My Dues no longer carries a cleared count');
 
 select * from finish();
 rollback;
