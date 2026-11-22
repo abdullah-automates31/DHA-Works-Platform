@@ -6,7 +6,8 @@ import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { ago, dateOnly, dateTime } from '@/lib/format';
 import { initials } from '../verification/rules';
-import { savePayToAction } from '../dues/actions';
+import { savePayAccountsAction, savePayToAction } from '../dues/actions';
+import { MAX_PAY_ACCOUNTS, PAY_METHODS, parsePayAccounts, payMethodLabel } from '../dues/parse';
 import { addCategoryAction, inviteStaffAction, removeStaffAction, revokeInviteAction, setCategoryAction, setPhaseAction, signOutOthersAction } from './actions';
 import { AuditView, type AuditParams } from './AuditView';
 import { HelplineForm } from './HelplineForm';
@@ -83,13 +84,26 @@ export async function SettingsView({ tab, params = {} }: { tab?: string; params?
   const needsSettings = active === 'categories' || active === 'areas' || active === 'helpline';
   const needsRules = active === 'jobs' || active === 'workers' || active === 'dues';
   const needsStaff = active === 'admins';
-  const [s, r, st, act, payTo] = await Promise.all([
+  const [s, r, st, act, payTo, accountsRes] = await Promise.all([
     needsSettings ? supabase.rpc('admin_settings_get') : null,
     needsRules ? supabase.rpc('admin_rules_get') : null,
     needsStaff ? supabase.rpc('admin_staff_list') : null,
     needsStaff ? supabase.rpc('admin_staff_activity') : null,
     active === 'dues' ? supabase.from('app_settings').select('value').eq('key', 'dues_pay_to').maybeSingle() : null,
+    active === 'dues' ? supabase.rpc('admin_dues_pay_accounts') : null,
   ]);
+  const payAccounts = parsePayAccounts(accountsRes && !accountsRes.error ? accountsRes.data : null);
+  // one empty slot more than there are accounts (at least three, at most six), so adding one needs no extra step
+  const slots = Math.min(MAX_PAY_ACCOUNTS, Math.max(3, payAccounts.length + 1));
+  const accountFields = Array.from({ length: slots }, (_, k) => k + 1).flatMap((n) => {
+    const a = payAccounts[n - 1];
+    return [
+      { name: `method${n}`, label: `Account ${n}: how workers pay`, kind: 'select' as const, placeholder: 'Not used', defaultValue: a?.method ?? '', options: PAY_METHODS.map((m) => ({ value: m, label: payMethodLabel(m) })) },
+      { name: `title${n}`, label: `Account ${n}: account title (the name on the account)`, kind: 'text' as const, defaultValue: a?.title ?? '', maxLength: 60, placeholder: 'DHA Works' },
+      { name: `number${n}`, label: `Account ${n}: number (phone, account number or IBAN)`, kind: 'text' as const, defaultValue: a?.number ?? '', maxLength: 40 },
+      { name: `label${n}`, label: `Account ${n}: bank name (optional)`, kind: 'text' as const, defaultValue: a?.label ?? '', maxLength: 40, placeholder: 'For example HBL' },
+    ];
+  });
   const settings = s ? parseSettings(s.error ? null : s.data) : null;
   const rules = r ? parseRules(r.error ? null : r.data) : null;
   const staff = parseStaff(st && !st.error ? st.data : null);
@@ -213,9 +227,16 @@ export async function SettingsView({ tab, params = {} }: { tab?: string; params?
               <div className="card col" style={{ gap: 12 }}>
                 <div>
                   <h2 className="h2">Where workers pay DHA</h2>
-                  <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>Shown in My Dues in the worker app, for example: JazzCash 0300 1234567, account title DHA Works. Workers pay here, then enter the transaction ID.</div>
+                  <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>Each account is its own card in My Dues in the worker app, with the number large so it can be copied. Leave an account empty to skip it. Saving replaces the whole list. Workers pay, then enter the transaction ID and attach a screenshot.</div>
                 </div>
-                <ActionForm action={savePayToAction} submit="Save" fields={[{ name: 'text', label: 'Payment details', kind: 'textarea', defaultValue: payToText, maxLength: 500, rows: 3 }]} resetOnOk={false} />
+                <ActionForm action={savePayAccountsAction} submit="Save accounts" fields={accountFields} resetOnOk={false} />
+              </div>
+              <div className="card col" style={{ gap: 12 }}>
+                <div>
+                  <h2 className="h2">Extra note (optional)</h2>
+                  <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>A short line shown under the accounts, for example office hours for cash payments.</div>
+                </div>
+                <ActionForm action={savePayToAction} submit="Save note" fields={[{ name: 'text', label: 'Note', kind: 'textarea', defaultValue: payToText, maxLength: 500, rows: 3 }]} resetOnOk={false} />
               </div>
               <Facts
                 title="Fixed rules"

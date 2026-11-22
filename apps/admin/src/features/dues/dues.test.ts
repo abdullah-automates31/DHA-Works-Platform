@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parseTab, parseWorkerDues, safeProofPath, whenText } from './parse.ts';
+import { METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parsePayAccounts, parseTab, parseWorkerDues, payAccountsFromForm, safeProofPath, whenText } from './parse.ts';
 
 const A = '00000000-0000-0000-0000-0000000000a1';
 const B = '00000000-0000-0000-0000-0000000000b1';
@@ -115,4 +115,31 @@ test('every way to pay can be named and recorded', () => {
   assert.equal(methodLabel('sadapay'), 'SadaPay');
   assert.equal(methodLabel('nayapay'), 'NayaPay');
   assert.equal(methodLabel('other'), 'Other');
+});
+
+test('the saved accounts are read, and an entry that is not one is dropped', () => {
+  const list = parsePayAccounts([
+    { method: 'easypaisa', label: null, title: 'DHA Works', number: ' 0300 1234567 ' },
+    { method: 'bank', label: 'HBL', title: 'DHA Works (Pvt) Ltd', number: 'PK36HABB0000001234567890' },
+    { method: 'cheque', title: 'x', number: '123' },
+    { method: 'jazzcash', title: 'x', number: '' },
+    'nonsense',
+  ]);
+  assert.deepEqual(list.map((a) => [a.method, a.label, a.number]), [['easypaisa', '', '0300 1234567'], ['bank', 'HBL', 'PK36HABB0000001234567890']]);
+  assert.deepEqual(parsePayAccounts(null), []);
+});
+
+test('the accounts form: empty slots are skipped, a half-filled slot is refused by number', () => {
+  const form = (o: Record<string, string>) => (n: string) => o[n] ?? '';
+  assert.deepEqual(payAccountsFromForm(form({})), { accounts: [] });
+  assert.deepEqual(payAccountsFromForm(form({ method1: 'easypaisa', title1: 'DHA Works', number1: '0300 1234567', method3: 'bank', label3: 'HBL', title3: 'DHA Works', number3: 'PK36HABB0000001234567890' })), {
+    accounts: [
+      { method: 'easypaisa', label: '', title: 'DHA Works', number: '0300 1234567' },
+      { method: 'bank', label: 'HBL', title: 'DHA Works', number: 'PK36HABB0000001234567890' },
+    ],
+  });
+  assert.deepEqual(payAccountsFromForm(form({ method1: 'jazzcash', title1: 'DHA Works' })), { error: 'Account 1: enter the number (3 to 40 characters).' });
+  assert.deepEqual(payAccountsFromForm(form({ number2: '0300 1234567' })), { error: 'Account 2: choose how workers pay.' });
+  assert.deepEqual(payAccountsFromForm(form({ method1: 'cheque', title1: 'x', number1: '123' })), { error: 'Account 1: choose how workers pay.' });
+  assert.deepEqual(payAccountsFromForm(form({ method1: 'bank', number1: '123456' })), { error: 'Account 1: enter the account title (the name on the account).' });
 });

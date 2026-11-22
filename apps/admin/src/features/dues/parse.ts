@@ -184,6 +184,48 @@ export function parseWorkerDues(json: unknown): WorkerDues | null {
 export const METHODS = ['jazzcash', 'easypaisa', 'bank', 'sadapay', 'nayapay', 'other', 'office_cash'] as const;
 const METHOD_LABEL: Record<string, string> = { jazzcash: 'JazzCash', easypaisa: 'Easypaisa', bank: 'Bank transfer', sadapay: 'SadaPay', nayapay: 'NayaPay', other: 'Other', office_cash: 'Cash at the office' };
 
+// ---- DHA's payment accounts (migration 0075): where workers send the money -----------------------------------------------------------
+
+export const PAY_METHODS = ['jazzcash', 'easypaisa', 'bank', 'sadapay', 'nayapay', 'raast', 'other'] as const;
+const PAY_METHOD_LABEL: Record<string, string> = { jazzcash: 'JazzCash', easypaisa: 'Easypaisa', bank: 'Bank account', sadapay: 'SadaPay', nayapay: 'NayaPay', raast: 'Raast ID', other: 'Other' };
+export const payMethodLabel = (m: string): string => PAY_METHOD_LABEL[m] ?? m;
+export const MAX_PAY_ACCOUNTS = 6;
+
+export type PayAccount = { method: string; label: string; title: string; number: string };
+
+/** The saved accounts as staff read them in Settings. Anything that does not look right is left out. */
+export function parsePayAccounts(json: unknown): PayAccount[] {
+  return arr(json).flatMap((item) => {
+    const o = obj(item);
+    const method = str(o?.method) ?? '';
+    const number = (str(o?.number) ?? '').trim();
+    if (!o || !(PAY_METHODS as readonly string[]).includes(method) || number === '') return [];
+    return [{ method, label: (str(o.label) ?? '').trim(), title: (str(o.title) ?? '').trim(), number }];
+  });
+}
+
+/**
+ * The accounts typed into the Settings form: slots method1/label1/title1/number1 and so on. A slot with nothing in it is
+ * skipped; a half-filled one is refused by name so staff know which to fix.
+ */
+export function payAccountsFromForm(get: (name: string) => string): { accounts: PayAccount[] } | { error: string } {
+  const accounts: PayAccount[] = [];
+  for (let i = 1; i <= MAX_PAY_ACCOUNTS; i++) {
+    const method = get(`method${i}`).trim();
+    const label = get(`label${i}`).trim();
+    const title = get(`title${i}`).trim();
+    const number = get(`number${i}`).trim();
+    if (method === '' && label === '' && title === '' && number === '') continue;
+    if (!(PAY_METHODS as readonly string[]).includes(method)) return { error: `Account ${i}: choose how workers pay.` };
+    if (title === '') return { error: `Account ${i}: enter the account title (the name on the account).` };
+    if (number.length < 3 || number.length > 40) return { error: `Account ${i}: enter the number (3 to 40 characters).` };
+    if (title.length > 60) return { error: `Account ${i}: the account title is too long (60 characters).` };
+    if (label.length > 40) return { error: `Account ${i}: the name is too long (40 characters).` };
+    accounts.push({ method, label, title, number });
+  }
+  return { accounts };
+}
+
 /** A screenshot path is only used if it is exactly "<worker id>/dues/<file>": no traversal, nothing else in the bucket. */
 export function safeProofPath(v: unknown): string | null {
   return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/dues\/[A-Za-z0-9._-]{1,120}$/i.test(v) && !v.includes('..') ? v : null;

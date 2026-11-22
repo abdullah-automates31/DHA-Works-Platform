@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { BAD_REQUEST, field, refusal, type ActionState } from '@/lib/action';
 import { requireAdmin } from '@/lib/auth';
 import { isUuid } from '@/lib/json';
-import { METHODS, parseRupees } from './parse';
+import { METHODS, parseRupees, payAccountsFromForm } from './parse';
 
 // Every action calls requireAdmin() and the database function checks again (is_admin, the code freshness, an audit row).
 // A decision also moves the sidebar badge, so the layout is revalidated.
@@ -95,7 +95,19 @@ export async function warnWorkerAction(_prev: ActionState, formData: FormData): 
   return { ok: 'Warning sent. The worker sees it in the app.' };
 }
 
-/** Where workers pay DHA: shown in My Dues in the worker app. */
+/** DHA's payment accounts (method, title, number): each is its own card in My Dues. Replaces the whole list. */
+export async function savePayAccountsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase } = await requireAdmin();
+  const result = payAccountsFromForm((name) => field(formData, name, 80));
+  if ('error' in result) return { error: result.error };
+  const { error } = await supabase.rpc('admin_dues_pay_accounts_save', { p_accounts: result.accounts });
+  if (error) return (await refusal(error))!;
+  revalidatePath('/dues');
+  revalidatePath('/settings');
+  return { ok: result.accounts.length === 0 ? 'Accounts removed. Workers are told to contact support.' : `Saved ${result.accounts.length} account${result.accounts.length === 1 ? '' : 's'}. Workers see them in My Dues.` };
+}
+
+/** An extra note under the accounts (optional): shown in My Dues in the worker app. */
 export async function savePayToAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase } = await requireAdmin();
   const text = field(formData, 'text', 500);
