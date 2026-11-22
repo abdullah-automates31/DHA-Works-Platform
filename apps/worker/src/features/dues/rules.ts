@@ -44,12 +44,16 @@ export type DuesPayment = {
   byStaff: boolean;
 };
 
+/** One place a worker can pay DHA (staff enter these in the portal; migration 0075). */
+export type PayAccount = { method: string; label: string; title: string; number: string };
+
 export type MyDues = {
   accountStatus: 'active' | 'suspended';
   suspensionReason: string;
   suspendedUntil: string | null;
   summary: DuesSummary;
   payTo: string;
+  payAccounts: PayAccount[];
   helpline: string | null;
   dues: DueRow[];
   payments: DuesPayment[];
@@ -106,10 +110,32 @@ export function parseMyDues(json: unknown): MyDues | null {
       credit: num(s.credit),
     },
     payTo: str(o.pay_to).trim(),
+    payAccounts: parsePayAccounts(o.pay_accounts),
     helpline: typeof o.helpline === 'string' && o.helpline.trim() !== '' ? o.helpline.trim() : null,
     dues,
     payments,
   };
+}
+
+/** DHA's accounts; an entry without a number or a way to pay is left out. */
+export function parsePayAccounts(json: unknown): PayAccount[] {
+  if (!Array.isArray(json)) return [];
+  const out: PayAccount[] = [];
+  for (const item of json) {
+    const o = obj(item);
+    if (!o) continue;
+    const method = str(o.method).trim();
+    const number = str(o.number).trim();
+    if (method === '' || number === '') continue;
+    out.push({ method, label: str(o.label).trim(), title: str(o.title).trim(), number });
+  }
+  return out;
+}
+
+/** "Easypaisa", or "Bank - HBL" when staff named the bank. */
+export function accountName(a: PayAccount): string {
+  const m = methodLabel(a.method);
+  return a.label !== '' ? `${m} - ${a.label}` : m;
 }
 
 /** "3 days", "1 day", "5 hours", "1 hour": how long until (or since) a time. */
@@ -150,6 +176,8 @@ export function methodLabel(method: string): string {
       return t('dues.methodEasypaisa');
     case 'bank':
       return t('dues.methodBank');
+    case 'raast':
+      return t('dues.methodRaast');
     case 'sadapay':
       return t('dues.methodSadapay');
     case 'nayapay':

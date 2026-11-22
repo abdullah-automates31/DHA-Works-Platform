@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DuesPayForm } from '@/components/DuesPayForm';
+import { DuesPayTo } from '@/components/DuesPayTo';
 import { Card, LoadError, Notice, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
 import { dueView, methodLabel, paymentView, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
@@ -76,16 +77,23 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
         <Text style={styles.line}>{t('dues.paidSoFar', { amount: formatRupees(summary.paidTotal) })}</Text>
       </View>
 
-      <Card>
-        <View style={styles.cardBody}>
-          <Text style={styles.cardTitle}>{t('dues.payTitle')}</Text>
-          <Text style={dues.payTo ? styles.payTo : settingsStyles.body} selectable>
-            {dues.payTo || t('dues.payNone')}
-          </Text>
-        </View>
-      </Card>
+      {summary.owed > 0 ? (
+        <>
+          <Card>
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle}>{t('dues.payTitle')}</Text>
+              <DuesPayTo dues={dues} />
+            </View>
+          </Card>
+          <DuesPayForm owed={summary.owed} onSent={onSent} />
+        </>
+      ) : null}
 
-      {summary.owed > 0 ? <DuesPayForm owed={summary.owed} onSent={onSent} /> : null}
+      <SectionTitle>{t('dues.duesTitle')}</SectionTitle>
+      {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t('dues.emptyDues')}</Text> : null}
+      {dues.dues.map((d) => (
+        <DueCard key={d.id} due={d} now={now} />
+      ))}
 
       {dues.payments.length > 0 ? (
         <>
@@ -95,13 +103,6 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
           ))}
         </>
       ) : null}
-
-      <SectionTitle>{t('dues.duesTitle')}</SectionTitle>
-      <Text style={settingsStyles.body}>{t('dues.duesNote')}</Text>
-      {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t('dues.emptyDues')}</Text> : null}
-      {dues.dues.map((d) => (
-        <DueCard key={d.id} due={d} now={now} />
-      ))}
     </>
   );
 }
@@ -147,9 +148,9 @@ function DueCard({ due, now }: { due: DueRow; now: Date }) {
         <View style={[styles.chip, { backgroundColor: chip.bg }]}>
           <Text style={[styles.chipText, { color: chip.fg }]}>{view.label}</Text>
         </View>
+        <Text style={styles.arrow}>{'\u203A'}</Text>
       </View>
-      <Text style={styles.itemNote}>{view.hint}</Text>
-      <Text style={styles.itemSub}>{t('dues.openDue')}</Text>
+      {due.status === 'due' || due.status === 'overdue' ? <Text style={styles.itemNote}>{view.hint}</Text> : null}
     </Pressable>
   );
 }
@@ -173,4 +174,5 @@ const styles = StyleSheet.create({
   itemNote: { fontFamily: fontFamily.semibold, fontSize: 12.5, lineHeight: 18, color: colors.ink },
   chip: { borderRadius: 13, paddingHorizontal: 10, paddingVertical: 5 },
   chipText: { fontFamily: fontFamily.extrabold, fontSize: 11.5 },
+  arrow: { fontFamily: fontFamily.bold, fontSize: 22, lineHeight: 24, color: colors.muted },
 });

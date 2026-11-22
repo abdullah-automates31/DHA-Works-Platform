@@ -9,8 +9,11 @@ import {
   duesErrorKey,
   METHODS,
   methodLabel,
+  accountName,
+  type PayAccount,
   parseDueDetail,
   parseMyDues,
+  parsePayAccounts,
   paymentView,
   sendPayment,
   spanText,
@@ -215,4 +218,22 @@ test('an answer that is not a due, or has an unknown state, is refused', () => {
 test('where the job was reads as phase and lane', () => {
   assert.equal(whereText(6, '8'), 'Phase 6, Lane 8');
   assert.equal(whereText(7, '  '), 'Phase 7');
+});
+
+test('DHA accounts are read and named for the worker', () => {
+  const list = parsePayAccounts([
+    { method: 'easypaisa', label: null, title: 'DHA Works', number: ' 0300 1234567 ' },
+    { method: 'bank', label: 'HBL', title: 'DHA Works (Pvt) Ltd', number: 'PK36HABB0000001234567890' },
+    { method: 'raast', title: '', number: '03001234567' },
+    { method: '', title: 'x', number: '123' },
+    { method: 'jazzcash', title: 'x', number: '  ' },
+    42,
+  ]);
+  assert.equal(list.length, 3);
+  const [first, second, third] = list as [PayAccount, PayAccount, PayAccount];
+  assert.equal(first.number, '0300 1234567');
+  assert.equal(accountName(first), 'Easypaisa');
+  assert.equal(accountName(second), 'Bank - HBL');
+  assert.equal(accountName(third), 'Raast');
+  assert.deepEqual(parsePayAccounts(undefined), []);
 });

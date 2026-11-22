@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
 import { PrimaryButton, TextLink } from '@/components/AuthForm';
 import { Crest } from '@/components/Crest';
+import { DuesPayTo } from '@/components/DuesPayTo';
 import { maskPhone } from '@/features/auth/validation';
 import { whatsappLink } from '@/features/dues/rules';
 import { useMyDues } from '@/features/dues/useMyDues';
@@ -55,7 +56,7 @@ export function SuspendedScreen({ reason, until, onCheck, checking }: { reason: 
       {owed > 0 ? (
         <View style={[styles.box, styles.owed]}>
           <Text style={styles.owedAmount}>{t('dues.suspended.owed', { amount: formatRupees(owed) })}</Text>
-          {dues?.payTo ? <Text style={styles.owedPay}>{dues.payTo}</Text> : null}
+          {dues ? <DuesPayTo dues={dues} /> : null}
         </View>
       ) : null}
 
@@ -81,7 +82,6 @@ const styles = StyleSheet.create({
   box: { alignSelf: 'stretch', backgroundColor: colors.mint, borderRadius: 14, padding: 14, gap: 4 },
   owed: { backgroundColor: colors.chip.declined.bg },
   owedAmount: { fontFamily: fontFamily.extrabold, fontSize: 18, color: colors.chip.declined.fg },
-  owedPay: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.ink },
   buttons: { alignSelf: 'stretch', gap: 12, marginTop: 6 },
   noContact: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.muted, textAlign: 'center' },
 });
