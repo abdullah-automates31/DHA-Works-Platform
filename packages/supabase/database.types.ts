@@ -2848,6 +2848,7 @@ export type Database = {
         Returns: undefined
       }
       my_dues: { Args: { p_limit?: number }; Returns: Json }
+      my_job_fee: { Args: { p_job_id: string }; Returns: number }
       my_reports: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json

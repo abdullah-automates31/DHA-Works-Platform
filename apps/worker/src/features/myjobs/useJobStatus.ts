@@ -39,15 +39,19 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
   if (jobKind(job) === 'not_chosen') return { status: 'unavailable' }; // a rejected job cannot be opened
 
   // The worker's own interest, quote and cash row (row-level security lets them read only their own).
-  const [interest, quote, cash, cancel] = await Promise.all([
+  const [interest, quote, cash, cancel, fee] = await Promise.all([
     supabase.from('job_interests').select('created_at').eq('job_id', id).maybeSingle(),
-    supabase.from('quotes').select('id, created_at, total, dha_fee, materials, status, revision, visit_start, visit_end, material_bill_path, busy_eta_pending').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('quotes').select('id, created_at, total, materials, status, revision, visit_start, visit_end, material_bill_path, busy_eta_pending').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('cash_records').select('worker_amount, agreed_amount').eq('job_id', id).maybeSingle(),
     supabase.from('cancellation_requests').select('id, requester_role').eq('job_id', id).eq('status', 'pending').maybeSingle(),
+    // DHA's share of this job (the worker's own; the fee is hidden from customers, so it is not a column anyone else can read)
+    supabase.rpc('my_job_fee', { p_job_id: id }),
   ]);
   // Do not guess when an extra read failed: without the quote the screen would skip the bill prompt, and without
   // the cash row it would offer the write-once form again. A reload that fails keeps the screen already shown.
   if (interest.error || quote.error || cash.error || cancel.error) return { status: 'error' };
+  // a failed fee read only hides the cash-screen note; it never blocks the job screen
+  const dhaFee = fee.error ? 0 : (typeof fee.data === 'number' ? fee.data : 0);
   if (cash.data?.worker_amount !== null && cash.data?.worker_amount !== undefined) job.cashRecorded = true;
   return {
     status: 'ready',
@@ -60,7 +64,7 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
       billAttached: Boolean(quote.data?.material_bill_path),
       cashAmount: cash.data?.worker_amount ?? null,
       cashDue: cash.data?.agreed_amount ?? job.myQuoteTotal,
-      dhaFee: quote.data?.dha_fee ?? 0,
+      dhaFee,
       cancelRequestId: cancel.data?.requester_role === 'worker' ? cancel.data.id : null,
       quoteRevision: quote.data?.revision ?? 0,
       quoteStatus: quote.data?.status ?? null,

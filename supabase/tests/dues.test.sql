@@ -394,5 +394,26 @@ select is(private.dha_fee(1000), 125, 'the new percentage is used at once');
 select is(private.setting_int('dues_due_days', 0), 7, 'and the new number of days');
 select is((select count(*) from public.audit_log where action = 'rules_saved' and record_id = 'dues'), 1::bigint, 'the change is audited');
 
+-- 13. The customer must not be able to learn about the fee (migration 0072) -----------------------------------------------------------
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select throws_ok($$select dha_fee from public.quotes$$, '42501', null, 'a customer cannot read the fee column of a quote');
+select throws_ok($$select * from public.quotes$$, '42501', null, 'nor read the whole quote row (it includes the fee)');
+select ok((select count(*) from (select id, total, labour from public.quotes) x) >= 1, 'the customer still reads the rest of the quotes of their own job');
+select is((select count(*) from public.app_settings where key in ('dha_fee_percent', 'dha_fee_min', 'dues_due_days', 'dues_pay_to')), 0::bigint, 'a customer sees none of the fee settings');
+select is((select count(*) from public.app_settings where key = 'helpline_number'), 1::bigint, 'the other settings stay readable');
+select is(public.get_setting('dha_fee_percent'), null::jsonb, 'get_setting hides the fee rule from a customer');
+select isnt(public.get_setting('helpline_number'), null::jsonb, 'and still answers for the others');
+select throws_ok($$select public.my_job_fee((select j0 from t))$$, '42501', 'not available', 'a customer cannot ask for the fee of a job');
+select tests.act('00000000-0000-0000-0000-0000000000b2');
+select is(public.my_job_fee((select j0 from t)), 400, 'the worker reads their own fee on the job');
+select is((select count(*) from public.app_settings where key in ('dha_fee_percent', 'dha_fee_min', 'dues_due_days', 'dues_pay_to')), 4::bigint, 'a worker reads the fee settings');
+select isnt(public.get_setting('dha_fee_percent'), null::jsonb, 'and get_setting answers for a worker');
+select ok((select count(*) from (select id, labour, total from public.quotes) x) >= 1, 'a worker reads their own quote columns as before');
+select tests.act('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-00000000c101');
+select is((select count(*) from public.app_settings where key in ('dha_fee_percent', 'dha_fee_min', 'dues_due_days', 'dues_pay_to')), 4::bigint, 'staff read the fee settings');
+select tests.back();
+select is(has_column_privilege('authenticated', 'public.quotes', 'dha_fee', 'select'), false, 'authenticated has no grant on the fee column');
+select is(has_column_privilege('authenticated', 'public.quotes', 'total', 'select'), true, 'but still has the other quote columns');
+
 select * from finish();
 rollback;
