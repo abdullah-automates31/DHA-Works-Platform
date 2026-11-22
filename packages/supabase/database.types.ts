@@ -529,6 +529,36 @@ export type Database = {
           },
         ]
       }
+      dues_pay_accounts: {
+        Row: {
+          account_number: string
+          account_title: string
+          id: string
+          label: string | null
+          method: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          account_number: string
+          account_title: string
+          id?: string
+          label?: string | null
+          method: string
+          position: number
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string
+          account_title?: string
+          id?: string
+          label?: string | null
+          method?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dues_payments: {
         Row: {
           amount: number
@@ -2546,6 +2576,11 @@ export type Database = {
           p_tab?: string
         }
         Returns: Json
+      }
+      admin_dues_pay_accounts: { Args: never; Returns: Json }
+      admin_dues_pay_accounts_save: {
+        Args: { p_accounts: Json }
+        Returns: undefined
       }
       admin_dues_pay_to_save: { Args: { p_text: string }; Returns: undefined }
       admin_dues_payment_decide: {

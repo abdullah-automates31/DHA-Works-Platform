@@ -252,9 +252,11 @@ insert into calls values
   ('select public.admin_dues_record_payment(''00000000-0000-0000-0000-0000000000b1'', 100, ''office_cash'', null, null)'),
   ('select public.admin_dues_waive(gen_random_uuid(), ''a reason'')'),
   ('select public.admin_dues_warn(''00000000-0000-0000-0000-0000000000b1'', ''please pay'')'),
-  ('select public.admin_dues_pay_to_save(''x'')');
+  ('select public.admin_dues_pay_to_save(''x'')'),
+  ('select public.admin_dues_pay_accounts()'),
+  ('select public.admin_dues_pay_accounts_save(''[]''::jsonb)');
 grant select on calls to authenticated;
-select is((select count(*) from calls), 8::bigint, 'the list covers all 8 staff functions');
+select is((select count(*) from calls), 10::bigint, 'the list covers all 10 staff functions');
 select tests.act('00000000-0000-0000-0000-0000000000c2', '00000000-0000-0000-0000-00000000c201');
 select is((select count(*) from calls c where not tests.refused(c.sql)), 0::bigint, 'a password-only admin session is refused by every one');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
@@ -376,11 +378,24 @@ select is(tests.q('select count(*) from public.audit_log where action = ''dues_w
 -- where to pay, and the helpline
 select throws_ok($$select public.admin_dues_pay_to_save(repeat('x', 501))$$, 'P0001', 'keep it to 500 characters', 'the pay-to text is limited');
 select lives_ok($$select public.admin_dues_pay_to_save('JazzCash 0300 1234567, account title DHA Works')$$, 'staff save where to pay');
+
+-- DHA's accounts: one card each in My Dues
+select throws_ok($$select public.admin_dues_pay_accounts_save('{}'::jsonb)$$, 'P0001', 'send the accounts as a list', 'the accounts must be a list');
+select throws_ok($$select public.admin_dues_pay_accounts_save('[{"method":"cheque","title":"DHA Works","number":"123456"}]'::jsonb)$$, 'P0001', 'account 1: choose how workers pay', 'an unknown way to pay is refused');
+select throws_ok($$select public.admin_dues_pay_accounts_save('[{"method":"jazzcash","title":"","number":"123456"}]'::jsonb)$$, 'P0001', 'account 1: enter the account title (up to 60 characters)', 'an account needs a title');
+select throws_ok($$select public.admin_dues_pay_accounts_save('[{"method":"jazzcash","title":"DHA Works","number":"12"}]'::jsonb)$$, 'P0001', 'account 1: enter the number (3 to 40 characters)', 'an account needs a number');
+select throws_ok($$select public.admin_dues_pay_accounts_save('[{"method":"jazzcash","title":"a","number":"123"},{"method":"jazzcash","title":"a","number":"123"},{"method":"jazzcash","title":"a","number":"123"},{"method":"jazzcash","title":"a","number":"123"},{"method":"jazzcash","title":"a","number":"123"},{"method":"jazzcash","title":"a","number":"123"},{"method":"jazzcash","title":"a","number":"123"}]'::jsonb)$$, 'P0001', 'at most 6 accounts', 'no more than six accounts');
+select lives_ok($$select public.admin_dues_pay_accounts_save('[{"method":"easypaisa","title":"DHA Works","number":"0300 1234567"},{"method":"bank","label":"HBL","title":"DHA Works (Pvt) Ltd","number":"PK36HABB0000001234567890"}]'::jsonb)$$, 'staff save two accounts');
+select is(jsonb_array_length(public.admin_dues_pay_accounts()), 2, 'staff read them back');
+select is(tests.q('select count(*) from public.audit_log where action = ''dues_pay_accounts_saved'''), '1', 'the change is audited');
 select tests.back();
 update public.app_settings set value = 'true'::jsonb where key = 'helpline_enabled';
 update public.app_settings set value = '"1092"'::jsonb where key = 'helpline_number';
 select tests.act('00000000-0000-0000-0000-0000000000b1');
 select is((public.my_dues() ->> 'pay_to'), 'JazzCash 0300 1234567, account title DHA Works', 'the worker sees where to pay');
+select is((public.my_dues() -> 'pay_accounts' -> 0 ->> 'number'), '0300 1234567', 'the worker sees the first account');
+select is((public.my_dues() -> 'pay_accounts' -> 1 ->> 'label'), 'HBL', 'and the bank name of the second');
+select is(jsonb_array_length(public.my_dues() -> 'pay_accounts'), 2, 'both accounts are in My Dues');
 select is((public.my_dues() ->> 'helpline'), '1092', 'and the helpline when it is on');
 select tests.back();
 

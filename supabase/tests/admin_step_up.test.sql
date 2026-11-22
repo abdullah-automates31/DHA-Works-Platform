@@ -147,6 +147,7 @@ select isnt(tests.msg($$select public.admin_dues_payment_decide('00000000-0000-0
 select isnt(tests.msg($$select public.admin_dues_record_payment('00000000-0000-0000-0000-0000000000b1', 100, 'office_cash', null, null)$$), 'confirm with a new code', 'admin_dues_record_payment: no new code needed after sign-in (0060)');
 select isnt(tests.msg($$select public.admin_dues_waive('00000000-0000-0000-0000-000000000001', 'because')$$), 'confirm with a new code', 'admin_dues_waive: no new code needed after sign-in (0060)');
 select isnt(tests.msg($$select public.admin_dues_warn('00000000-0000-0000-0000-0000000000b1', 'please pay')$$), 'confirm with a new code', 'admin_dues_warn: no new code needed after sign-in (0060)');
+select isnt(tests.msg($$select public.admin_dues_pay_accounts_save('[]'::jsonb)$$), 'confirm with a new code', 'admin_dues_pay_accounts_save: no new code needed after sign-in (0060)');
 select tests.back();
 
 select * from finish();
