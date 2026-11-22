@@ -104,3 +104,7 @@ Only the public URL and the anon key go there; never the service-role key. Do no
 Needs from the user before the first real build: an Expo account and `eas init` (links the project), a Google Play developer account for Android store releases, and an Apple Developer account (99 USD a year) for any iOS build on a real device. Nothing here is run yet. Local development with Expo Go is unchanged.
 
 **Customer app (Shariq Bhai's repo):** the same split is a separate change in his repository (Gradle build types or flavors with a `.dev` application id for Android; `Debug.xcconfig` and `Release.xcconfig` with a `.dev` bundle id for iOS). Not touched from here.
+
+## 21 Nov 2026: iPhone without an Apple Developer account
+
+The Apple Developer account is bought next month (Shariq), so until then there is no signed iOS build, no TestFlight and no iOS push. What works on an iPhone meanwhile: the **worker app in Expo Go** (Metro on the LAN, or a published EAS Update opened in Expo Go; push is skipped on iOS), and the **customer app built by Shariq from Xcode with a free Apple ID** (a 7-day certificate, installed on his own device). The demo plan around this is in [DEMO-SCRIPT.md](DEMO-SCRIPT.md); the decision is in DECISIONS.md 21 Nov.

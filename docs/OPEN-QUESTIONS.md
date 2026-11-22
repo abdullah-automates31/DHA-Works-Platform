@@ -188,3 +188,30 @@ Built in the worker app and the shared database (migrations 0024 to 0026): the m
 - Live portal speed (cold starts, Vercel Pro) and a custom domain remain open owner decisions.
 
 - 20 Nov, worker Open jobs: Newest / Nearest and Within X km are built (docs/DECISIONS.md 20 Nov). Distances are phase-level estimates; exact distances need the customer app to send a job location (Shariq). Phase centres in `features/feed/distance.ts` are approximate: please check them. Needs a new native build on Android because of `expo-location` (iPhone Expo Go already has it).
+
+## 21 Nov 2026: demo week (owner and Shariq items)
+
+Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 Nov.
+
+| # | Item | Who | Status |
+|---|---|---|---|
+| 1 | **Apple Developer account** ($99/year) is bought next month, so the demo has no signed iOS build and no iOS push. iPhone demo: worker app in Expo Go, customer app from Shariq's Mac with a free Apple ID (installed the day before, 7-day certificate). | Shariq | Waiting; plan adjusted |
+| 2 | **Customer PR #17** (a busy worker's time on the quote) is open with merge conflicts, and it is needed again because migration 0070 brought the estimate back. A rebased copy is in the local branch `abdullah/busy-time-rebased` in `C:\Users\Abdullah Ali\dha-tmp-busy` (one commit on Shariq's `main`; not pushed; not compiled). Shariq reviews and merges (in a few days, owner 21 Nov); the owner says when to push the rebased branch. Without it the customer does not see the estimate. | Owner, Shariq | Waiting |
+| 3 | **Forgot password** on the live portal after `TURNSTILE_SECRET_KEY` was set on DEV (21 Nov): request a code once to prove it works (it emails a real code). | Owner | Not tested |
+| 4 | **Per-IP rate limit** on `/signin*` (Vercel firewall rule, plan permitting). Not needed for a demo. | Owner | Decide before real use |
+| 5 | **Keyboard on Report a problem and Support (iPhone):** the Send button is again at the end of the form. Proposed: scroll the focused box above the keyboard and add a Done button. | Owner | Waiting for a yes |
+| 6 | **Copy the `server-only` change** to the standalone portal repository and push `main` (a push deploys on Vercel). | Owner | Waiting for a yes |
+| 7 | **Twilio WhatsApp cost and approval** are the biggest unknowns for launch; the sender approval can take days to weeks. For the demo use the dashboard test numbers. | Owner | Open |
+| 8 | **Old keys to rotate:** the Expo token and the old Brevo key (from the 13 Nov list). | Owner | Open |
+
+
+## 22 Nov 2026: DHA fee and dues (for Shariq and the owner)
+
+| # | Item | Status |
+|---|---|---|
+| 1 | The fee ships OFF. Decide the real percent and minimum (the owner mentioned 15 to 40% and Rs 50 to 60), set them in Settings > DHA fee and dues, enter where workers pay, and turn the helpline on (the suspended screen needs it for Call and WhatsApp). | Owner and Shariq |
+| 2 | **Tax and legal:** a fee DHA collects probably needs business registration and sales tax on services (Sindh); ask an accountant before launch. | Owner |
+| 3 | **Automatic suspension** (when a due runs past its days) is not built; staff suspend by hand. Needs a rule for the grace period and for reactivation. | Later |
+| 4 | **Payment screenshots** and an in-app payment (JazzCash / Easypaisa API) are not built; the worker enters a transaction ID and staff check it by hand. | Later |
+| 5 | A literal sign-out of a suspended worker to the sign-in screen (instead of the locked Suspended screen) needs a saved copy of the dues info on the phone. | Owner decides |
+| 6 | The customer app needs no change (the fee is inside the quote). Quotes already open when the fee is switched on keep fee 0. | Info |

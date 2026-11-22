@@ -153,3 +153,29 @@ The live portal already runs on hosted DEV; Docker was only for local tests. Sin
 - **Worker requests** (`/requests`, sidebar under Operations with the open count; `src/features/requests/*`, migration 0067): tabs All, Messages, Documents, Name and number changes. Staff reply to support messages, approve or reject replacement documents (signed links to the files), and mark name or number changes "reviewed". Uses `admin_requests_list`, `admin_requests_counts`, `admin_request_reply`, `admin_request_decide`, `admin_request_ack`. Staff get no push or email for new requests, only the badge.
 - **Pictures:** `/avatar?p=<path>` serves worker and customer pictures (see DECISIONS 20 Nov). Not browser-tested yet.
 - Both changes are in the monorepo and the standalone portal repo (`8069e04`, `29439b5`). Another Claude session ("admin-dashboard-content-upgrade") also edits the portal and shares the database: check `git log` and message it before touching shared files, and take migration numbers from the latest on `dev` (0069 was its; mine next is 0070 or later).
+
+## Search everything, activity list, server-only and CI (20 to 21 Nov 2026)
+
+- **One search for everything:** the search box in the sidebar of every page opens `/search` (`src/app/(portal)/search/page.tsx`, rules in `src/features/search/rules.ts`). It reads through the same `admin_*_list` functions as the list screens (so who may search, and what they see, are exactly as there) and shows **workers, residents, jobs and reports, five of each**, with "See all N" linking to the full list with the search kept (reports use the "all" tab so resolved cases are found). Two characters at least; the text is trimmed, capped at 80 characters and stripped of control characters. Unapproved applicants are not searched.
+- **Search box look:** no inner gold box (the focus ring is on the pill) and no browser history dropdown (commit `da1fc4d`).
+- **Dashboard activity:** the recent-activity list shows 12 rows, then a **Show more** button (`b40be69`). The database function returns at most 20 rows, so Show more stops there.
+- **`server-only` guard (21 Nov, `08f21c8`):** `src/lib/auth.ts` and `src/lib/supabase/server.ts` start with `import 'server-only'` (dependency `server-only` 0.0.1), so a client component that imports the guards or the Supabase server client fails the build. Checked the same day: the built client bundle holds no secret (`TURNSTILE_SECRET_KEY`, service role, mail key); only the Supabase URL, the anon key and the Turnstile site key are public by design; no `.env` file is tracked. Every portal view, the `/avatar` route and `/confirm` call `requireAdmin()` themselves, besides the portal layout. **This change is in the monorepo only; copy the four files and the lockfile to the standalone repository to ship it.**
+- **CI:** GitHub Actions are pinned to commit SHAs, and the standalone workflow checks the SHA256 of the gitleaks download (`3ea7ab5` in the monorepo, `1e261b9` in the standalone repository). On 21 Nov all three jobs (typecheck, lint, test and build; dependency audit; secret scan) passed and Vercel reported the deployment as completed.
+- **Rate limits today:** per account in the database only (see DECISIONS.md 21 Nov); no per-IP limit. Suggested: a Vercel firewall rule on `/signin*`.
+- **Known leftover:** `/confirm` and `stepUpResendAction` / `stepUpVerifyAction` in `src/app/signin/actions.ts` are not reached since 0060 (the code is asked only at sign-in) but are still used by the `/confirm` page; removing them means removing that page, its tests and docs. Left as is (owner decides).
+- **Forgot password:** the function secret `TURNSTILE_SECRET_KEY` for `admin-password-reset` was set on DEV on 21 Nov. Not yet tried from the live page (it emails a real code).
+- **Tests:** admin 119 (`npm run admin:test`); typecheck, lint, audit (0 vulnerabilities) and build clean on 21 Nov.
+
+
+## Dues (22 Nov 2026, migration 0071)
+
+- **Dues page (/dues, sidebar Dues with a badge = payments waiting + overdue workers):** tiles (outstanding, overdue, payments to check, collected this month), the queue of payments to check (Confirm with the amount that arrived, or Reject with a reason), tabs Owing / Overdue / Payments waiting / Suspended / All with search, and where workers pay. Code: src/features/dues/ (DuesView, parse, actions).
+- **Worker profile, Dues tab (/users/<id>?tab=dues):** what they owe, overdue, paid and next due; every due per job (fee, paid, left, added, due, status, Waive with a reason); every payment (method, transaction ID, who checked it and when; Confirm / Reject while waiting); Record a payment (for example cash at the office; counts at once); Warn the worker. Suspend and Reactivate stay in the Account box on the right (manual).
+- **Settings > DHA fee and dues:** the fee percent (one decimal), the minimum fee, the days to pay, and the payment details workers see. Every change is audited.
+- **Tests:** admin 127; database supabase/tests/dues.test.sql.
+
+
+**Payment screenshots (22 Nov, migration 0073):** the Dues page queue and the worker’s Dues tab show the screenshot the worker attached (a small picture that opens full size; a private link valid for 5 minutes, only for paths of the exact shape worker id / dues / file). Recording a payment offers the new methods. Tests: admin 130.
+
+
+**Settings > DHA fee and dues, accounts (22 Nov, migration 0075):** the saved accounts are listed with a Remove button each, and one short Add an account form (how workers pay, account title, number, optional bank name) adds the next, up to six (parse.ts payAccountsFromForm, actions addPayAccountAction and removePayAccountAction, which replace the list through the 0075 function); the old free text is now "Extra note (optional)". Tests: admin 132.

@@ -259,3 +259,22 @@ A report can be followed by the person who filed it, and DHA staff notices reach
 ## Admin password reset functions (20 Nov 2026, migrations 0068 and 0069)
 
 All service-role only unless noted; no grants to anon or authenticated except the last one. `admin_reset_issue(p_email)` makes a 10-minute code (1 a minute, 5 an hour, stores sha256(code || id)). `admin_reset_confirm(p_email, p_code, p_password)` checks the code (5 tries, 10 wrong an hour lock), sets the password (12 to 72 bytes, bcrypt), deletes all sessions of the user, writes audit rows and a 10-minute marker in `admin_reset_signins`. `admin_verify_after_reset()` (authenticated, password session only) consumes the marker, marks the session verified and audits `admin_signed_in_after_reset`. `private.block_admin_password_change()` is a trigger on `auth.users`. `admin_issue_challenge` now needs a password session. Table `admin_reset_challenges` has RLS and no grants.
+
+
+## 22 Nov 2026: migration 0071, DHA fee and dues (supersedes item 20 "Commission: 0% in MVP 1")
+
+quotes.dha_fee (snapshot by trigger from app_settings dha_fee_percent / dha_fee_min), worker_dues and dues_payments (RLS on, no policy, no grant), private.dues_rows / dues_workers / dues_summary (allocation worked out on read), settle_cash creates the due when the job becomes cash_collected, get_my_earnings leaves the fee out, push preferences always push dues notices. Worker: my_dues(p_limit), submit_dues_payment(amount, method, reference); both also work for a suspended worker. Staff: admin_dues_counts, admin_dues_list, admin_dues_worker, admin_dues_payment_decide, admin_dues_record_payment, admin_dues_waive, admin_dues_warn, admin_dues_pay_to_save (all audited; the ones that change money check admin_fresh). Settings: rule group "dues" in private.rule_registry (admin_rules_save now accepts any group of the registry). Cron dw-dues-reminders (05:00 UTC). Notification types: dues_reminder, dues_payment_decided, dues_warning. Tests: supabase/tests/dues.test.sql. Reasons and rules: DECISIONS.md 22 Nov.
+
+
+Migration 0072 (22 Nov 2026): hides the fee from customers: SELECT on quotes without dha_fee, the fee settings readable by staff and workers only (policy app_settings_read and get_setting), and my_job_fee(p_job_id) for the worker’s own fee.
+
+
+Migration 0073 (22 Nov 2026): dues_payments.proof_path, bucket dues-proof (can_upload_dues_proof, own-folder upload, owner-or-staff read), more methods (sadapay, nayapay, other), submit_dues_payment(amount, method, reference, proof_path) replaces the three-argument version, admin_dues_list / admin_dues_worker return proof_path, my_dues returns has_proof.
+
+
+Migration 0074 (22 Nov 2026): my_due_detail(p_due uuid), worker only (a suspended worker too): the due, its job (phase and lane only), the quote money (labour, materials, total, fee, earned, cash recorded) and the total owed; a due that is not the caller’s answers "this due was not found" like one that does not exist.
+
+
+Migration 0075 (22 Nov 2026): closed table dues_pay_accounts (position 1 to 6, method, label, account_title, account_number); admin_dues_pay_accounts() (staff read) and admin_dues_pay_accounts_save(jsonb) (staff replace the list; is_admin, freshness, validation, audit row dues_pay_accounts_saved); my_dues() gains "pay_accounts".
+
+Migration 0079 (22 Nov 2026): search_my_dues(p_query) searches all of a worker's dues and payments (word by word, plain text: job code, title, amount, state, date, transaction ID, way of paying; up to 50 of each); my_dues is rebuilt from the helpers private.due_items and private.payment_items. The short-lived "Clear all" (0077 hide, 0078 restore) is removed again: the two functions and the worker_hidden_at columns are dropped.

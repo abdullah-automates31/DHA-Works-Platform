@@ -76,3 +76,30 @@ Open pull requests on 19 Nov: #9 dev and prod builds, #15 no sign-in flash, #17 
 - [x] Tests no longer need Docker: hosted test project, 47 pgTAP files (1,940 assertions) and three attack drills pass.
 - [ ] Each admin turns on 2-Step Verification for their email (the safety guide is written, not yet shared). Owner.
 - [ ] Production Supabase project, paid plan, Twilio Verify and the other items in section 0 are unchanged.
+
+## Progress update, 21 Nov 2026 (demo week)
+
+- [x] One-week plan and demo script written: [DEMO-SCRIPT.md](DEMO-SCRIPT.md) (devices, clean demo data, 9-step story, checklists, limits, E2E bug log).
+- [x] Customer app: PRs #14, #16 and #18 merged by Shariq. #17 (busy worker's time) still open; rebased copy kept locally (OPEN-QUESTIONS 21 Nov).
+- [x] Worker app: Android keyboard lift on every form, "Within X km" dropdown with 2 km, tests 328.
+- [x] Admin portal: global search, 12-row activity list, `server-only` guard (monorepo), CI pinned. Audit found no new defects.
+- [ ] **iPhone demo without an Apple account:** worker in Expo Go, customer from Shariq's Mac; no iOS push. Apple account next month.
+- [ ] Clean production or demo Supabase project, seeded with [DEMO] data (DEMO-SCRIPT section 2).
+- [ ] Per-IP rate limit on sign-in (Vercel firewall rule).
+- [ ] Forgot password proven on the live site; keyboard on Report/Support settled.
+
+### Running costs (estimates, 21 Nov 2026; check current prices before budgeting)
+
+Only Supabase Pro ($25 a month) and the Apple fee ($99 a year) come from our own docs; the rest are rough public prices. Rupees at about Rs 280 per dollar.
+
+| Item | Cost | Notes |
+|---|---|---|
+| Supabase Pro (production project) | about $25 a month | daily backups, session limits |
+| Backup storage outside Supabase | about $5 a month | decided 27 Oct |
+| Vercel Pro (optional) | about $20 a month | Hobby is slow on cold pages; commercial use expects a paid plan |
+| Google Play developer account | about $25 once | |
+| Custom domain | about $12 a year | removes the Chrome "deceptive site" warning |
+| Apple Developer Program | $99 a year | next month; iOS builds and iOS push |
+| Twilio WhatsApp / SMS codes | **unknown** | per message; depends on the Pakistan rate and the number of sign-ins |
+
+Monthly: about $30 lean (Rs 8,400) or $50 comfortable (Rs 14,000). Year one, excluding Twilio: lean Android only about $397 (Rs 111,000); lean with iPhone about $496 (Rs 139,000); comfortable Android only about $637 (Rs 178,000); comfortable with iPhone about $736 (Rs 206,000). Today (development and demo) everything runs on free tiers, so about $0.

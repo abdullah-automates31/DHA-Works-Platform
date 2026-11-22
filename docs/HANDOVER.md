@@ -18,6 +18,14 @@ Sections 1 onward were written on 5 Nov and are kept for history; where they dis
 
 **20 Nov 2026 update (read with section 0):** migrations are now 71 files up to 0069, all on DEV. Admin Forgot password (0068, function `admin-password-reset`) and the no-second-code-after-reset rule (0069) are live; eye buttons on password boxes; Turnstile fixes. Worker My jobs cards have no buttons (tap opens the job screen). **Docker is retired**: tests and drills run on the hosted TEST project `bqjzzjhwcxvomcabpyfm` (`node scripts/test-db-hosted.cjs`, drills with `--hosted`; pgTAP 47 files 1,940 assertions). Standalone admin repo `main` at 793995b (Vercel success). Dev commits: f3eb1bb, a07ab97, fefb1e2, 7f3d75a, 673f280 to 46a34f0. Two Claude sessions share this repo: pull first, message before touching shared files, next migration 0070.
 
+**21 Nov 2026 update (read with section 0): demo week.** The owner wants all three platforms ready and a heavy demo on **Fri 27 Nov**; plan, story, demo data and E2E bug log are in [DEMO-SCRIPT.md](DEMO-SCRIPT.md). The demo needs iPhones but the Apple Developer account comes next month (Shariq), so no signed iOS build and no iOS push (worker in Expo Go, customer from Shariq's Mac; DECISIONS.md 21 Nov).
+- **Git:** `dev` at `f170b35` before the documentation commit (Android keyboard lift, "Within X km" dropdown with 2 km, admin `server-only` guard); the standalone admin repository `main` at `1e261b9` (global search, CI pinned; **without** the `server-only` change). Nothing pushed to `main` of the monorepo.
+- **Database (hosted DEV):** 72 migration files, all applied up to 0070 (checked 21 Nov; `busy_estimate_window_hours` = 6). `TURNSTILE_SECRET_KEY` was set for `admin-password-reset` on 21 Nov (Forgot password not yet tried live). Nothing was deleted or seeded on DEV on 21 Nov: it is shared with Shariq and holds the busy-worker fixtures DW-2088, DW-2090 and DW-2091.
+- **Tests (21 Nov):** pgTAP 49 files, all pass on the hosted TEST project; worker 328; admin 119. The busy-worker drill was run on TEST afterwards (result in DEMO-SCRIPT.md section 6).
+- **Customer app:** PRs #14, #16 and #18 are merged. #17 (busy worker's time on the quote) is open with conflicts and is needed again because 0070 brought the estimate back; a rebased copy is local only (branch `abdullah/busy-time-rebased` in `C:\Users\Abdullah Ali\dha-tmp-busy`, not pushed, not compiled). #15, #19, #20 and #9 are open and not blocking. Shariq reviews and merges (in a few days).
+- **Open (owner):** the keyboard on Report a problem and Support (iPhone), copying `server-only` to the standalone repository, Forgot password check, per-IP sign-in limit, clean demo project. List: OPEN-QUESTIONS.md 21 Nov.
+- **This PC:** only about 2 to 3 GB of memory was free; Claude Code stopped the Expo dev server once for that. Leftover Metro servers may still run on ports 8081 to 8083.
+
 ## 1. Where we are
 
 - **Admin portal (8 Nov): all screens A01 to A15 are built and tested locally** (migrations 0040 to 0042 are local only, NOT on hosted DEV; 1228 pgTAP assertions in 31 files; 53 portal unit tests). The note below describes phase 1.
@@ -151,3 +159,6 @@ The user's instruction: build what is clear, leave what is unsure, they will con
 - UI reference (outside the repo): `C:\Users\Abdullah Ali\DHA-Works-UI\` (`SPEC.md`, screenshots; ignore `.dc.html`). Screen ids: C = customer, W = worker, A = admin.
 - Claude's memory index: `C:\Users\Abdullah Ali\.claude\projects\C--Users-Abdullah-Ali-dha-works\memory\MEMORY.md`.
 - Old conversation transcript: `C:\Users\Abdullah Ali\.claude\projects\C--Users-Abdullah-Ali-dha-works\5489b549-2150-4e6a-b922-b482bb0cd147.jsonl`.
+
+
+**22 Nov 2026 update (DHA fee and dues):** migration 0071 (file 20261122100000_dha_fee_and_dues.sql, 73 migration files) is built and tested on the hosted TEST project (pgTAP 50 files pass; the new test is supabase/tests/dues.test.sql) but **not yet applied to DEV**. Worker app, admin portal and send-push changes are in the working tree (worker 349 tests, admin 127, deno send-push 11); nothing is deployed. Deploy order (each needs the owner’s go-ahead): db push to DEV (the fee is 0, nothing changes for users), deploy send-push, admin portal (monorepo and the standalone repository), worker app build, then the owner sets the rule in Settings. See DECISIONS.md 22 Nov.
