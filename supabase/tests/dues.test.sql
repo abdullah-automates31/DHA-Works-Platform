@@ -505,5 +505,25 @@ select is(jsonb_array_length(public.admin_dues_worker('00000000-0000-0000-0000-0
 select is(jsonb_array_length(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'payments'), (select settled_pays + waiting_pays from pre14), 'and every payment');
 select tests.back();
 
+-- 15. ... and brings them back (migration 0078) --------------------------------------------------------------------------------------
+select tests.act('00000000-0000-0000-0000-0000000000b1');
+select is((public.my_dues() -> 'cleared' ->> 'dues')::int, (select settled_dues from pre14), 'My Dues says how many dues are cleared');
+select is((public.my_dues() -> 'cleared' ->> 'payments')::int, (select settled_pays from pre14), 'and how many payments');
+select is(public.restore_my_dues_history('dues'), (select settled_dues from pre14), 'bringing the dues back restores exactly the cleared ones');
+select is(jsonb_array_length(public.my_dues() -> 'dues'), (select settled_dues + open_dues from pre14), 'every due is listed again');
+select is((public.my_dues() -> 'cleared' ->> 'dues')::int, 0, 'none are cleared any more');
+select is(public.my_dues() -> 'summary', (select j -> 'summary' from m14), 'the totals still do not change');
+select is(public.restore_my_dues_history('dues'), 0, 'bringing back again changes nothing');
+select is(public.restore_my_dues_history('payments'), (select settled_pays from pre14), 'the payments come back too');
+select is(jsonb_array_length(public.my_dues() -> 'payments'), (select settled_pays + waiting_pays from pre14), 'every payment is listed again');
+select is(public.clear_my_dues_history('dues'), (select settled_dues from pre14), 'and they can be cleared again');
+select throws_ok($$select public.restore_my_dues_history('everything')$$, 'P0001', 'choose dues or payments', 'only dues or payments');
+select tests.act('00000000-0000-0000-0000-0000000000b2');
+select is(public.restore_my_dues_history('dues'), 0, 'another worker restores nothing of someone else''s');
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select throws_ok($$select public.restore_my_dues_history('dues')$$, '42501', 'not available', 'a resident cannot');
+select tests.back();
+select is(has_function_privilege('anon', 'public.restore_my_dues_history(text)', 'execute'), false, 'anon cannot run it');
+
 select * from finish();
 rollback;

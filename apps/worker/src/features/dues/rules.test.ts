@@ -251,3 +251,9 @@ test('Clear all is offered from 20 cards, and only settled cards count as cleara
   assert.equal(showClearAll(20, 20), true);
   assert.equal(showClearAll(25, 0), false);
 });
+
+test('My Dues reads how many cards were cleared (zero when the answer has none)', () => {
+  assert.equal(parseMyDues({ ...answer, cleared: { dues: 16, payments: 3 } })?.clearedDues, 16);
+  assert.equal(parseMyDues({ ...answer, cleared: { dues: 16, payments: 3 } })?.clearedPayments, 3);
+  assert.equal(parseMyDues(answer)?.clearedDues, 0);
+});

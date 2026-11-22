@@ -39,5 +39,16 @@ export function useMyDues() {
     [reload],
   );
 
-  return { state, reload, clearHistory };
+  /** Brings the cleared cards of one list back (restore_my_dues_history, migration 0078). */
+  const restoreHistory = useCallback(
+    async (which: 'dues' | 'payments') => {
+      const { error } = await supabase.rpc('restore_my_dues_history', { p_which: which });
+      if (error) return false;
+      await reload();
+      return true;
+    },
+    [reload],
+  );
+
+  return { state, reload, clearHistory, restoreHistory };
 }

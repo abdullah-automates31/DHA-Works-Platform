@@ -57,6 +57,9 @@ export type MyDues = {
   helpline: string | null;
   dues: DueRow[];
   payments: DuesPayment[];
+  /** How many cards the worker has cleared from each list (they can bring them back). */
+  clearedDues: number;
+  clearedPayments: number;
 };
 
 const DAY = 86_400_000;
@@ -96,7 +99,10 @@ export function parseMyDues(json: unknown): MyDues | null {
     if (!r || typeof r.id !== 'string' || (status !== 'pending' && status !== 'confirmed' && status !== 'rejected')) continue;
     payments.push({ id: r.id, amount: num(r.amount), method: str(r.method), reference: str(r.reference), status, createdAt: str(r.created_at), reason: str(r.reason), byStaff: r.by_staff === true });
   }
+  const cleared = obj(o.cleared);
   return {
+    clearedDues: num(cleared?.dues),
+    clearedPayments: num(cleared?.payments),
     accountStatus: a.status === 'suspended' ? 'suspended' : 'active',
     suspensionReason: str(a.reason),
     suspendedUntil: typeof a.until === 'string' ? a.until : null,

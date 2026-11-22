@@ -2969,6 +2969,7 @@ export type Database = {
         Args: { p_folder: string }
         Returns: boolean
       }
+      restore_my_dues_history: { Args: { p_which: string }; Returns: number }
       revise_quote: {
         Args: {
           p_labour: number

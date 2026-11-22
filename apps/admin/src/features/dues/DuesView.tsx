@@ -6,6 +6,7 @@ import { Chip } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { buildHref, dateTime, lastPage, PAGE_SIZE, pageNumber, phoneText, rupees, searchText } from '@/lib/format';
 import { decidePaymentAction } from './actions';
+import { ConfirmRejectRow } from './ConfirmRejectRow';
 import { ProofLink, signedProofUrls } from './ProofLink';
 import { methodLabel, parseCounts, parseDuesList, parseTab, whenText, type PendingPayment, type Tab } from './parse';
 
@@ -116,27 +117,26 @@ function PendingCard({ p, proofUrl }: { p: PendingPayment; proofUrl: string | nu
         <span className="mut" style={{ fontSize: 12.5 }}>{dateTime(p.createdAt)}</span>
       </div>
       <ProofLink url={proofUrl} />
-      <div className="row g8" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <ActionForm
-          action={decidePaymentAction}
-          hidden={{ paymentId: p.id, workerId: p.workerId, decision: 'confirm' }}
-          inline
-          submit="Confirm"
-          fields={[{ name: 'amount', kind: 'text', label: 'Amount that arrived (Rs)', defaultValue: String(p.amount), maxLength: 12 }]}
-        />
-        <details>
-          <summary className="btn out" style={{ cursor: 'pointer' }}>Reject</summary>
-          <div style={{ marginTop: 8 }}>
-            <ActionForm
-              action={decidePaymentAction}
-              hidden={{ paymentId: p.id, workerId: p.workerId, decision: 'reject' }}
-              submit="Reject"
-              tone="red"
-              fields={[{ name: 'reason', kind: 'text', label: 'Reason (the worker sees this)', placeholder: 'For example: the transaction ID was not found', maxLength: 300, required: true }]}
-            />
-          </div>
-        </details>
-      </div>
+      <ConfirmRejectRow
+        confirm={
+          <ActionForm
+            action={decidePaymentAction}
+            hidden={{ paymentId: p.id, workerId: p.workerId, decision: 'confirm' }}
+            inline
+            submit="Confirm"
+            fields={[{ name: 'amount', kind: 'text', label: 'Amount that arrived (Rs)', defaultValue: String(p.amount), maxLength: 12 }]}
+          />
+        }
+        reject={
+          <ActionForm
+            action={decidePaymentAction}
+            hidden={{ paymentId: p.id, workerId: p.workerId, decision: 'reject' }}
+            submit="Reject"
+            tone="red"
+            fields={[{ name: 'reason', kind: 'text', label: 'Reason (the worker sees this)', placeholder: 'For example: the transaction ID was not found', maxLength: 300, required: true }]}
+          />
+        }
+      />
     </div>
   );
 }

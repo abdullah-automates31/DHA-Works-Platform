@@ -17,7 +17,7 @@ import { colors, fontFamily } from '@/theme';
 // ID. DHA staff confirm it in the admin portal. The fee comes out of each job's quote: the worker collects the full quote in
 // cash and pays DHA its share here. It also opens for a suspended worker, who pays here to get the account back.
 export default function DuesScreen() {
-  const { state, reload, clearHistory } = useMyDues();
+  const { state, reload, clearHistory, restoreHistory } = useMyDues();
   const [pulling, setPulling] = useState(false);
 
   async function pull() {
@@ -49,14 +49,24 @@ export default function DuesScreen() {
           keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={pulling} onRefresh={() => void pull()} tintColor={colors.green} />}
         >
-          <Body dues={state.dues} onSent={reload} onClear={clearHistory} />
+          <Body dues={state.dues} onSent={reload} onClear={clearHistory} onRestore={restoreHistory} />
         </ScrollView>
       ) : null}
     </KeyboardAvoidingView>
   );
 }
 
-function Body({ dues, onSent, onClear }: { dues: MyDues; onSent: () => Promise<void>; onClear: (which: 'dues' | 'payments') => Promise<boolean> }) {
+function Body({
+  dues,
+  onSent,
+  onClear,
+  onRestore,
+}: {
+  dues: MyDues;
+  onSent: () => Promise<void>;
+  onClear: (which: 'dues' | 'payments') => Promise<boolean>;
+  onRestore: (which: 'dues' | 'payments') => Promise<boolean>;
+}) {
   const now = new Date();
   const { summary } = dues;
   const suspended = dues.accountStatus === 'suspended';
@@ -74,6 +84,11 @@ function Body({ dues, onSent, onClear }: { dues: MyDues; onSent: () => Promise<v
         },
       },
     ]);
+  }
+  function restore(which: 'dues' | 'payments') {
+    void onRestore(which).then((ok) => {
+      if (!ok) Alert.alert(t('dues.restoreFailed'));
+    });
   }
   const clearDues = showClearAll(dues.dues.length, clearableDues(dues.dues));
   const clearPayments = showClearAll(dues.payments.length, clearablePayments(dues.payments));
@@ -113,12 +128,13 @@ function Body({ dues, onSent, onClear }: { dues: MyDues; onSent: () => Promise<v
         </View>
         {clearDues ? <ClearAllButton onPress={() => confirmClear('dues')} /> : null}
       </View>
-      {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t('dues.emptyDues')}</Text> : null}
+      {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t(dues.clearedDues > 0 ? 'dues.allCleared' : 'dues.emptyDues')}</Text> : null}
       {dues.dues.map((d) => (
         <DueCard key={d.id} due={d} now={now} />
       ))}
+      {dues.clearedDues > 0 ? <ShowClearedButton count={dues.clearedDues} onPress={() => restore('dues')} /> : null}
 
-      {dues.payments.length > 0 ? (
+      {dues.payments.length > 0 || dues.clearedPayments > 0 ? (
         <>
           <View style={styles.sectionRow}>
             <View style={{ flex: 1 }}>
@@ -126,9 +142,11 @@ function Body({ dues, onSent, onClear }: { dues: MyDues; onSent: () => Promise<v
             </View>
             {clearPayments ? <ClearAllButton onPress={() => confirmClear('payments')} /> : null}
           </View>
+          {dues.payments.length === 0 ? <Text style={settingsStyles.body}>{t('dues.allClearedPayments')}</Text> : null}
           {dues.payments.map((p) => (
             <PaymentCard key={p.id} payment={p} />
           ))}
+          {dues.clearedPayments > 0 ? <ShowClearedButton count={dues.clearedPayments} onPress={() => restore('payments')} /> : null}
         </>
       ) : null}
     </>
@@ -139,6 +157,15 @@ function ClearAllButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={t('dues.clearAll')} onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.clearBtn, pressed && { opacity: 0.6 }]}>
       <Text style={styles.clearText}>{t('dues.clearAll')}</Text>
+    </Pressable>
+  );
+}
+
+function ShowClearedButton({ count, onPress }: { count: number; onPress: () => void }) {
+  const label = t('dues.showCleared', { n: String(count) });
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.showCleared, pressed && { opacity: 0.6 }]}>
+      <Text style={styles.showClearedText}>{label}</Text>
     </Pressable>
   );
 }
@@ -213,5 +240,7 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   clearBtn: { paddingHorizontal: 4, paddingVertical: 6 },
   clearText: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.chip.declined.fg },
+  showCleared: { alignSelf: 'center', paddingHorizontal: 10, paddingVertical: 10 },
+  showClearedText: { fontFamily: fontFamily.extrabold, fontSize: 13.5, color: colors.greenDark },
   arrow: { fontFamily: fontFamily.bold, fontSize: 22, lineHeight: 24, color: colors.muted },
 });
