@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DuesPayForm } from '@/components/DuesPayForm';
 import { DuesPayTo } from '@/components/DuesPayTo';
 import { Card, LoadError, Notice, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
-import { dueView, methodLabel, paymentView, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
+import { clearableDues, clearablePayments, dueView, methodLabel, paymentView, showClearAll, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
 import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
 import { dateText } from '@/features/myreports/rules';
@@ -17,7 +17,7 @@ import { colors, fontFamily } from '@/theme';
 // ID. DHA staff confirm it in the admin portal. The fee comes out of each job's quote: the worker collects the full quote in
 // cash and pays DHA its share here. It also opens for a suspended worker, who pays here to get the account back.
 export default function DuesScreen() {
-  const { state, reload } = useMyDues();
+  const { state, reload, clearHistory } = useMyDues();
   const [pulling, setPulling] = useState(false);
 
   async function pull() {
@@ -49,17 +49,35 @@ export default function DuesScreen() {
           keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={pulling} onRefresh={() => void pull()} tintColor={colors.green} />}
         >
-          <Body dues={state.dues} onSent={reload} />
+          <Body dues={state.dues} onSent={reload} onClear={clearHistory} />
         </ScrollView>
       ) : null}
     </KeyboardAvoidingView>
   );
 }
 
-function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
+function Body({ dues, onSent, onClear }: { dues: MyDues; onSent: () => Promise<void>; onClear: (which: 'dues' | 'payments') => Promise<boolean> }) {
   const now = new Date();
   const { summary } = dues;
   const suspended = dues.accountStatus === 'suspended';
+
+  function confirmClear(which: 'dues' | 'payments') {
+    Alert.alert(t(which === 'dues' ? 'dues.clearDuesTitle' : 'dues.clearPaymentsTitle'), t(which === 'dues' ? 'dues.clearDuesBody' : 'dues.clearPaymentsBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('dues.clearAll'),
+        style: 'destructive',
+        onPress: () => {
+          void onClear(which).then((ok) => {
+            if (!ok) Alert.alert(t('dues.clearFailed'));
+          });
+        },
+      },
+    ]);
+  }
+  const clearDues = showClearAll(dues.dues.length, clearableDues(dues.dues));
+  const clearPayments = showClearAll(dues.payments.length, clearablePayments(dues.payments));
+
   return (
     <>
       {suspended ? <Notice kind="error">{t('dues.suspendedNotice')}</Notice> : summary.overdue > 0 ? <Notice kind="error">{t('dues.overdueNotice')}</Notice> : null}
@@ -89,7 +107,12 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
         </>
       ) : null}
 
-      <SectionTitle>{t('dues.duesTitle')}</SectionTitle>
+      <View style={styles.sectionRow}>
+        <View style={{ flex: 1 }}>
+          <SectionTitle>{t('dues.duesTitle')}</SectionTitle>
+        </View>
+        {clearDues ? <ClearAllButton onPress={() => confirmClear('dues')} /> : null}
+      </View>
       {dues.dues.length === 0 ? <Text style={settingsStyles.body}>{t('dues.emptyDues')}</Text> : null}
       {dues.dues.map((d) => (
         <DueCard key={d.id} due={d} now={now} />
@@ -97,13 +120,26 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
 
       {dues.payments.length > 0 ? (
         <>
-          <SectionTitle>{t('dues.paymentsTitle')}</SectionTitle>
+          <View style={styles.sectionRow}>
+            <View style={{ flex: 1 }}>
+              <SectionTitle>{t('dues.paymentsTitle')}</SectionTitle>
+            </View>
+            {clearPayments ? <ClearAllButton onPress={() => confirmClear('payments')} /> : null}
+          </View>
           {dues.payments.map((p) => (
             <PaymentCard key={p.id} payment={p} />
           ))}
         </>
       ) : null}
     </>
+  );
+}
+
+function ClearAllButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={t('dues.clearAll')} onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.clearBtn, pressed && { opacity: 0.6 }]}>
+      <Text style={styles.clearText}>{t('dues.clearAll')}</Text>
+    </Pressable>
   );
 }
 
@@ -174,5 +210,8 @@ const styles = StyleSheet.create({
   itemNote: { fontFamily: fontFamily.semibold, fontSize: 12.5, lineHeight: 18, color: colors.ink },
   chip: { borderRadius: 13, paddingHorizontal: 10, paddingVertical: 5 },
   chipText: { fontFamily: fontFamily.extrabold, fontSize: 11.5 },
+  sectionRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  clearBtn: { paddingHorizontal: 4, paddingVertical: 6 },
+  clearText: { fontFamily: fontFamily.extrabold, fontSize: 13, color: colors.chip.declined.fg },
   arrow: { fontFamily: fontFamily.bold, fontSize: 22, lineHeight: 24, color: colors.muted },
 });

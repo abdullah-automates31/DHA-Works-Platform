@@ -168,6 +168,22 @@ export function paymentView(p: DuesPayment): { label: string; tone: ChipTone } {
   return { label: t('dues.payPending'), tone: 'wait' };
 }
 
+/** From this many cards in a list, My Dues offers "Clear all" for it. */
+export const CLEAR_ALL_AT = 20;
+
+/** Cards that "Clear all" would hide: a due that is paid or waived, a payment DHA confirmed or rejected. Owed dues and waiting payments stay. */
+export function clearableDues(list: DueRow[]): number {
+  return list.filter((d) => d.status === 'paid' || d.status === 'waived').length;
+}
+export function clearablePayments(list: DuesPayment[]): number {
+  return list.filter((p) => p.status === 'confirmed' || p.status === 'rejected').length;
+}
+
+/** Show the Clear all button for a list: it has reached 20 cards and at least one of them is settled. */
+export function showClearAll(total: number, clearable: number): boolean {
+  return total >= CLEAR_ALL_AT && clearable > 0;
+}
+
 export function methodLabel(method: string): string {
   switch (method) {
     case 'jazzcash':

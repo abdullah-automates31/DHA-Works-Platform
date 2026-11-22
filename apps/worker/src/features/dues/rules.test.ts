@@ -5,6 +5,10 @@ import {
   amountDigits,
   buildProofPath,
   checkPayment,
+  clearableDues,
+  clearablePayments,
+  showClearAll,
+  type DuesPayment,
   dueView,
   duesErrorKey,
   METHODS,
@@ -236,4 +240,14 @@ test('DHA accounts are read and named for the worker', () => {
   assert.equal(accountName(second), 'Bank - HBL');
   assert.equal(accountName(third), 'Raast');
   assert.deepEqual(parsePayAccounts(undefined), []);
+});
+
+test('Clear all is offered from 20 cards, and only settled cards count as clearable', () => {
+  const due = (status: DueRow['status']): DueRow => ({ id: status, jobCode: 'DW-1', jobTitle: 'x', amount: 50, paid: 0, remaining: 0, accruedAt: '2026-11-22T00:00:00Z', dueAt: '2026-11-27T00:00:00Z', status });
+  const pay = (status: DuesPayment['status']): DuesPayment => ({ id: status, amount: 50, method: 'bank', reference: 'ABC123', status, createdAt: '2026-11-22T00:00:00Z', reason: '', byStaff: false });
+  assert.equal(clearableDues([due('paid'), due('waived'), due('due'), due('overdue')]), 2);
+  assert.equal(clearablePayments([pay('confirmed'), pay('rejected'), pay('pending')]), 2);
+  assert.equal(showClearAll(19, 19), false);
+  assert.equal(showClearAll(20, 20), true);
+  assert.equal(showClearAll(25, 0), false);
 });

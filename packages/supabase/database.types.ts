@@ -573,6 +573,7 @@ export type Database = {
           proof_path: string | null
           reference: string | null
           status: string
+          worker_hidden_at: string | null
           worker_id: string
         }
         Insert: {
@@ -588,6 +589,7 @@ export type Database = {
           proof_path?: string | null
           reference?: string | null
           status?: string
+          worker_hidden_at?: string | null
           worker_id: string
         }
         Update: {
@@ -603,6 +605,7 @@ export type Database = {
           proof_path?: string | null
           reference?: string | null
           status?: string
+          worker_hidden_at?: string | null
           worker_id?: string
         }
         Relationships: [
@@ -2020,6 +2023,7 @@ export type Database = {
           waive_reason: string | null
           waived_at: string | null
           waived_by: string | null
+          worker_hidden_at: string | null
           worker_id: string
         }
         Insert: {
@@ -2032,6 +2036,7 @@ export type Database = {
           waive_reason?: string | null
           waived_at?: string | null
           waived_by?: string | null
+          worker_hidden_at?: string | null
           worker_id: string
         }
         Update: {
@@ -2044,6 +2049,7 @@ export type Database = {
           waive_reason?: string | null
           waived_at?: string | null
           waived_by?: string | null
+          worker_hidden_at?: string | null
           worker_id?: string
         }
         Relationships: [
@@ -2836,6 +2842,7 @@ export type Database = {
         Args: { p_email: string; p_token: string }
         Returns: boolean
       }
+      clear_my_dues_history: { Args: { p_which: string }; Returns: number }
       clear_my_notifications: { Args: never; Returns: undefined }
       complete_job: {
         Args: { p_bill_path?: string; p_job_id: string }

@@ -28,5 +28,16 @@ export function useMyDues() {
   );
   useLiveRefresh(() => void reload());
 
-  return { state, reload };
+  /** Hides the settled cards of one list from this worker's My Dues (clear_my_dues_history, migration 0077). Nothing is deleted. */
+  const clearHistory = useCallback(
+    async (which: 'dues' | 'payments') => {
+      const { error } = await supabase.rpc('clear_my_dues_history', { p_which: which });
+      if (error) return false;
+      await reload();
+      return true;
+    },
+    [reload],
+  );
+
+  return { state, reload, clearHistory };
 }

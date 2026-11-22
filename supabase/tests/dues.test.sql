@@ -467,5 +467,43 @@ select tests.back();
 select is(has_column_privilege('authenticated', 'public.quotes', 'dha_fee', 'select'), false, 'authenticated has no grant on the fee column');
 select is(has_column_privilege('authenticated', 'public.quotes', 'total', 'select'), true, 'but still has the other quote columns');
 
+-- 14. A worker clears the settled cards from My Dues (migration 0077) ---------------------------------------------------------------
+create temp table pre14 as select
+  (select count(*) from private.dues_rows('00000000-0000-0000-0000-0000000000b1') r where r.remaining = 0)::int as settled_dues,
+  (select count(*) from private.dues_rows('00000000-0000-0000-0000-0000000000b1') r where r.remaining > 0)::int as open_dues,
+  (select count(*) from public.dues_payments p where p.worker_id = '00000000-0000-0000-0000-0000000000b1' and p.status in ('confirmed', 'rejected'))::int as settled_pays,
+  (select count(*) from public.dues_payments p where p.worker_id = '00000000-0000-0000-0000-0000000000b1' and p.status = 'pending')::int as waiting_pays,
+  (select count(*) from public.worker_dues)::int as all_dues,
+  (select count(*) from public.dues_payments)::int as all_pays;
+grant select on pre14 to authenticated;
+select ok((select settled_dues from pre14) >= 2 and (select open_dues from pre14) >= 1, 'the worker has paid and unpaid dues to start with');
+select ok((select settled_pays from pre14) >= 2, 'and settled payments');
+select tests.act('00000000-0000-0000-0000-0000000000b1');
+create temp table m14 as select public.my_dues() as j;
+grant select on m14 to authenticated;
+select is((select jsonb_array_length(j -> 'dues') from m14), (select settled_dues + open_dues from pre14), 'all the dues are listed before clearing');
+select is(public.clear_my_dues_history('dues'), (select settled_dues from pre14), 'clearing dues hides exactly the settled ones');
+select is(jsonb_array_length(public.my_dues() -> 'dues'), (select open_dues from pre14), 'only the dues still owed are left');
+select is((select count(*) from jsonb_array_elements(public.my_dues() -> 'dues') x where x ->> 'status' in ('paid', 'waived')), 0::bigint, 'no paid or waived card is left');
+select is(public.my_dues() -> 'summary', (select j -> 'summary' from m14), 'the totals (owed, paid so far) do not change');
+select is(public.clear_my_dues_history('dues'), 0, 'clearing again clears nothing');
+select lives_ok($$select public.my_due_detail((select id from dids where amount = 200))$$, 'a cleared due can still be opened (a link, a notice)');
+select is(public.clear_my_dues_history('payments'), (select settled_pays from pre14), 'clearing payments hides the confirmed and rejected ones');
+select is(jsonb_array_length(public.my_dues() -> 'payments'), (select waiting_pays from pre14), 'payments waiting for DHA are never cleared');
+select throws_ok($$select public.clear_my_dues_history('everything')$$, 'P0001', 'choose dues or payments', 'only dues or payments');
+select throws_ok($$select public.clear_my_dues_history(null)$$, 'P0001', 'choose dues or payments', 'not nothing');
+select tests.act('00000000-0000-0000-0000-0000000000b2');
+select is(public.clear_my_dues_history('dues'), 0, 'another worker has nothing to clear (and cannot clear someone else''s)');
+select tests.act('00000000-0000-0000-0000-0000000000a1');
+select throws_ok($$select public.clear_my_dues_history('dues')$$, '42501', 'not available', 'a resident cannot clear');
+select tests.back();
+select is((select count(*) from public.worker_dues)::int, (select all_dues from pre14), 'nothing was deleted: every due is still stored');
+select is((select count(*) from public.dues_payments)::int, (select all_pays from pre14), 'nor any payment');
+select is(has_function_privilege('anon', 'public.clear_my_dues_history(text)', 'execute'), false, 'anon cannot run it');
+select tests.act('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-00000000c101');
+select is(jsonb_array_length(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'dues'), (select settled_dues + open_dues from pre14), 'staff still see every due');
+select is(jsonb_array_length(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'payments'), (select settled_pays + waiting_pays from pre14), 'and every payment');
+select tests.back();
+
 select * from finish();
 rollback;
