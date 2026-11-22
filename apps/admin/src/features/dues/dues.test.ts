@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parsePayAccounts, parseTab, parseWorkerDues, payAccountsFromForm, safeProofPath, whenText } from './parse.ts';
+import { workerDueCounts, METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parsePayAccounts, parseTab, parseWorkerDues, payAccountsFromForm, safeProofPath, whenText } from './parse.ts';
 
 const A = '00000000-0000-0000-0000-0000000000a1';
 const B = '00000000-0000-0000-0000-0000000000b1';
@@ -142,4 +142,16 @@ test('the accounts form: empty slots are skipped, a half-filled slot is refused 
   assert.deepEqual(payAccountsFromForm(form({ number2: '0300 1234567' })), { error: 'Account 2: choose how workers pay.' });
   assert.deepEqual(payAccountsFromForm(form({ method1: 'cheque', title1: 'x', number1: '123' })), { error: 'Account 1: choose how workers pay.' });
   assert.deepEqual(payAccountsFromForm(form({ method1: 'bank', number1: '123456' })), { error: 'Account 1: enter the account title (the name on the account).' });
+});
+
+test('the dues card counts paid, left, overdue, waived and pending', () => {
+  const due = (id: string, status: string, amount: number) => ({ id, job_id: B, job_code: 'DW-1', job_title: 'x', amount, paid: status === 'paid' ? amount : 0, remaining: status === 'paid' || status === 'waived' ? 0 : amount, accrued_at: hours(-10), due_at: hours(10), status });
+  const w = parseWorkerDues({
+    summary: { owed: 100, overdue: 50, next_due_at: hours(5), overdue_since: hours(-5), paid_total: 100, pending_total: 40, pending_count: 2, credit: 0 },
+    dues: [due(A, 'paid', 50), due(B, 'paid', 50), due('00000000-0000-0000-0000-0000000000c1', 'due', 50), due('00000000-0000-0000-0000-0000000000c2', 'overdue', 50), due('00000000-0000-0000-0000-0000000000c3', 'waived', 50)],
+    payments: [],
+    suspended: false,
+  });
+  assert.ok(w);
+  assert.deepEqual(workerDueCounts(w), { paid: 2, left: 2, overdue: 1, waived: 1, pending: 2, total: 5 });
 });

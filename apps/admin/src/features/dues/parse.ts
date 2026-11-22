@@ -120,6 +120,14 @@ export type WorkerDues = { summary: WorkerSummary; dues: LedgerDue[]; payments: 
 const STATUSES: readonly string[] = ['due', 'overdue', 'paid', 'waived'];
 const PAY_STATUSES: readonly string[] = ['pending', 'confirmed', 'rejected'];
 
+/** How many dues are paid, still to pay (and how many of those are overdue), waived, and how many payments wait for staff. */
+export type WorkerDueCounts = { paid: number; left: number; overdue: number; waived: number; pending: number; total: number };
+
+export function workerDueCounts(w: WorkerDues): WorkerDueCounts {
+  const count = (...statuses: DueStatus[]) => w.dues.filter((d) => statuses.includes(d.status)).length;
+  return { paid: count('paid'), left: count('due', 'overdue'), overdue: count('overdue'), waived: count('waived'), pending: w.summary.pendingCount, total: w.dues.length };
+}
+
 export function parseWorkerDues(json: unknown): WorkerDues | null {
   const o = obj(json);
   const s = obj(o?.summary);

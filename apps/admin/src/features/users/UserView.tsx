@@ -10,6 +10,7 @@ import { buildHref, dateOnly, dateTime, jobStatus, lastPage, PAGE_SIZE, pageNumb
 import { isUuid } from '@/lib/json';
 import { parseReviews } from '../reviews/parse';
 import { ReviewsTable } from '../reviews/ReviewsTable';
+import { WorkerDuesCard } from '../dues/WorkerDuesCard';
 import { WorkerDuesPanel } from '../dues/WorkerDuesPanel';
 import { DOC_LABEL, initials, phasesText, phoneText, type DocType } from '../verification/rules';
 import { addStaffNoteAction, sendMessageAction, setAccountStatusAction } from './actions';
@@ -80,6 +81,8 @@ export async function UserView({ id, params }: { id: string; params: { tab?: str
           <div className="grid4">
             {stats.map((s) => <div key={s.label} className="card stat"><span>{s.label}</span><b className={/^[0-9.\-]+$/.test(s.value) ? undefined : 'txt'}>{s.value}</b></div>)}
           </div>
+
+          {isWorker && tab !== 'dues' ? <WorkerDuesCard supabase={supabase} workerId={d.id} /> : null}
 
           {isWorker ? (
             <TabBar
