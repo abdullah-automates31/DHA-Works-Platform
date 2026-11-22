@@ -31,7 +31,7 @@ export type DuesRow = {
   paidTotal: number;
 };
 
-export type PendingPayment = { id: string; workerId: string; workerName: string; amount: number; method: string; reference: string; createdAt: string };
+export type PendingPayment = { id: string; workerId: string; workerName: string; amount: number; method: string; reference: string; proofPath: string | null; createdAt: string };
 
 export type DuesTotals = { owed: number; overdue: number; pending: number; collectedThisMonth: number };
 
@@ -67,6 +67,7 @@ export function parseDuesList(json: unknown): DuesList {
       amount: int(r.amount),
       method: str(r.method) ?? '',
       reference: str(r.reference) ?? '',
+      proofPath: safeProofPath(r.proof_path),
       createdAt: str(r.created_at) ?? '',
     });
   }
@@ -102,6 +103,7 @@ export type LedgerPayment = {
   method: string;
   reference: string | null;
   note: string | null;
+  proofPath: string | null;
   status: 'pending' | 'confirmed' | 'rejected';
   createdAt: string;
   decidedAt: string | null;
@@ -151,6 +153,7 @@ export function parseWorkerDues(json: unknown): WorkerDues | null {
       method: str(r.method) ?? '',
       reference: str(r.reference),
       note: str(r.note),
+      proofPath: safeProofPath(r.proof_path),
       status: r.status as LedgerPayment['status'],
       createdAt: str(r.created_at) ?? '',
       decidedAt: str(r.decided_at),
@@ -178,8 +181,13 @@ export function parseWorkerDues(json: unknown): WorkerDues | null {
   };
 }
 
-export const METHODS = ['jazzcash', 'easypaisa', 'bank', 'office_cash'] as const;
-const METHOD_LABEL: Record<string, string> = { jazzcash: 'JazzCash', easypaisa: 'Easypaisa', bank: 'Bank transfer', office_cash: 'Cash at the office' };
+export const METHODS = ['jazzcash', 'easypaisa', 'bank', 'sadapay', 'nayapay', 'other', 'office_cash'] as const;
+const METHOD_LABEL: Record<string, string> = { jazzcash: 'JazzCash', easypaisa: 'Easypaisa', bank: 'Bank transfer', sadapay: 'SadaPay', nayapay: 'NayaPay', other: 'Other', office_cash: 'Cash at the office' };
+
+/** A screenshot path is only used if it is exactly "<worker id>/dues/<file>": no traversal, nothing else in the bucket. */
+export function safeProofPath(v: unknown): string | null {
+  return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/dues\/[A-Za-z0-9._-]{1,120}$/i.test(v) && !v.includes('..') ? v : null;
+}
 export const methodLabel = (m: string): string => METHOD_LABEL[m] ?? m;
 
 /** Whole rupees from what staff typed ("1,250" or "Rs 1250"): 1 to 10,000,000, otherwise null. */

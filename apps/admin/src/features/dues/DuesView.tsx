@@ -6,6 +6,7 @@ import { Chip } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { buildHref, dateTime, lastPage, PAGE_SIZE, pageNumber, phoneText, rupees, searchText } from '@/lib/format';
 import { decidePaymentAction } from './actions';
+import { ProofLink, signedProofUrls } from './ProofLink';
 import { methodLabel, parseCounts, parseDuesList, parseTab, whenText, type PendingPayment, type Tab } from './parse';
 
 type Params = { tab?: string; q?: string; page?: string };
@@ -31,6 +32,8 @@ export async function DuesView({ params }: { params: Params }) {
   ]);
   const counts = parseCounts(countsRes.error ? null : countsRes.data);
   const list = parseDuesList(listRes.error ? null : listRes.data);
+  // short-lived private links to the payment screenshots on this page (staff only: the bucket is closed to everyone else)
+  const proofUrls = await signedProofUrls(supabase, list.pending.map((p) => p.proofPath));
   const now = new Date();
   const base = (over: Record<string, string | number | null>) => buildHref('/dues', { tab: tab === 'owing' ? null : tab, q: q || null, ...over });
 
@@ -54,7 +57,7 @@ export async function DuesView({ params }: { params: Params }) {
         <div className="card col" style={{ gap: 12 }}>
           <h2 className="h2">Payments to check</h2>
           <span className="mut" style={{ fontSize: 13 }}>Compare each transaction ID with your JazzCash, Easypaisa or bank statement, then confirm or reject.</span>
-          {list.pending.map((p) => <PendingCard key={p.id} p={p} />)}
+          {list.pending.map((p) => <PendingCard key={p.id} p={p} proofUrl={p.proofPath ? proofUrls[p.proofPath] ?? null : null} />)}
         </div>
       ) : null}
 
@@ -102,7 +105,7 @@ export async function DuesView({ params }: { params: Params }) {
   );
 }
 
-function PendingCard({ p }: { p: PendingPayment }) {
+function PendingCard({ p, proofUrl }: { p: PendingPayment; proofUrl: string | null }) {
   return (
     <div className="note g" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
       <div className="row g8" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
@@ -112,6 +115,7 @@ function PendingCard({ p }: { p: PendingPayment }) {
         <span style={{ fontWeight: 800 }}>{p.reference}</span>
         <span className="mut" style={{ fontSize: 12.5 }}>{dateTime(p.createdAt)}</span>
       </div>
+      <ProofLink url={proofUrl} />
       <div className="row g8" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <ActionForm
           action={decidePaymentAction}

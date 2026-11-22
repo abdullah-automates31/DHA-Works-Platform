@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { methodLabel, parseCounts, parseDuesList, parseRupees, parseTab, parseWorkerDues, whenText } from './parse.ts';
+import { METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parseTab, parseWorkerDues, safeProofPath, whenText } from './parse.ts';
 
 const A = '00000000-0000-0000-0000-0000000000a1';
 const B = '00000000-0000-0000-0000-0000000000b1';
@@ -86,4 +86,33 @@ test('payment methods read plainly', () => {
   assert.equal(methodLabel('jazzcash'), 'JazzCash');
   assert.equal(methodLabel('office_cash'), 'Cash at the office');
   assert.equal(methodLabel('cheque'), 'cheque');
+});
+
+test('a screenshot path is only used if it is exactly worker id / dues / file', () => {
+  const ok = `${A}/dues/1700000000000-abc123.jpg`;
+  assert.equal(safeProofPath(ok), ok);
+  assert.equal(safeProofPath(`${A}/dues/../identity/cnic.jpg`), null, 'no traversal');
+  assert.equal(safeProofPath(`${A}/identity/cnic.jpg`), null, 'only the dues folder');
+  assert.equal(safeProofPath(`${A}/dues/a/b.jpg`), null, 'no deeper folders');
+  assert.equal(safeProofPath('/etc/passwd'), null);
+  assert.equal(safeProofPath(null), null);
+  assert.equal(safeProofPath(42), null);
+});
+
+test('the queue and the ledger carry the screenshot path, and an unsafe one is dropped', () => {
+  const good = `${A}/dues/p1.jpg`;
+  const l = parseDuesList({ total: 0, rows: [], pending_payments: [
+    { id: B, worker_id: A, amount: 50, method: 'sadapay', reference: 'SP-1', proof_path: good, created_at: hours(-1) },
+    { id: A, worker_id: A, amount: 50, method: 'other', reference: 'X-2', proof_path: '../../secret', created_at: hours(-1) },
+  ] });
+  assert.deepEqual(l.pending.map((p) => [p.method, p.proofPath]), [['sadapay', good], ['other', null]]);
+  const w = parseWorkerDues({ summary: {}, payments: [{ id: B, amount: 50, method: 'bank', status: 'pending', proof_path: good }, { id: A, amount: 5, method: 'office_cash', status: 'confirmed' }] });
+  assert.deepEqual(w?.payments.map((p) => p.proofPath), [good, null]);
+});
+
+test('every way to pay can be named and recorded', () => {
+  assert.deepEqual([...METHODS], ['jazzcash', 'easypaisa', 'bank', 'sadapay', 'nayapay', 'other', 'office_cash']);
+  assert.equal(methodLabel('sadapay'), 'SadaPay');
+  assert.equal(methodLabel('nayapay'), 'NayaPay');
+  assert.equal(methodLabel('other'), 'Other');
 });

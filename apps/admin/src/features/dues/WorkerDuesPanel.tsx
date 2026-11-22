@@ -6,6 +6,7 @@ import { dateTime, rupees } from '@/lib/format';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@dha/supabase';
 import { decidePaymentAction, recordPaymentAction, waiveDueAction, warnWorkerAction } from './actions';
+import { ProofLink, signedProofUrls } from './ProofLink';
 import { METHODS, methodLabel, parseWorkerDues, whenText, type LedgerDue } from './parse';
 
 const DUE_CHIP: Record<LedgerDue['status'], { tone: 'wait' | 'ok' | 'red' | 'gray'; label: string }> = {
@@ -21,6 +22,7 @@ export async function WorkerDuesPanel({ supabase, workerId, workerName }: { supa
   const w = res.error ? null : parseWorkerDues(res.data);
   if (!w) return <LoadError />;
   const now = new Date();
+  const proofUrls = await signedProofUrls(supabase, w.payments.map((p) => p.proofPath));
   const s = w.summary;
   const hasOpenDue = w.dues.some((d) => d.status === 'due' || d.status === 'overdue');
 
@@ -90,7 +92,7 @@ export async function WorkerDuesPanel({ supabase, workerId, workerName }: { supa
                 <td>{dateTime(p.createdAt)}</td>
                 <td className="b">{rupees(p.amount)}</td>
                 <td>{methodLabel(p.method)}{p.byStaff ? <div className="mut" style={{ fontSize: 12.5 }}>Recorded by {p.createdBy ?? 'staff'}</div> : null}</td>
-                <td>{p.reference ?? <span className="mut">-</span>}{p.note ? <div className="mut" style={{ fontSize: 12.5 }}>{p.note}</div> : null}</td>
+                <td>{p.reference ?? <span className="mut">-</span>}{p.note ? <div className="mut" style={{ fontSize: 12.5 }}>{p.note}</div> : null}<ProofLink url={p.proofPath ? proofUrls[p.proofPath] ?? null : null} small /></td>
                 <td>
                   {p.status === 'pending' ? (
                     <div className="col" style={{ gap: 6, minWidth: 200 }}>
