@@ -195,6 +195,15 @@ export function paymentView(p: DuesPayment): { label: string; tone: ChipTone } {
   return { label: t('dues.payPending'), tone: 'wait' };
 }
 
+/**
+ * The payment DHA turned down, when it is the worker's latest one (newest first, as my_dues returns them). Once the worker
+ * sends another payment, or DHA decides a newer one, the message goes away: it only says what still needs a new try.
+ */
+export function latestRejection(payments: DuesPayment[]): DuesPayment | null {
+  const latest = payments[0];
+  return latest && latest.status === 'rejected' ? latest : null;
+}
+
 export function methodLabel(method: string): string {
   switch (method) {
     case 'jazzcash':

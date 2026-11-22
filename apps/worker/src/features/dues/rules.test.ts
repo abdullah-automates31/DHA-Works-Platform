@@ -5,6 +5,7 @@ import {
   amountDigits,
   buildProofPath,
   checkPayment,
+  latestRejection,
   parseSearch,
   SEARCH_FROM,
   searchText,
@@ -22,6 +23,7 @@ import {
   spanText,
   whatsappLink,
   whereText,
+  type DuesPayment,
   type DueRow,
 } from './rules.ts';
 
@@ -251,4 +253,12 @@ test('the search text is tidied and cut, and its answer is read like My Dues', (
   assert.equal(found?.payments.length, 1);
   assert.equal(parseSearch('nonsense'), null);
   assert.equal(SEARCH_FROM, 5);
+});
+
+test('the rejection message shows only while the latest payment is the rejected one', () => {
+  const pay = (id: string, status: DuesPayment['status']): DuesPayment => ({ id, amount: 250, method: 'easypaisa', reference: 'TX1', status, createdAt: '2026-11-22T00:00:00Z', reason: 'Transaction not found', byStaff: false });
+  assert.equal(latestRejection([pay('a', 'rejected'), pay('b', 'confirmed')])?.id, 'a');
+  assert.equal(latestRejection([pay('c', 'pending'), pay('a', 'rejected')]), null);
+  assert.equal(latestRejection([pay('d', 'confirmed'), pay('a', 'rejected')]), null);
+  assert.equal(latestRejection([]), null);
 });

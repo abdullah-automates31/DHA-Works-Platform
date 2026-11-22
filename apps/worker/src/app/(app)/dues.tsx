@@ -7,7 +7,7 @@ import { DuesPayTo } from '@/components/DuesPayTo';
 import { Card, LoadError, Notice, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { SearchIcon } from '@/components/icons';
 import { DetailSkeleton, SkeletonGroup } from '@/components/Skeleton';
-import { dueView, methodLabel, paymentView, SEARCH_FROM, searchText, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
+import { dueView, latestRejection, methodLabel, paymentView, SEARCH_FROM, searchText, spanText, type DuesPayment, type DueRow, type MyDues } from '@/features/dues/rules';
 import { useDuesSearch } from '@/features/dues/useDuesSearch';
 import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
@@ -62,6 +62,7 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
   const now = new Date();
   const { summary } = dues;
   const suspended = dues.accountStatus === 'suspended';
+  const rejected = latestRejection(dues.payments);
   const [query, setQuery] = useState('');
   const searching = searchText(query) !== '';
   const found = useDuesSearch(query);
@@ -69,6 +70,15 @@ function Body({ dues, onSent }: { dues: MyDues; onSent: () => Promise<void> }) {
   return (
     <>
       {suspended ? <Notice kind="error">{t('dues.suspendedNotice')}</Notice> : summary.overdue > 0 ? <Notice kind="error">{t('dues.overdueNotice')}</Notice> : null}
+
+      {rejected ? (
+        <View style={styles.rejected} accessibilityRole="alert">
+          <Text style={styles.rejectedTitle}>{t('dues.rejectedTitle', { amount: formatRupees(rejected.amount) })}</Text>
+          <Text style={styles.rejectedLine}>{t('dues.rejectedWhich', { method: methodLabel(rejected.method), reference: rejected.reference || '-' })}</Text>
+          <Text style={styles.rejectedReason}>{rejected.reason ? t('dues.rejectedReason', { reason: rejected.reason }) : t('dues.rejectedNoReason')}</Text>
+          <Text style={styles.rejectedLine}>{summary.owed > 0 ? t('dues.rejectedAgain') : t('dues.rejectedDone')}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.summary} accessible accessibilityLabel={`${t('dues.toPay')} ${formatRupees(summary.owed)}`}>
         <Text style={styles.cap}>{t('dues.toPay')}</Text>
@@ -190,7 +200,7 @@ function PaymentCard({ payment }: { payment: DuesPayment }) {
         </View>
       </View>
       {payment.byStaff ? <Text style={styles.itemSub}>{t('dues.byStaff')}</Text> : null}
-      {payment.status === 'rejected' && payment.reason ? <Text style={styles.itemNote}>{payment.reason}</Text> : null}
+      {payment.status === 'rejected' ? <Text style={styles.itemNote}>{payment.reason ? t('dues.reasonLabel', { reason: payment.reason }) : t('dues.rejectedNoReason')}</Text> : null}
     </View>
   );
 }
@@ -228,6 +238,10 @@ const styles = StyleSheet.create({
   cap: { fontFamily: fontFamily.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
   big: { fontFamily: fontFamily.extrabold, fontSize: 34, color: colors.greenDark },
   line: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.muted },
+  rejected: { backgroundColor: colors.chip.declined.bg, borderRadius: 18, padding: 16, gap: 6 },
+  rejectedTitle: { fontFamily: fontFamily.extrabold, fontSize: 16, lineHeight: 22, color: colors.chip.declined.fg },
+  rejectedReason: { fontFamily: fontFamily.bold, fontSize: 14.5, lineHeight: 21, color: colors.ink },
+  rejectedLine: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.ink },
   cardBody: { paddingVertical: 14, gap: 10 },
   cardTitle: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.ink },
   payTo: { fontFamily: fontFamily.bold, fontSize: 14, lineHeight: 21, color: colors.ink },
