@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { BAD_REQUEST, field, refusal, type ActionState } from '@/lib/action';
 import { requireAdmin } from '@/lib/auth';
 import { isUuid } from '@/lib/json';
-import { METHODS, parseRupees, payAccountsFromForm } from './parse';
+import { MAX_PAY_ACCOUNTS, METHODS, parsePayAccounts, parseRupees, payAccountsFromForm, type PayAccount } from './parse';
 
 // Every action calls requireAdmin() and the database function checks again (is_admin, the code freshness, an audit row).
 // A decision also moves the sidebar badge, so the layout is revalidated.
@@ -95,16 +95,42 @@ export async function warnWorkerAction(_prev: ActionState, formData: FormData): 
   return { ok: 'Warning sent. The worker sees it in the app.' };
 }
 
-/** DHA's payment accounts (method, title, number): each is its own card in My Dues. Replaces the whole list. */
-export async function savePayAccountsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+/** The current accounts, read through the staff function (the list is replaced as a whole on every change). */
+async function currentAccounts(supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase']): Promise<PayAccount[] | null> {
+  const { data, error } = await supabase.rpc('admin_dues_pay_accounts');
+  return error ? null : parsePayAccounts(data);
+}
+
+/** Add one of DHA's payment accounts (how workers pay, account title, number, optional bank name): a new card in My Dues. */
+export async function addPayAccountAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase } = await requireAdmin();
-  const result = payAccountsFromForm((name) => field(formData, name, 80));
-  if ('error' in result) return { error: result.error };
-  const { error } = await supabase.rpc('admin_dues_pay_accounts_save', { p_accounts: result.accounts });
+  // the form has one account; the shared check reads slot names, so slot 1 is this account
+  const one = payAccountsFromForm((name) => (name.endsWith('1') ? field(formData, name.slice(0, -1), 80) : ''));
+  if ('error' in one) return { error: one.error.replace('Account 1: ', '') };
+  const added = one.accounts[0];
+  if (!added) return { error: 'Choose how workers pay and enter the title and the number.' };
+  const current = await currentAccounts(supabase);
+  if (current === null) return { error: 'Could not read the saved accounts. Reload the page and try again.' };
+  if (current.length >= MAX_PAY_ACCOUNTS) return { error: `At most ${MAX_PAY_ACCOUNTS} accounts. Remove one first.` };
+  const { error } = await supabase.rpc('admin_dues_pay_accounts_save', { p_accounts: [...current, added] });
   if (error) return (await refusal(error))!;
   revalidatePath('/dues');
   revalidatePath('/settings');
-  return { ok: result.accounts.length === 0 ? 'Accounts removed. Workers are told to contact support.' : `Saved ${result.accounts.length} account${result.accounts.length === 1 ? '' : 's'}. Workers see them in My Dues.` };
+  return { ok: 'Added. Workers see it in My Dues.' };
+}
+
+/** Remove one account (by its place in the list). */
+export async function removePayAccountAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase } = await requireAdmin();
+  const at = Number(formData.get('position'));
+  if (!Number.isInteger(at) || at < 1 || at > MAX_PAY_ACCOUNTS) return BAD_REQUEST;
+  const current = await currentAccounts(supabase);
+  if (current === null || at > current.length) return { error: 'That account is already gone. Reload the page.' };
+  const { error } = await supabase.rpc('admin_dues_pay_accounts_save', { p_accounts: current.filter((_, i) => i !== at - 1) });
+  if (error) return (await refusal(error))!;
+  revalidatePath('/dues');
+  revalidatePath('/settings');
+  return { ok: 'Removed.' };
 }
 
 /** An extra note under the accounts (optional): shown in My Dues in the worker app. */

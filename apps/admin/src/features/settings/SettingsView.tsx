@@ -6,7 +6,7 @@ import { Avatar, Chip, Icon, ICONS } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { ago, dateOnly, dateTime } from '@/lib/format';
 import { initials } from '../verification/rules';
-import { savePayAccountsAction, savePayToAction } from '../dues/actions';
+import { addPayAccountAction, removePayAccountAction, savePayToAction } from '../dues/actions';
 import { MAX_PAY_ACCOUNTS, PAY_METHODS, parsePayAccounts, payMethodLabel } from '../dues/parse';
 import { addCategoryAction, inviteStaffAction, removeStaffAction, revokeInviteAction, setCategoryAction, setPhaseAction, signOutOthersAction } from './actions';
 import { AuditView, type AuditParams } from './AuditView';
@@ -93,17 +93,6 @@ export async function SettingsView({ tab, params = {} }: { tab?: string; params?
     active === 'dues' ? supabase.rpc('admin_dues_pay_accounts') : null,
   ]);
   const payAccounts = parsePayAccounts(accountsRes && !accountsRes.error ? accountsRes.data : null);
-  // one empty slot more than there are accounts (at least three, at most six), so adding one needs no extra step
-  const slots = Math.min(MAX_PAY_ACCOUNTS, Math.max(3, payAccounts.length + 1));
-  const accountFields = Array.from({ length: slots }, (_, k) => k + 1).flatMap((n) => {
-    const a = payAccounts[n - 1];
-    return [
-      { name: `method${n}`, label: `Account ${n}: how workers pay`, kind: 'select' as const, placeholder: 'Not used', defaultValue: a?.method ?? '', options: PAY_METHODS.map((m) => ({ value: m, label: payMethodLabel(m) })) },
-      { name: `title${n}`, label: `Account ${n}: account title (the name on the account)`, kind: 'text' as const, defaultValue: a?.title ?? '', maxLength: 60, placeholder: 'DHA Works' },
-      { name: `number${n}`, label: `Account ${n}: number (phone, account number or IBAN)`, kind: 'text' as const, defaultValue: a?.number ?? '', maxLength: 40 },
-      { name: `label${n}`, label: `Account ${n}: bank name (optional)`, kind: 'text' as const, defaultValue: a?.label ?? '', maxLength: 40, placeholder: 'For example HBL' },
-    ];
-  });
   const settings = s ? parseSettings(s.error ? null : s.data) : null;
   const rules = r ? parseRules(r.error ? null : r.data) : null;
   const staff = parseStaff(st && !st.error ? st.data : null);
@@ -227,9 +216,34 @@ export async function SettingsView({ tab, params = {} }: { tab?: string; params?
               <div className="card col" style={{ gap: 12 }}>
                 <div>
                   <h2 className="h2">Where workers pay DHA</h2>
-                  <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>Each account is its own card in My Dues in the worker app, with the number large so it can be copied. Leave an account empty to skip it. Saving replaces the whole list. Workers pay, then enter the transaction ID and attach a screenshot.</div>
+                  <div className="mut" style={{ fontSize: 13, marginTop: 4 }}>Each account is its own card in My Dues in the worker app. Workers pay to one of them, then enter the transaction ID and attach a screenshot.</div>
                 </div>
-                <ActionForm action={savePayAccountsAction} submit="Save accounts" fields={accountFields} resetOnOk={false} />
+                {payAccounts.length === 0 ? <div className="mut" style={{ fontSize: 13 }}>No accounts yet. Workers are told to contact support until you add one.</div> : null}
+                {payAccounts.map((a, i) => (
+                  <div key={`${a.method}-${i}`} className="row g8" style={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontWeight: 800 }}>{payMethodLabel(a.method)}{a.label ? ` - ${a.label}` : ''}: {a.number}</div>
+                      <div className="mut" style={{ fontSize: 13 }}>Account title: {a.title}</div>
+                    </div>
+                    <ButtonForm action={removePayAccountAction} hidden={{ position: String(i + 1) }} label="Remove" tone="red" />
+                  </div>
+                ))}
+                {payAccounts.length < MAX_PAY_ACCOUNTS ? (
+                  <div className="col" style={{ gap: 8 }}>
+                    <div style={{ fontWeight: 800 }}>Add an account</div>
+                    <ActionForm
+                      action={addPayAccountAction}
+                      submit="Add account"
+                      inline
+                      fields={[
+                        { name: 'method', label: 'How workers pay', kind: 'select', required: true, placeholder: 'Choose', options: PAY_METHODS.map((m) => ({ value: m, label: payMethodLabel(m) })) },
+                        { name: 'title', label: 'Account title', kind: 'text', required: true, maxLength: 60, placeholder: 'DHA Works' },
+                        { name: 'number', label: 'Number or IBAN', kind: 'text', required: true, maxLength: 40 },
+                        { name: 'label', label: 'Bank name (only for a bank)', kind: 'text', maxLength: 40, placeholder: 'For example HBL' },
+                      ]}
+                    />
+                  </div>
+                ) : null}
               </div>
               <div className="card col" style={{ gap: 12 }}>
                 <div>
