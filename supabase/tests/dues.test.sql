@@ -94,6 +94,9 @@ begin
   return v;
 end $$;
 grant execute on function tests.q(text) to authenticated;
+insert into storage.objects (bucket_id, name, owner) values
+  ('dues-proof', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg', '00000000-0000-0000-0000-0000000000b1'),
+  ('dues-proof', '00000000-0000-0000-0000-0000000000b1/dues/proof2.jpg', '00000000-0000-0000-0000-0000000000b1');
 create function tests.refused(p_sql text) returns boolean language plpgsql as $$
 begin
   execute p_sql;
@@ -191,27 +194,50 @@ select is((select j -> 'dues' -> 0 ->> 'job_code' from d1), (select code from c3
 select is((select j -> 'dues' -> 0 ->> 'status' from d1), 'due', 'each due shows its state');
 select is((select j -> 'account' ->> 'status' from d1), 'active', 'the account state comes with it');
 select is((select j ->> 'helpline' from d1), null::text, 'no helpline number while the helpline is off');
+create temp table dd as select public.my_due_detail((select id from dids where amount = 200)) as j;
+grant select on dd to authenticated;
+select is((select j -> 'job' ->> 'title' from dd), 'Fee job one', 'the due detail names the job');
+select is((select j -> 'job' ->> 'phase' from dd), '6', 'and where it was (phase)');
+select ok((select j -> 'job' ->> 'completed_at' from dd) is not null, 'and when it was completed');
+select is((select j -> 'money' ->> 'total' from dd), '1000', 'what the worker quoted');
+select is((select j -> 'money' ->> 'fee' from dd), '200', 'the DHA fee');
+select is((select j -> 'money' ->> 'earned' from dd), '800', 'what the worker earned (quote minus the fee)');
+select is((select j -> 'money' ->> 'cash_recorded' from dd), '1000', 'the cash recorded');
+select is((select j -> 'due' ->> 'status' from dd), 'due', 'the state of the due');
+select is((select j -> 'due' ->> 'remaining' from dd), '200', 'what is left to pay on it');
+select is((select j ->> 'owed_total' from dd), '550', 'and what the worker owes in all');
+select is((select count(*) from jsonb_object_keys((select j -> 'job' from dd)) k where k in ('resident_id', 'phone', 'plot_no', 'full_name')), 0::bigint, 'nothing about the customer is in it');
+select throws_ok($$select public.my_due_detail(gen_random_uuid())$$, 'P0001', 'this due was not found', 'a due that does not exist');
 select tests.act('00000000-0000-0000-0000-0000000000b2');
+select throws_ok($$select public.my_due_detail((select id from dids where amount = 200))$$, 'P0001', 'this due was not found', 'another worker cannot open it (it looks like it does not exist)');
 select is((public.my_dues() -> 'summary' ->> 'owed'), '0', 'another worker sees only their own dues');
 select tests.act('00000000-0000-0000-0000-0000000000a1');
 select throws_ok($$select public.my_dues()$$, '42501', 'not available', 'a resident cannot read My Dues');
-select throws_ok($$select public.submit_dues_payment(10, 'jazzcash', 'TX-R')$$, '42501', 'not available', 'nor send a payment');
+select throws_ok($$select public.my_due_detail((select id from dids where amount = 200))$$, '42501', 'not available', 'nor open a due');
+select is(has_function_privilege('anon', 'public.my_due_detail(uuid)', 'execute'), false, 'anon cannot run it');
+select throws_ok($$select public.submit_dues_payment(10, 'jazzcash', 'TX-R', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, '42501', 'not available', 'nor send a payment');
 select tests.back();
 
 -- 7. Sending a payment ----------------------------------------------------------------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select throws_ok($$select public.submit_dues_payment(100, 'cheque', 'TX-1')$$, 'P0001', 'choose how you paid: JazzCash, Easypaisa or bank', 'a bad method');
-select throws_ok($$select public.submit_dues_payment(0, 'jazzcash', 'TX-1')$$, 'P0001', 'enter the amount you paid', 'a zero amount');
-select throws_ok($$select public.submit_dues_payment(100, 'jazzcash', null)$$, 'P0001', 'enter the transaction ID from your payment (3 to 60 characters)', 'no transaction ID');
-select throws_ok($$select public.submit_dues_payment(100, 'jazzcash', 'ab')$$, 'P0001', 'enter the transaction ID from your payment (3 to 60 characters)', 'a transaction ID that is too short');
-select throws_ok($$select public.submit_dues_payment(551, 'jazzcash', 'TX-1001')$$, 'P0001', 'the amount is more than you owe', 'more than owed');
-select lives_ok($$select public.submit_dues_payment(250, 'jazzcash', 'TX-1001')$$, 'a payment of Rs 250 is sent');
-select throws_ok($$select public.submit_dues_payment(10, 'jazzcash', 'tx-1001')$$, 'P0001', 'this transaction ID was already sent', 'the same transaction ID (any case) cannot be used twice');
-select lives_ok($$select public.submit_dues_payment(10, 'easypaisa', 'TX-1002')$$, 'a second payment');
-select lives_ok($$select public.submit_dues_payment(10, 'bank', 'TX-1003')$$, 'a third payment');
-select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-1004')$$, 'P0001',
+select throws_ok($$select public.submit_dues_payment(100, 'cheque', 'TX-1', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'choose how you paid', 'a bad method');
+select throws_ok($$select public.submit_dues_payment(0, 'jazzcash', 'TX-1', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'enter the amount you paid', 'a zero amount');
+select throws_ok($$select public.submit_dues_payment(100, 'jazzcash', null, '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'enter the transaction ID from your payment (3 to 60 characters)', 'no transaction ID');
+select throws_ok($$select public.submit_dues_payment(100, 'jazzcash', 'ab', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'enter the transaction ID from your payment (3 to 60 characters)', 'a transaction ID that is too short');
+select throws_ok($$select public.submit_dues_payment(551, 'jazzcash', 'TX-1001', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'the amount is more than you owe', 'more than owed');
+select lives_ok($$select public.submit_dues_payment(250, 'jazzcash', 'TX-1001', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'a payment of Rs 250 is sent');
+select throws_ok($$select public.submit_dues_payment(10, 'jazzcash', 'tx-1001', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'this transaction ID was already sent', 'the same transaction ID (any case) cannot be used twice');
+select lives_ok($$select public.submit_dues_payment(10, 'easypaisa', 'TX-1002', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'a second payment');
+select lives_ok($$select public.submit_dues_payment(10, 'bank', 'TX-1003', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'a third payment');
+select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-1004', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001',
   'DHA is still checking your earlier payments; please wait for them to be confirmed', 'not more than three payments waiting at once');
+select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-NOPROOF')$$, 'P0001', 'attach a screenshot of your payment', 'a payment without a screenshot is refused');
+select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-NOPROOF', null)$$, 'P0001', 'attach a screenshot of your payment', 'also with the screenshot left empty');
+select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-NOPROOF', '00000000-0000-0000-0000-0000000000b2/dues/proof.jpg')$$, 'P0001', 'attach a screenshot of your payment', 'a file in someone else''s folder does not count');
+select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-NOPROOF', '00000000-0000-0000-0000-0000000000b1/dues/never-uploaded.jpg')$$, 'P0001', 'attach a screenshot of your payment', 'a file that was never uploaded does not count');
+select throws_ok($$select public.submit_dues_payment(10, 'bank', 'TX-NOPROOF', '00000000-0000-0000-0000-0000000000b1/other/proof.jpg')$$, 'P0001', 'attach a screenshot of your payment', 'a file outside the dues folder does not count');
 select is((public.my_dues() -> 'summary' ->> 'owed'), '550', 'a payment waiting for DHA does not lower what is owed yet');
+select is((public.my_dues() -> 'payments' -> 0 ->> 'has_proof'), 'true', 'the worker is told the screenshot is attached (not the path)');
 select is((public.my_dues() -> 'summary' ->> 'pending_total'), '270', 'it is shown as waiting');
 select is(tests.q('select count(*) from public.audit_log where action = ''dues_payment_submitted'''), '3', 'each payment sent is audited');
 select tests.back();
@@ -260,6 +286,7 @@ select is((select j ->> 'total' from l1), '1', 'the pending tab lists the one wo
 select is((select j -> 'rows' -> 0 ->> 'name' from l1), 'Usman One', 'by name');
 select is((select j -> 'rows' -> 0 ->> 'owed' from l1), '550', 'with what they owe');
 select is((select jsonb_array_length(j -> 'pending_payments') from l1), 3, 'and the queue of payments to check');
+select is((select j -> 'pending_payments' -> 0 ->> 'proof_path' from l1), '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg', 'each payment in the queue carries its screenshot');
 select is((select j -> 'totals' ->> 'owed' from l1), '550', 'the totals add up what is owed');
 select is((public.admin_dues_list('owing') ->> 'total'), '1', 'one worker owes');
 select is((public.admin_dues_list('overdue') ->> 'total'), '0', 'none overdue');
@@ -286,6 +313,8 @@ select is(tests.q('select count(*) from public.audit_log where action in (''dues
 select throws_ok($$select public.admin_dues_record_payment('00000000-0000-0000-0000-0000000000b1', 100, 'cheque', null, null)$$, 'P0001', 'choose how the payment was made', 'a bad method');
 select throws_ok($$select public.admin_dues_record_payment('00000000-0000-0000-0000-0000000000b1', 100, 'bank', null, null)$$, 'P0001', 'enter the transaction ID (3 to 60 characters)', 'a transfer needs its ID');
 select lives_ok($$select public.admin_dues_record_payment('00000000-0000-0000-0000-0000000000b1', 150, 'office_cash', null, 'paid at the office')$$, 'staff record Rs 150 paid in cash at the office');
+select is((select count(*) from jsonb_array_elements(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'payments') x where x ->> 'method' = 'office_cash'), 1::bigint, 'the office payment is in the ledger');
+select is((select x ->> 'proof_path' from jsonb_array_elements(public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'payments') x where x ->> 'method' = 'office_cash'), null::text, 'and it carries no screenshot (only app payments do)');
 select is((public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'dues' -> 2 ->> 'status'), 'paid', 'the oldest due is now paid');
 select is((public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'summary' ->> 'owed'), '350', 'Rs 350 is left');
 select throws_ok($$select public.admin_dues_waive((select id from dids where amount = 200), 'kind gesture')$$,
@@ -300,7 +329,7 @@ select is(tests.q('select count(*) from public.audit_log where action in (''dues
 -- the 250 the worker sent again is confirmed: only what is owed counts, so a payment above it stays as credit
 select tests.back();
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select lives_ok($$select public.submit_dues_payment(250, 'jazzcash', 'TX-1001')$$, 'the rejected transaction ID can be sent again');
+select lives_ok($$select public.submit_dues_payment(250, 'jazzcash', 'TX-1001', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'the rejected transaction ID can be sent again');
 select tests.act('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-00000000c101');
 select lives_ok($$select public.admin_dues_payment_decide(tests.q('select id from public.dues_payments where reference = ''TX-1001'' and status = ''pending''')::uuid, true, null, null)$$, 'and confirmed');
 select is((public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'summary' ->> 'owed'), '50', 'Rs 50 is left');
@@ -318,7 +347,7 @@ select is((public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> '
 select is((public.admin_dues_worker('00000000-0000-0000-0000-0000000000b1') -> 'summary' ->> 'credit'), '50', 'the extra Rs 50 stays as credit');
 select tests.back();
 select tests.act('00000000-0000-0000-0000-0000000000b1');
-select throws_ok($$select public.submit_dues_payment(10, 'jazzcash', 'TX-ZERO')$$, 'P0001', 'you do not owe DHA anything right now', 'nothing to pay when nothing is owed');
+select throws_ok($$select public.submit_dues_payment(10, 'jazzcash', 'TX-ZERO', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'P0001', 'you do not owe DHA anything right now', 'nothing to pay when nothing is owed');
 select tests.back();
 
 -- 10. Another due, reminders, warning ---------------------------------------------------------------------------------------------------
@@ -366,7 +395,7 @@ select tests.act('00000000-0000-0000-0000-0000000000b1');
 select is((public.my_dues() -> 'account' ->> 'status'), 'suspended', 'a suspended worker still reads My Dues');
 select is((public.my_dues() -> 'account' ->> 'reason'), 'Unpaid DHA dues', 'with the reason');
 select is((public.my_dues() -> 'summary' ->> 'owed'), '150', 'and what they owe');
-select lives_ok($$select public.submit_dues_payment(150, 'jazzcash', 'TX-SUSP')$$, 'a suspended worker can send a payment');
+select lives_ok($$select public.submit_dues_payment(150, 'jazzcash', 'TX-SUSP', '00000000-0000-0000-0000-0000000000b1/dues/proof.jpg')$$, 'a suspended worker can send a payment');
 select throws_ok($$select public.get_my_earnings()$$, '42501', 'your account is suspended', 'but nothing else in the app works');
 select tests.back();
 delete from public.notifications where type = 'dues_reminder';
@@ -393,6 +422,14 @@ select tests.back();
 select is(private.dha_fee(1000), 125, 'the new percentage is used at once');
 select is(private.setting_int('dues_due_days', 0), 7, 'and the new number of days');
 select is((select count(*) from public.audit_log where action = 'rules_saved' and record_id = 'dues'), 1::bigint, 'the change is audited');
+
+-- 12b. Screenshot and more ways to pay (migration 0073) ---------------------------------------------------------------------------
+select is((select count(*) from pg_constraint where conname = 'dues_payments_method_check' and pg_get_constraintdef(oid) like '%sadapay%' and pg_get_constraintdef(oid) like '%nayapay%' and pg_get_constraintdef(oid) like '%other%'), 1::bigint, 'SadaPay, NayaPay and Other are allowed methods');
+select is((select public from storage.buckets where id = 'dues-proof'), false, 'the screenshot bucket is private');
+select is(has_function_privilege('anon', 'public.can_upload_dues_proof()', 'execute'), false, 'anon cannot use the upload check');
+select is((select count(*) from pg_policies where tablename = 'objects' and policyname in ('dues_proof_owner_upload', 'dues_proof_read')), 2::bigint, 'the bucket has an own-folder upload rule and a read rule');
+select is((select pg_get_expr(polqual, polrelid) like '%is_admin%' from pg_policy where polname = 'dues_proof_read'), true, 'staff can read every screenshot');
+select is((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'submit_dues_payment' and p.pronargs = 3), 0::bigint, 'the old three-argument call is gone');
 
 -- 13. The customer must not be able to learn about the fee (migration 0072) -----------------------------------------------------------
 select tests.act('00000000-0000-0000-0000-0000000000a1');

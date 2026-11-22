@@ -540,6 +540,7 @@ export type Database = {
           id: string
           method: string
           note: string | null
+          proof_path: string | null
           reference: string | null
           status: string
           worker_id: string
@@ -554,6 +555,7 @@ export type Database = {
           id?: string
           method: string
           note?: string | null
+          proof_path?: string | null
           reference?: string | null
           status?: string
           worker_id: string
@@ -568,6 +570,7 @@ export type Database = {
           id?: string
           method?: string
           note?: string | null
+          proof_path?: string | null
           reference?: string | null
           status?: string
           worker_id?: string
@@ -2786,6 +2789,7 @@ export type Database = {
         Args: { p_bill_path: string; p_job_id: string }
         Returns: undefined
       }
+      can_upload_dues_proof: { Args: never; Returns: boolean }
       can_upload_media: { Args: { p_bucket: string }; Returns: boolean }
       can_view_job: { Args: { p_job: string }; Returns: boolean }
       cancel_job: {
@@ -2847,6 +2851,7 @@ export type Database = {
         Args: { p_ids?: string[] }
         Returns: undefined
       }
+      my_due_detail: { Args: { p_due: string }; Returns: Json }
       my_dues: { Args: { p_limit?: number }; Returns: Json }
       my_job_fee: { Args: { p_job_id: string }; Returns: number }
       my_reports: {
@@ -2980,7 +2985,12 @@ export type Database = {
         Returns: string
       }
       submit_dues_payment: {
-        Args: { p_amount: number; p_method: string; p_reference: string }
+        Args: {
+          p_amount: number
+          p_method: string
+          p_proof_path?: string
+          p_reference: string
+        }
         Returns: string
       }
       submit_for_review: { Args: never; Returns: undefined }
