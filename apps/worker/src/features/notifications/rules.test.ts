@@ -139,3 +139,23 @@ test('the one-hour reminder names the job and opens it', () => {
   assert.match(v.body, /4 PM/);
   assert.equal(v.opensJob, true);
 });
+
+test('dues notices open My Dues and carry the amounts, never a job', () => {
+  const dues = (type: string, payload: Record<string, unknown>) => describe(n({ type, jobId: null, payload }), now);
+  const soon = dues('dues_reminder', { owed: 350, overdue: 0 });
+  assert.equal(soon.title, 'DHA dues reminder');
+  assert.equal(soon.body, 'You owe DHA Rs 350. Pay it in My Dues before it is due.');
+  assert.equal(soon.opensDues, true);
+  assert.equal(soon.opensJob, false);
+  assert.match(dues('dues_reminder', { owed: 350, overdue: 50 }).body, /Rs 50 overdue/);
+  assert.equal(dues('dues_payment_decided', { status: 'confirmed', amount: 250 }).title, 'Payment confirmed');
+  assert.equal(dues('dues_payment_decided', { status: 'confirmed', amount: 250 }).body, 'DHA confirmed your payment of Rs 250.');
+  const rejected = dues('dues_payment_decided', { status: 'rejected', amount: 250, reason: 'Transaction not found' });
+  assert.equal(rejected.title, 'Payment not accepted');
+  assert.match(rejected.body, /Transaction not found/);
+  assert.equal(rejected.opensDues, true);
+  const warning = dues('dues_warning', { message: 'Please pay this week.' });
+  assert.equal(warning.title, 'Warning from DHA');
+  assert.equal(warning.body, 'Please pay this week.');
+  assert.equal(warning.opensDues, true);
+});

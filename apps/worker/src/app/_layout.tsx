@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WebFrame } from '@/components/WebFrame';
 import { showPushesInForeground } from '@/features/push/device';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { ToastHost } from '@/lib/toast';
 import { colors } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -59,6 +60,7 @@ export default function RootLayout() {
         <StatusBar style="auto" />
         <WebFrame>
           <RootStack />
+          <ToastHost />
         </WebFrame>
       </AuthProvider>
     </SafeAreaProvider>

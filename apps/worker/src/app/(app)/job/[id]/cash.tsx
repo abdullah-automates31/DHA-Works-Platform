@@ -115,6 +115,7 @@ export default function RecordCashScreen() {
               <Text style={styles.agreedLabel}>{t('cash.agreed')}</Text>
               <Text style={styles.agreedAmount}>{formatRupees(agreed)}</Text>
             </View>
+            {ready.extras.dhaFee > 0 ? <Text style={styles.feeNote}>{t('cash.feeNote', { fee: formatRupees(ready.extras.dhaFee), keep: formatRupees(Math.max(0, agreed - ready.extras.dhaFee)) })}</Text> : null}
 
             <Text style={styles.label}>{t('cash.collected')}</Text>
             <View style={styles.seg}>
@@ -197,6 +198,7 @@ const styles = StyleSheet.create({
   agreed: { backgroundColor: colors.mint, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   agreedLabel: { fontFamily: fontFamily.bold, fontSize: 13, color: colors.greenDark },
   agreedAmount: { fontFamily: fontFamily.extrabold, fontSize: 20, color: colors.greenDark },
+  feeNote: { fontFamily: fontFamily.semibold, fontSize: 12.5, lineHeight: 18, color: colors.muted },
   label: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.muted },
   seg: { height: 52, flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 4, gap: 4 },
   segButton: { flex: 1, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

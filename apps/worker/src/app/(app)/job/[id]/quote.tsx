@@ -30,6 +30,8 @@ import { minutesUntilVisit, needsBusyEstimate } from '@/features/quote/busy';
 import { claimJob, reviseQuote } from '@/features/quote/submit';
 import { CurrentJobTimeScreen } from '@/components/CurrentJobTimeScreen';
 import { t, type TranslationKey } from '@/i18n';
+import { payout, percentText } from '@/features/quote/fee';
+import { useFeeRule } from '@/features/quote/useFeeRule';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
@@ -177,6 +179,8 @@ function QuoteForm({ jobId, when, preferred, next, onAccepted, revise }: { jobId
   const labour = parseAmount(input.labour);
   const materials = materialsTotal(input);
   const total = computeTotal(input);
+  const feeRule = useFeeRule();
+  const pay = payout(labour, materials, feeRule);
 
   const setItem = (index: number, patch: Partial<MaterialItem>) =>
     set({ items: input.items.map((item, n) => (n === index ? { ...item, ...patch } : item)) });
@@ -315,6 +319,20 @@ function QuoteForm({ jobId, when, preferred, next, onAccepted, revise }: { jobId
             </View>
             {when ? <Text style={styles.visit}>{t('quote.visitFixed', { when })}</Text> : null}
           </View>
+
+          {pay.fee > 0 ? (
+            <View style={styles.preview} accessibilityLabel={t('quote.payoutTitle')}>
+              <Text style={styles.previewTitle}>{t('quote.payoutTitle')}</Text>
+              <Line label={t('quote.payoutTotal')} value={formatRupees(pay.total)} />
+              <Line label={pay.byMinimum ? t('quote.payoutFeeMin') : t('quote.payoutFeeRule', { percent: percentText(feeRule.percent) })} value={`- ${formatRupees(pay.fee)}`} />
+              <View style={styles.rule} />
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>{t('quote.payoutGet')}</Text>
+                <Text style={styles.totalValue}>{formatRupees(pay.youGet)}</Text>
+              </View>
+              <Text style={styles.visit}>{t('quote.payoutNote')}</Text>
+            </View>
+          ) : null}
 
           <Text style={styles.fine}>{t('quote.fine')}</Text>
           {touched && errors.total ? <FieldError>{t('quote.errors.totalHint')}</FieldError> : null}

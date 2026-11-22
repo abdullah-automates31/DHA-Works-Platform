@@ -210,7 +210,14 @@ export function BottomBar({
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: inactive, busy: loading }}
-        onPress={inactive ? undefined : onPress}
+        onPress={
+          inactive
+            ? undefined
+            : () => {
+                Keyboard.dismiss(); // closes the keyboard and takes the cursor out of the box, so the tap visibly did something
+                onPress();
+              }
+        }
         style={({ pressed }) => [styles.btn, secondary && { flex: 1.3 }, soft && { backgroundColor: colors.mint }, (inactive || pressed) && { opacity: 0.6 }]}
       >
         <Text style={[styles.btnText, soft && { color: colors.greenDark }]}>{loading ? t('about.saving') : label}</Text>

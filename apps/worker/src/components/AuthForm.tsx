@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { colors, fontFamily } from '@/theme';
 
@@ -64,7 +64,14 @@ export function PrimaryButton({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive, busy: loading }}
-      onPress={inactive ? undefined : onPress}
+      onPress={
+        inactive
+          ? undefined
+          : () => {
+              Keyboard.dismiss(); // closes the keyboard and takes the cursor out of the box, so the tap visibly did something
+              onPress();
+            }
+      }
       style={({ pressed }) => [styles.button, (disabled || pressed) && styles.buttonDim]}
     >
       {loading ? (

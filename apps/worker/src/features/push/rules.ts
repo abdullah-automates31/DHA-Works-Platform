@@ -19,6 +19,7 @@ export function pushHref(data: PushData): Href {
   const type = text(data?.type);
   const jobId = text(data?.job_id);
   if (type === 'new_job') return '/open-jobs' as Href;
+  if (type === 'dues_reminder' || type === 'dues_payment_decided' || type === 'dues_warning') return '/dues' as Href;
   if (type && jobId) {
     const notice = { id: text(data?.notification_id), type, jobId, payload: null, readAt: null, createdAt: new Date().toISOString() };
     if (describe(notice).opensJob) return statusHref(jobId);

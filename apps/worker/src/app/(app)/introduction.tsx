@@ -15,6 +15,7 @@ import { useWork } from '@/features/work/useWork';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { showToast } from '@/lib/toast';
 import { colors, fontFamily } from '@/theme';
 
 // Profile > Introduction (Shariq, 2 Nov): the worker's voice introduction and a written "about" text, editable any time.
@@ -118,6 +119,7 @@ function IntroductionForm({ work, userId }: { work: Ready; userId: string }) {
     setAbout(about.trim());
     if (result.voicePath) setSavedVoicePath(result.voicePath);
     setJustSaved(true);
+    showToast(t('introduction.saved'));
   }
 
   return (

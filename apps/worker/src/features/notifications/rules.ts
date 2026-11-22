@@ -4,6 +4,7 @@
 import { t } from '../../i18n/index.ts';
 import { timeAgo } from '../feed/format.ts';
 import { dateText } from '../myreports/rules.ts';
+import { formatRupees } from '../home/format.ts';
 import { dayWord, windowText } from '../myjobs/rules.ts';
 
 export type Notice = {
@@ -16,7 +17,9 @@ export type Notice = {
 };
 
 export type NoticeIcon = 'check' | 'info' | 'alert' | 'job';
-export type NoticeView = { title: string; body: string; icon: NoticeIcon; opensJob: boolean; opensReports?: boolean };
+export type NoticeView = { title: string; body: string; icon: NoticeIcon; opensJob: boolean; opensReports?: boolean; opensDues?: boolean };
+
+const amountOf = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -107,6 +110,26 @@ export function describe(n: Notice, now: Date = new Date()): NoticeView {
       return { title: t('notices.reportWarningTitle'), body: t('notices.reportWarningBody', { message: text(n.payload?.message) || t('notices.updateGeneric') }), icon: 'alert', opensJob: false };
     case 'staff_message':
       return { title: t('notices.staffMessageTitle'), body: t('notices.staffMessageBody', { message: text(n.payload?.text) || t('notices.updateGeneric') }), icon: 'info', opensJob: false };
+    case 'dues_reminder': {
+      const overdue = amountOf(n.payload?.overdue);
+      return {
+        title: t('notices.duesReminderTitle'),
+        body: overdue > 0 ? t('notices.duesReminderOverdueBody', { overdue: formatRupees(overdue) }) : t('notices.duesReminderBody', { owed: formatRupees(amountOf(n.payload?.owed)) }),
+        icon: 'alert',
+        opensJob: false,
+        opensDues: true,
+      };
+    }
+    case 'dues_payment_decided': {
+      const amount = formatRupees(amountOf(n.payload?.amount));
+      const reason = text(n.payload?.reason);
+      if (n.payload?.status === 'rejected') {
+        return { title: t('notices.duesRejectedTitle'), body: reason ? t('notices.duesRejectedReasonBody', { amount, reason }) : t('notices.duesRejectedBody', { amount }), icon: 'alert', opensJob: false, opensDues: true };
+      }
+      return { title: t('notices.duesConfirmedTitle'), body: t('notices.duesConfirmedBody', { amount }), icon: 'check', opensJob: false, opensDues: true };
+    }
+    case 'dues_warning':
+      return { title: t('notices.duesWarningTitle'), body: t('notices.duesWarningBody', { message: text(n.payload?.message) || t('notices.updateGeneric') }), icon: 'alert', opensJob: false, opensDues: true };
     case 'cancellation_declined':
       return { title: t('notices.cancelDeclinedTitle'), body: t('notices.cancelDeclinedBody', { job, message: text(n.payload?.message) }).trim(), icon: 'alert', opensJob: true };
     case 'new_sign_in':

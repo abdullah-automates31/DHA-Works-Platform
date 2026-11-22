@@ -38,7 +38,7 @@ test('approved without areas must choose areas first; with areas goes home and m
   const approved = with_({ verification_status: 'approved' });
   assert.deepEqual(allowedRoutes(approved), ['/areas']);
   assert.deepEqual(allowedRoutes(approved, 0), ['/areas']);
-  assert.deepEqual(allowedRoutes(approved, 3), ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction', '/settings']);
+  assert.deepEqual(allowedRoutes(approved, 3), ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction', '/dues', '/settings']);
 });
 
 test('areas do not matter before approval', () => {
@@ -47,16 +47,23 @@ test('areas do not matter before approval', () => {
 });
 
 test('a suspended or wrong-role account never reaches the tabs', () => {
-  assert.deepEqual(allowedRoutes(with_({ verification_status: 'approved', account_status: 'suspended' }), 3), ['/status']);
+  assert.deepEqual(allowedRoutes(with_({ verification_status: 'approved', account_status: 'suspended' }), 3), ['/status', '/dues'], 'a suspended worker may only pay their dues');
   assert.deepEqual(allowedRoutes(with_({ verification_status: 'approved', role: 'resident' }), 3), ['/status']);
 });
 
 test('a suspended account is blocked whatever its status', () => {
   for (const s of ['incomplete', 'pending', 'approved'] as const) {
     const p = with_({ verification_status: s, account_status: 'suspended' });
-    assert.deepEqual(allowedRoutes(p), ['/status'], s);
+    assert.deepEqual(allowedRoutes(p), ['/status', '/dues'], s);
     assert.equal(statusKind(p), 'suspended');
   }
+});
+
+test('only a suspended worker may open My Dues without being approved', () => {
+  assert.equal(isRouteAllowed('/dues', allowedRoutes(with_({ verification_status: 'approved', account_status: 'suspended' }), 3)), true);
+  assert.equal(isRouteAllowed('/dues', allowedRoutes(with_({ verification_status: 'pending' }))), false);
+  assert.equal(isRouteAllowed('/dues', allowedRoutes(with_({ role: 'resident' }))), false);
+  assert.equal(isRouteAllowed('/home', allowedRoutes(with_({ verification_status: 'approved', account_status: 'suspended' }), 3)), false);
 });
 
 test('a customer or staff account cannot use the worker app', () => {

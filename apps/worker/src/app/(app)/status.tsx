@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 import { PendingReview } from '@/components/PendingReview';
+import { SuspendedScreen } from '@/components/SuspendedScreen';
 import { useLiveRefresh } from '@/features/live/useLiveRefresh';
 import { TempScreen } from '@/components/TempScreen';
-import { dateText } from '@/features/myreports/rules';
 import { statusKind, type StatusKind } from '@/features/profile/routing';
 import { t } from '@/i18n';
 import { useMyProfile } from '@/lib/profile';
@@ -39,16 +39,15 @@ export default function StatusScreen() {
   if (kind === 'pending') {
     return <PendingReview sentAt={profile?.verification_updated_at ?? null} checking={checking} onCheck={() => void check()} />;
   }
-  const showReason = kind === 'visit_hq' || kind === 'rejected' || kind === 'suspended';
-  // A suspension shows the reason staff wrote and, when it has an end date, when the account opens again.
-  const reason = kind === 'suspended' ? profile?.suspension_reason : profile?.verification_reason;
-  const until = kind === 'suspended' ? dateText(profile?.suspended_until) : '';
-  const body = until ? `${t(COPY[kind].body)} ${t('temp.status.suspendedUntil', { date: until })}` : t(COPY[kind].body);
+  if (kind === 'suspended') {
+    return <SuspendedScreen reason={profile?.suspension_reason} until={profile?.suspended_until} onCheck={() => void check()} checking={checking} />;
+  }
+  const showReason = kind === 'visit_hq' || kind === 'rejected';
   return (
     <TempScreen
       title={t(COPY[kind].title)}
-      body={body}
-      reason={showReason ? reason : null}
+      body={t(COPY[kind].body)}
+      reason={showReason ? profile?.verification_reason : null}
       reasonLabel={t('temp.status.reasonLabel')}
       action={kind === 'wrong_role' ? undefined : { label: t('temp.status.refresh'), onPress: () => void check(), loading: checking }}
     />

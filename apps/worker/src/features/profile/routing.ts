@@ -30,6 +30,7 @@ export type AppRoute =
   | '/report'
   | '/my-reports'
   | '/introduction'
+  | '/dues'
   | '/settings';
 
 export type StatusKind = 'wrong_role' | 'suspended' | 'pending' | 'visit_hq' | 'rejected';
@@ -69,9 +70,11 @@ export function changesNeededReason(p: Pick<ProfileSnapshot, 'verification_statu
 /** `areaCount` = phases the worker chose; an approved worker with none must choose areas first (W05). */
 export function allowedRoutes(p: ProfileSnapshot | null, areaCount = 0): AppRoute[] {
   if (!p) return ['/about'];
+  // A suspended worker stays on the Suspended screen; My Dues is the one other place, so they can pay their way back (migration 0071).
+  if (statusKind(p) === 'suspended') return ['/status', '/dues'];
   if (statusKind(p) !== null) return ['/status'];
   if (p.verification_status === 'approved') {
-    return areaCount === 0 ? ['/areas'] : ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction', '/settings'];
+    return areaCount === 0 ? ['/areas'] : ['/home', '/open-jobs', '/my-jobs', '/profile', '/notifications', '/areas', '/help', '/report', '/my-reports', '/introduction', '/dues', '/settings'];
   }
   // incomplete or needs_changes: identity first; once it is complete, the documents step and those after it.
   return identityComplete(p) ? ['/documents', '/references', '/work', '/about'] : ['/about'];

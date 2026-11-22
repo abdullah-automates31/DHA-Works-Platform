@@ -48,3 +48,24 @@ test('every screen with a text field is wrapped so the keyboard lifts it', () =>
     .map((f) => f.path);
   assert.deepEqual(offenders, [], 'wrap the screen in a KeyboardAvoidingView');
 });
+
+// Save feedback: tapping a primary button closes the keyboard and takes the cursor out of the box, and a save that keeps the
+// person on the screen shows the floating "Saved" toast (lib/toast.tsx), because an inline notice can sit below the fold.
+
+test('the shared primary buttons close the keyboard when pressed', () => {
+  for (const file of ['components/AuthForm.tsx', 'components/onboarding.tsx']) {
+    const entry = FILES.find((f) => f.path.replaceAll('\\', '/') === file);
+    assert.ok(entry, `${file} exists`);
+    assert.match(entry.text, /Keyboard\.dismiss\(\)/, `${file}: the button must call Keyboard.dismiss() before its action`);
+  }
+});
+
+test('every screen with a Save bar shows the Saved toast after a successful save', () => {
+  const offenders = FILES.filter(({ path, text }) => path.replaceAll('\\', '/').startsWith('app/') && /<SaveBar\b/.test(text) && !/showToast\(/.test(text)).map((f) => f.path);
+  assert.deepEqual(offenders, [], 'call showToast(t("common.saved")) when the save succeeds');
+});
+
+test('the toast host is mounted once in the root layout', () => {
+  const root = FILES.find((f) => f.path.replaceAll('\\', '/') === 'app/_layout.tsx');
+  assert.ok(root && /<ToastHost\s*\/>/.test(root.text));
+});

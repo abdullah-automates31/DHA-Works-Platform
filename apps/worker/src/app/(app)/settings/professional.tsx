@@ -13,6 +13,7 @@ import { digitsOnly, toggleTrade } from '@/features/work/rules';
 import { fetchWork, type WorkData } from '@/features/work/useWork';
 import { t } from '@/i18n';
 import { supabase } from '@/lib/supabase';
+import { showToast } from '@/lib/toast';
 
 const professionalClient: ProfessionalClient = {
   rpc: (fn, args) =>
@@ -88,6 +89,7 @@ function Form({ work }: { work: Ready }) {
     setAbout(about.trim());
     setSaving(false);
     setDone(true);
+    showToast(t('common.saved'));
   }
 
   return (

@@ -15,6 +15,7 @@ export type StatusExtras = {
   billAttached: boolean; // the bill photo is already on the quote (the customer sees it in view quote)
   cashAmount: number | null; // what the worker recorded, once recorded
   cashDue: number | null; // the agreed amount from the accepted quote
+  dhaFee: number; // DHA's share of that cash (migration 0071); 0 while the fee is off
   cancelRequestId: string | null; // this worker's pending cancellation request, if any (to withdraw it)
   quoteRevision: number; // 0 = the sent quote can still be changed once (0044)
   quoteStatus: string | null;
@@ -40,7 +41,7 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
   // The worker's own interest, quote and cash row (row-level security lets them read only their own).
   const [interest, quote, cash, cancel] = await Promise.all([
     supabase.from('job_interests').select('created_at').eq('job_id', id).maybeSingle(),
-    supabase.from('quotes').select('id, created_at, total, materials, status, revision, visit_start, visit_end, material_bill_path, busy_eta_pending').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('quotes').select('id, created_at, total, dha_fee, materials, status, revision, visit_start, visit_end, material_bill_path, busy_eta_pending').eq('job_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('cash_records').select('worker_amount, agreed_amount').eq('job_id', id).maybeSingle(),
     supabase.from('cancellation_requests').select('id, requester_role').eq('job_id', id).eq('status', 'pending').maybeSingle(),
   ]);
@@ -59,6 +60,7 @@ async function fetchStatus(id: string): Promise<JobStatusState> {
       billAttached: Boolean(quote.data?.material_bill_path),
       cashAmount: cash.data?.worker_amount ?? null,
       cashDue: cash.data?.agreed_amount ?? job.myQuoteTotal,
+      dhaFee: quote.data?.dha_fee ?? 0,
       cancelRequestId: cancel.data?.requester_role === 'worker' ? cancel.data.id : null,
       quoteRevision: quote.data?.revision ?? 0,
       quoteStatus: quote.data?.status ?? null,

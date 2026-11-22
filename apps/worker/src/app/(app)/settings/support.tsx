@@ -8,6 +8,7 @@ import { useHelpline } from '@/features/profile/useHelpline';
 import { BODY_MAX, SUBJECT_MAX, parseRequests, sendSupport, supportState, type MyRequest } from '@/features/settings/requests';
 import { t } from '@/i18n';
 import { supabase } from '@/lib/supabase';
+import { showToast } from '@/lib/toast';
 import { colors, fontFamily } from '@/theme';
 
 // Settings > Contact DHA support: a real message to DHA staff. They answer in the admin portal; the answer shows here and
@@ -54,6 +55,7 @@ export default function SupportScreen() {
     setSubject('');
     setBody('');
     setDone(true);
+    showToast(t('settings.supportScreen.sent'));
     setAttempt((n) => n + 1);
   }
 

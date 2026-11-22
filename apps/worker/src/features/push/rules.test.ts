@@ -33,3 +33,9 @@ test('push data is read from the content first, then from the Firebase message',
   assert.deepEqual(pushDataOf(shownByApp), { type: 'job_stuck' });
   assert.equal(pushDataOf({ notification: { request: { content: {}, trigger: null } } }), null);
 });
+
+test('a dues push opens My Dues', () => {
+  assert.equal(pushHref({ type: 'dues_reminder' }), '/dues');
+  assert.equal(pushHref({ type: 'dues_payment_decided' }), '/dues');
+  assert.equal(pushHref({ type: 'dues_warning' }), '/dues');
+});

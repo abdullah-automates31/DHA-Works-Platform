@@ -7,6 +7,8 @@ import { PrimaryButton } from '@/components/AuthForm';
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { ShieldCheckIcon } from '@/components/icons';
 import { FieldError, Pill } from '@/components/onboarding';
+import { owedText } from '@/features/dues/rules';
+import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
 import { areaSummary, ratingText, tradeSummary } from '@/features/profile/summary';
 import { useProfileSummary } from '@/features/profile/useProfileSummary';
@@ -14,6 +16,7 @@ import { toggleTrade } from '@/features/work/rules';
 import { t } from '@/i18n';
 import { useMyProfile } from '@/lib/profile';
 import { signOut } from '@/lib/signOut';
+import { showToast } from '@/lib/toast';
 import { colors, fontFamily } from '@/theme';
 
 // W16 Profile (worker/screens/w-profile.dc.html): name, trade and areas, "Verified worker", this week's cash,
@@ -25,6 +28,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { state: profileState } = useMyProfile();
   const { data, reload, setAvailable, setReminders, saveTrades } = useProfileSummary();
+  const duesState = useMyDues().state;
+  const owedValue = duesState.status === 'ready' ? owedText(duesState.dues.summary) : '';
   const [sheet, setSheet] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
@@ -59,6 +64,7 @@ export default function ProfileScreen() {
       return;
     }
     setSheet(false);
+    showToast(t('common.saved'));
   }
 
   async function onToggle(value: boolean) {
@@ -135,6 +141,7 @@ export default function ProfileScreen() {
                   thumbColor="#fff"
                 />
               </View>
+              <Row title={t('dues.profileRow')} value={owedValue} onPress={() => router.push('/dues')} divider />
               <Row title={t('profile.category')} value={tradeSummary(names)} onPress={openSheet} divider />
               <Row title={t('profile.introduction')} onPress={() => router.push('/introduction')} divider />
               <Row title={t('profile.areas')} value={areaSummary(areas)} onPress={() => router.push('/areas')} divider />

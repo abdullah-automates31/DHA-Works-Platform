@@ -1,5 +1,6 @@
 import type { Database } from '@dha/supabase';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { useAuth } from './auth';
 import { supabase } from './supabase';
@@ -72,6 +73,28 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     // areas or a document), keep what is already on screen instead of replacing the whole app with an error.
     setState((current) => (next.status === 'error' && current.status === 'ready' ? current : next));
   }, [userId]);
+
+  // Suspension must take effect at once, not when the worker next opens a screen that reloads the profile. One channel for the
+  // whole signed-in session (the one exception to "a channel only while its screen is in front", docs/PERFORMANCE.md): it
+  // listens for this worker's own account notices only and reloads the profile, and the route gate then moves the worker to the
+  // Suspended screen. Coming back to the app from the background reloads the profile too.
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`account-${userId}-${Math.random().toString(16).slice(2, 8)}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (change) => {
+        const type = (change.new as { type?: unknown } | null)?.type;
+        if (type === 'account_suspended' || type === 'account_reactivated') void refresh();
+      })
+      .subscribe();
+    const appState = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void refresh();
+    });
+    return () => {
+      appState.remove();
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, refresh]);
 
   const value = useMemo(() => ({ state, refresh }), [state, refresh]);
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;

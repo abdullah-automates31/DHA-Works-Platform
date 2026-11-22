@@ -14,6 +14,7 @@ import { useUnsavedGuard } from '@/features/settings/useUnsavedGuard';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { useMyProfile } from '@/lib/profile';
+import { showToast } from '@/lib/toast';
 import { supabase } from '@/lib/supabase';
 import { colors, fontFamily } from '@/theme';
 
@@ -100,6 +101,7 @@ export default function PersonalScreen() {
       }
       await refresh();
       setDone(true);
+      showToast(t('common.saved'));
     } catch {
       setError(t('settings.errors.network'));
     } finally {

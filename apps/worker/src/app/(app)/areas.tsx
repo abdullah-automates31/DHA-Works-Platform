@@ -9,6 +9,7 @@ import { toggleTrade } from '@/features/work/rules';
 import { t } from '@/i18n';
 import { useMyProfile } from '@/lib/profile';
 import { supabase } from '@/lib/supabase';
+import { showToast } from '@/lib/toast';
 import { colors, fontFamily } from '@/theme';
 
 // W05 Where do you work? DHA phases 1 to 8 (from service_areas), multi-select, saved with set_my_areas.
@@ -63,6 +64,7 @@ export default function AreasScreen() {
     }
     await refresh();
     setSaving(false);
+    if (!firstTime) showToast(t('common.saved'));
     router.replace(firstTime ? '/home' : '/profile');
   }
 
