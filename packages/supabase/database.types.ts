@@ -559,6 +559,47 @@ export type Database = {
         }
         Relationships: []
       }
+      dues_payment_checks: {
+        Row: {
+          checked_at: string
+          engine: string | null
+          extracted: Json
+          image_sha256: string | null
+          owed: number | null
+          payment_id: string
+          reasons: string[]
+          verdict: string
+        }
+        Insert: {
+          checked_at?: string
+          engine?: string | null
+          extracted: Json
+          image_sha256?: string | null
+          owed?: number | null
+          payment_id: string
+          reasons?: string[]
+          verdict: string
+        }
+        Update: {
+          checked_at?: string
+          engine?: string | null
+          extracted?: Json
+          image_sha256?: string | null
+          owed?: number | null
+          payment_id?: string
+          reasons?: string[]
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dues_payment_checks_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "dues_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dues_payments: {
         Row: {
           amount: number
@@ -2850,6 +2891,16 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       delete_draft: { Args: { p_job_id: string }; Returns: undefined }
+      dues_check_apply: {
+        Args: {
+          p_engine: string
+          p_extracted: Json
+          p_payment: string
+          p_sha: string
+        }
+        Returns: Json
+      }
+      dues_check_context: { Args: { p_payment: string }; Returns: Json }
       express_interest: { Args: { p_job_id: string }; Returns: undefined }
       file_report: {
         Args: {
