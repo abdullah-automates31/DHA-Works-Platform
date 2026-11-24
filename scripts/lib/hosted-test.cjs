@@ -34,13 +34,18 @@ function hostedContext() {
     fs.writeFileSync(file, q);
     let out = '';
     for (let attempt = 1; attempt <= 4; attempt++) {
-      try { out = execSync(`npx supabase db query --linked -f "${file}"`, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
+      try { out = execSync(`npx supabase db query --linked --output-format json -f "${file}"`, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); } catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
       if (!/TransportError|Transport error|ECONNRESET|ETIMEDOUT|fetch failed/i.test(out)) break;
     }
     fs.rmSync(file, { force: true });
-    const j = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1));
-    if (j.error) throw new Error(String(j.error.message || j.error).slice(0, 300));
-    return j.rows || [];
+const i = out.indexOf('{');
+const j2 = out.indexOf('[');
+const start = (i >= 0 && (j2 < 0 || i < j2)) ? i : j2;
+if (start < 0) throw new Error('no JSON from the CLI: ' + out.slice(0, 300));
+let j = JSON.parse(out.slice(start, out.lastIndexOf(start === i ? '}' : ']') + 1));
+if (Array.isArray(j)) j = { rows: j };
+if (j.error) throw new Error(String(j.error.message || j.error).slice(0, 300));
+return j.rows || [];
   }
   /** The first value of the first row as text ('' when there is none): the same shape psql -tA gave. */
   function scalar(q) {

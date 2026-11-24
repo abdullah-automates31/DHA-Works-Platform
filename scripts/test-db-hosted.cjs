@@ -36,13 +36,16 @@ function query(sql) {
   let out = '';
   // A network hiccup between this computer and Supabase is retried (up to 4 tries); a real SQL error is not.
   for (let attempt = 1; attempt <= 4; attempt++) {
-    try { out = cli(['db', 'query', '--linked', '-f', file]); } catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
+    try { out = cli(['db', 'query', '--linked', '--output-format', 'json', '-f', file]); } catch (e) { out = String(e.stdout || '') + String(e.stderr || ''); }
     if (!/TransportError|Transport error|ECONNRESET|ETIMEDOUT|fetch failed/i.test(out)) break;
   }
   fs.rmSync(file, { force: true });
-  const i = out.indexOf('{');
-  if (i < 0) throw new Error('no JSON from the CLI: ' + out.slice(0, 300));
-  let j; try { j = JSON.parse(out.slice(i, out.lastIndexOf('}') + 1)); } catch { throw new Error('unreadable CLI answer: ' + out.slice(0, 300)); }
+const i = out.indexOf('{');
+const j2 = out.indexOf('[');
+const start = (i >= 0 && (j2 < 0 || i < j2)) ? i : j2;
+if (start < 0) throw new Error('no JSON from the CLI: ' + out.slice(0, 300));
+let j; try { j = JSON.parse(out.slice(start, out.lastIndexOf(start === i ? '}' : ']') + 1)); } catch { throw new Error('unreadable CLI answer: ' + out.slice(0, 300)); }
+if (Array.isArray(j)) j = { rows: j };
   if (j._tag === 'Error' || j.error) throw new Error((j.error && j.error.message ? j.error.message : JSON.stringify(j)).replace(/\\n/g, '\n').slice(0, 600));
   return j.rows || [];
 }
@@ -74,7 +77,7 @@ async function resetProject() {
   const keys = JSON.parse(keysOut.slice(keysOut.indexOf('[')));
   const svc = (keys.find((k) => k.name === 'service_role') || {}).api_key;
   if (!svc) throw new Error('could not read the test project service key');
-  for (const id of ['identity', 'job-media', 'worker-media', 'report-media']) {
+  for (const id of ['identity', 'job-media', 'worker-media', 'report-media', 'dues-proof']) {
     const r = await fetch(`https://${testRef}.supabase.co/storage/v1/bucket/${id}`, { method: 'DELETE', headers: { apikey: svc, authorization: `Bearer ${svc}` } });
     if (!r.ok && r.status !== 404) console.log(`bucket ${id}: ${r.status} ${(await r.text()).slice(0, 120)}`);
   }
