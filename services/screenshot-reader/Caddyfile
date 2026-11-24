@@ -1,0 +1,13 @@
+{$READER_DOMAIN} {
+	# only the two paths the service has; everything else is refused here
+	@allowed path /check /health
+	handle @allowed {
+		reverse_proxy reader:8080
+	}
+	handle {
+		respond "not found" 404
+	}
+	request_body {
+		max_size 4KB
+	}
+}

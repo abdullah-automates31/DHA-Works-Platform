@@ -1,0 +1,6 @@
+# The service itself. Pinned to the versions the tests ran with (24 Nov 2026).
+fastapi==0.165.0
+uvicorn==0.54.0
+httpx==0.28.1
+pillow==13.0.0
+pydantic==2.14.4

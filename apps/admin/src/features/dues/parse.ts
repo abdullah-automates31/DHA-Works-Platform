@@ -1,6 +1,7 @@
 // DHA dues (migration 0071): what admin_dues_list, admin_dues_worker and admin_dues_counts return, and the small rules the
 // screens share. A reply that does not look right becomes zeros or an empty list, never a half-drawn row.
 import { arr, bool, int, isUuid, obj, page, str } from '../../lib/json.ts';
+import { parseScreenCheck, type ScreenCheck } from './screenCheck.ts';
 
 export const TABS = ['pending', 'overdue', 'owing', 'suspended', 'all'] as const;
 export type Tab = (typeof TABS)[number];
@@ -31,7 +32,7 @@ export type DuesRow = {
   paidTotal: number;
 };
 
-export type PendingPayment = { id: string; workerId: string; workerName: string; amount: number; method: string; reference: string; proofPath: string | null; createdAt: string };
+export type PendingPayment = { id: string; workerId: string; workerName: string; amount: number; method: string; reference: string; proofPath: string | null; createdAt: string; check: ScreenCheck | null };
 
 export type DuesTotals = { owed: number; overdue: number; pending: number; collectedThisMonth: number };
 
@@ -69,6 +70,7 @@ export function parseDuesList(json: unknown): DuesList {
       reference: str(r.reference) ?? '',
       proofPath: safeProofPath(r.proof_path),
       createdAt: str(r.created_at) ?? '',
+      check: parseScreenCheck(r.check),
     });
   }
   return {
@@ -111,6 +113,7 @@ export type LedgerPayment = {
   byStaff: boolean;
   createdBy: string | null;
   decidedBy: string | null;
+  check: ScreenCheck | null;
 };
 
 export type WorkerSummary = { owed: number; overdue: number; nextDueAt: string | null; overdueSince: string | null; paidTotal: number; pendingTotal: number; pendingCount: number; credit: number };
@@ -169,6 +172,7 @@ export function parseWorkerDues(json: unknown): WorkerDues | null {
       byStaff: bool(r.by_staff),
       createdBy: str(r.created_by_name),
       decidedBy: str(r.decided_by_name),
+      check: parseScreenCheck(r.check),
     });
   }
   const w = obj(o.worker);

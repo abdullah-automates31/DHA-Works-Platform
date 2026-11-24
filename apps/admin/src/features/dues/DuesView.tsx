@@ -1,16 +1,18 @@
 import Link from 'next/link';
 import { ActionForm } from '@/components/FormKit';
-import { EmptyRow, LoadError, PagerBar, SearchBox, TabBar } from '@/components/ListBits';
+import { EmptyRow, LoadError, PagerBar, PillRow, SearchBox, TabBar } from '@/components/ListBits';
 import { PortalFrame } from '@/components/PortalFrame';
 import { Chip } from '@/components/ui';
 import { requireSession } from '@/lib/auth';
 import { buildHref, dateTime, lastPage, PAGE_SIZE, pageNumber, phoneText, rupees, searchText } from '@/lib/format';
 import { decidePaymentAction } from './actions';
+import { CheckPanel } from './CheckPanel';
 import { ConfirmRejectRow } from './ConfirmRejectRow';
 import { ProofLink, signedProofUrls } from './ProofLink';
 import { methodLabel, parseCounts, parseDuesList, parseTab, whenText, type PendingPayment, type Tab } from './parse';
+import { filterByCheck, parseCheckFilter } from './screenCheck';
 
-type Params = { tab?: string; q?: string; page?: string };
+type Params = { tab?: string; q?: string; page?: string; check?: string };
 
 const EMPTY: Record<Tab, string> = {
   pending: 'No payments are waiting for you.',
@@ -26,6 +28,7 @@ export async function DuesView({ params }: { params: Params }) {
   const tab = parseTab(params.tab);
   const q = searchText(params.q);
   const page = pageNumber(params.page);
+  const check = parseCheckFilter(params.check);
 
   const [countsRes, listRes] = await Promise.all([
     supabase.rpc('admin_dues_counts'),
@@ -36,7 +39,9 @@ export async function DuesView({ params }: { params: Params }) {
   // short-lived private links to the payment screenshots on this page (staff only: the bucket is closed to everyone else)
   const proofUrls = await signedProofUrls(supabase, list.pending.map((p) => p.proofPath));
   const now = new Date();
-  const base = (over: Record<string, string | number | null>) => buildHref('/dues', { tab: tab === 'owing' ? null : tab, q: q || null, ...over });
+  const base = (over: Record<string, string | number | null>) => buildHref('/dues', { tab: tab === 'owing' ? null : tab, q: q || null, check: check === 'all' ? null : check, ...over });
+  const shown = filterByCheck(list.pending, check);
+  const matched = filterByCheck(list.pending, 'matches').length;
 
   return (
     <PortalFrame
@@ -57,8 +62,17 @@ export async function DuesView({ params }: { params: Params }) {
       {list.pending.length > 0 ? (
         <div className="card col" style={{ gap: 12 }}>
           <h2 className="h2">Payments to check</h2>
-          <span className="mut" style={{ fontSize: 13 }}>Compare each transaction ID with your JazzCash, Easypaisa or bank statement, then confirm or reject.</span>
-          {list.pending.map((p) => <PendingCard key={p.id} p={p} proofUrl={p.proofPath ? proofUrls[p.proofPath] ?? null : null} />)}
+          <span className="mut" style={{ fontSize: 13 }}>Each screenshot is read automatically and compared with what the worker typed. That only shows where to look: compare the transaction ID with your JazzCash, Easypaisa or bank statement, then confirm or reject.</span>
+          <PillRow
+            active={check}
+            pills={[
+              { key: 'all', label: `All (${list.pending.length})`, href: base({ check: null, page: null }) },
+              { key: 'matches', label: `Screenshot matches (${matched})`, href: base({ check: 'matches', page: null }) },
+              { key: 'attention', label: `Needs a closer look (${list.pending.length - matched})`, href: base({ check: 'attention', page: null }) },
+            ]}
+          />
+          {shown.length === 0 ? <span className="mut" style={{ fontSize: 13 }}>No payment matches this filter.</span> : null}
+          {shown.map((p) => <PendingCard key={p.id} p={p} proofUrl={p.proofPath ? proofUrls[p.proofPath] ?? null : null} />)}
         </div>
       ) : null}
 
@@ -116,7 +130,10 @@ function PendingCard({ p, proofUrl }: { p: PendingPayment; proofUrl: string | nu
         <span style={{ fontWeight: 800 }}>{p.reference}</span>
         <span className="mut" style={{ fontSize: 12.5 }}>{dateTime(p.createdAt)}</span>
       </div>
-      <ProofLink url={proofUrl} />
+      <div className="row g8" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <ProofLink url={proofUrl} />
+        <CheckPanel check={p.check} payment={{ amount: p.amount, reference: p.reference, method: p.method, createdAt: p.createdAt }} />
+      </div>
       <ConfirmRejectRow
         confirm={
           <ActionForm

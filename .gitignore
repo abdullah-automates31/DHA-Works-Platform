@@ -28,3 +28,11 @@ next-env.d.ts
 *.tsbuildinfo
 .next-*/
 .vercel
+
+# Screenshot reader service (services/screenshot-reader): real payment screenshots carry names and account numbers and the repo is PUBLIC.
+# Only generated/synthetic fixtures go in fixtures/synthetic.
+services/screenshot-reader/fixtures/real/
+services/screenshot-reader/.venv/
+services/screenshot-reader/**/__pycache__/
+services/screenshot-reader/.pytest_cache/
+services/screenshot-reader/.env

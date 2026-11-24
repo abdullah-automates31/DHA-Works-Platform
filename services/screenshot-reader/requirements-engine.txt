@@ -1,0 +1,5 @@
+# The OCR engine. Installed on the SERVER only (heavy; the tests do not need it). Not run here yet: pin exact versions
+# after the first install on the server (pip freeze) and keep them, because PaddleOCR's answer format changed between 2.x and 3.x.
+paddlepaddle
+paddleocr
+numpy

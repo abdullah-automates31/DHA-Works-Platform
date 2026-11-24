@@ -212,6 +212,22 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 | 1 | The fee ships OFF. Decide the real percent and minimum (the owner mentioned 15 to 40% and Rs 50 to 60), set them in Settings > DHA fee and dues, enter where workers pay, and turn the helpline on (the suspended screen needs it for Call and WhatsApp). | Owner and Shariq |
 | 2 | **Tax and legal:** a fee DHA collects probably needs business registration and sales tax on services (Sindh); ask an accountant before launch. | Owner |
 | 3 | **Automatic suspension** (when a due runs past its days) is not built; staff suspend by hand. Needs a rule for the grace period and for reactivation. | Later |
-| 4 | **Payment screenshots** and an in-app payment (JazzCash / Easypaisa API) are not built; the worker enters a transaction ID and staff check it by hand. | Later |
+| 4 | A payment screenshot is required and staff check it by hand (built, 0073). An in-app payment (JazzCash / Easypaisa API) is not built; the worker pays outside the app and enters the transaction ID. | Later |
 | 5 | A literal sign-out of a suspended worker to the sign-in screen (instead of the locked Suspended screen) needs a saved copy of the dues info on the phone. | Owner decides |
+| 7 | **Refund / reversal of a confirmed payment is not built.** The product has no refunds; an overpayment becomes credit that covers later dues, and a confirmed payment cannot be corrected in the portal. Optional: a staff "Reverse payment" button. | Owner decides |
+| 8 | **The DEV fee is ON for testing** (20 / 50 / 5 days, placeholder accounts). After the owner says the full test passed it goes back to 0 (dha_fee_percent and dha_fee_min); real activation needs the owner’s go-ahead. | Owner |
+| 9 | Not yet checked live: the warning message, the overdue state, the daily reminder, push notices for dues on a real Android build, and the customer view in Shariq’s app with the fee on. | Shariq and owner |
+| 10 | A Copy button for account numbers needs a native build (expo-clipboard); today the number is selectable text. | Later |
 | 6 | The customer app needs no change (the fee is inside the quote). Quotes already open when the fee is switched on keep fee 0. | Info |
+
+## 24 Nov 2026: screenshot check of dues payments (migration 0080, services/screenshot-reader)
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Shariq: is an open-source OCR (PaddleOCR) running on our own server what he means by "our own SDK, no 3rd party"? | Shariq |
+| 2 | **Where the reader runs:** a small Linux server and a name (subdomain) pointing at it. Not chosen, not priced (a basic server is probably a few dollars a month; measure PaddleOCR's memory and speed there). | Owner and Shariq |
+| 3 | The owner or Shariq sets the secrets on the server (`SUPABASE_SERVICE_ROLE_KEY`, `READER_WEBHOOK_SECRET`) and in each Supabase project's Vault (`reader_url`, `reader_secret`). Never by Claude. | Owner |
+| 4 | **Accuracy gate:** 30 to 50 small transfers between own accounts (right, wrong amount, wrong account, old date, repeated ID, edited; each app). Target 95% of amounts and transaction IDs read correctly; unsure must be "could not read". The label sets per app are starter sets until then. | Owner |
+| 5 | Run `supabase db push` for 0080 on DEV, and the demo seed `supabase/dev/seed_dues_checks.sql` for the Fri 27 Nov demo (DEV payments waiting with a screenshot are needed). | Owner says go |
+| 6 | Free upgrade for later: match payments against DHA's own bank / JazzCash / Easypaisa statement export. Which receiving accounts can export a statement or send alerts? | Owner and Shariq |
+| 7 | One sentence for the worker in My Dues that the screenshot is read automatically (worker app text, ships with the next worker build). | Owner decides |

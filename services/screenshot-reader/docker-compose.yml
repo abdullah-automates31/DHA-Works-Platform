@@ -1,0 +1,25 @@
+# On the server: copy .env.example to .env, fill it in, then `docker compose up -d --build`.
+# Caddy gets a free HTTPS certificate for READER_DOMAIN by itself, so the secret and the payment id never cross the internet in clear.
+services:
+  reader:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "8080"
+    # no published port: only Caddy can reach it
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - reader
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - READER_DOMAIN=${READER_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+volumes:
+  caddy_data:

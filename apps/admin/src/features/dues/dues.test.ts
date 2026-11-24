@@ -155,3 +155,27 @@ test('the dues card counts paid, left, overdue, waived and pending', () => {
   assert.ok(w);
   assert.deepEqual(workerDueCounts(w), { paid: 2, left: 2, overdue: 1, waived: 1, pending: 2, total: 5 });
 });
+
+test('the screenshot check comes with each payment in the queue and the ledger (migration 0080); no check is null', () => {
+  const check = { verdict: 'flagged', reasons: ['amount_mismatch'], extracted: { amount: 2000, transaction_id: 'TX-1' }, owed: 200, engine: 'test', checked_at: hours(-1) };
+  const l = parseDuesList({
+    total: 0, rows: [], totals: {},
+    pending_payments: [
+      { id: B, worker_id: A, worker_name: 'Usman One', amount: 200, method: 'jazzcash', reference: 'TX-1', created_at: hours(-2), check },
+      { id: 'cccccccc-0000-0000-0000-000000000001', worker_id: A, worker_name: 'Usman One', amount: 50, method: 'bank', reference: 'TX-2', created_at: hours(-2), check: null },
+    ],
+  });
+  assert.equal(l.pending[0]?.check?.verdict, 'flagged');
+  assert.deepEqual(l.pending[0]?.check?.reasons, ['amount_mismatch']);
+  assert.equal(l.pending[0]?.check?.read.amount, 2000);
+  assert.equal(l.pending[1]?.check, null);
+  const w = parseWorkerDues({
+    summary: {}, dues: [],
+    payments: [
+      { id: B, amount: 200, method: 'jazzcash', reference: 'TX-1', status: 'pending', created_at: hours(-2), check },
+      { id: 'cccccccc-0000-0000-0000-000000000002', amount: 5, method: 'office_cash', status: 'confirmed', created_at: hours(-3) },
+    ],
+  });
+  assert.equal(w?.payments[0]?.check?.verdict, 'flagged');
+  assert.equal(w?.payments[1]?.check, null, 'cash recorded by staff has no check');
+});
