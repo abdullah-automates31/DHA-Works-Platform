@@ -86,6 +86,40 @@ export function PrimaryButton({
   );
 }
 
+/** A white button with a green outline, an icon and a label: the quieter choice next to PrimaryButton (Email Support, Back to Home). */
+export function OutlineButton({
+  label,
+  onPress,
+  icon,
+  loading,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  icon?: React.ReactNode;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  const inactive = disabled || loading;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: inactive, busy: loading }}
+      onPress={inactive ? undefined : onPress}
+      style={({ pressed }) => [styles.outline, (disabled || pressed) && styles.buttonDim]}
+    >
+      {loading ? (
+        <ActivityIndicator color={colors.signIn.hero} />
+      ) : (
+        <>
+          {icon}
+          <Text style={styles.outlineText}>{label}</Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
 export function ErrorText({ children }: { children?: string | null }) {
   if (!children) return null;
   return (
@@ -146,6 +180,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   buttonDim: { opacity: 0.6 },
+  outline: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.signIn.hero,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  outlineText: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.signIn.hero },
   buttonText: { fontFamily: fontFamily.extrabold, fontSize: 17, color: '#fff' },
   error: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 18, color: colors.chip.declined.fg },
   link: { fontFamily: fontFamily.bold, fontSize: 14, color: colors.greenDark, textAlign: 'center' },

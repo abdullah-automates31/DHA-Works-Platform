@@ -40,7 +40,7 @@ export default function StatusScreen() {
     return <PendingReview sentAt={profile?.verification_updated_at ?? null} checking={checking} onCheck={() => void check()} />;
   }
   if (kind === 'suspended') {
-    return <SuspendedScreen reason={profile?.suspension_reason} until={profile?.suspended_until} onCheck={() => void check()} checking={checking} />;
+    return <SuspendedScreen reason={profile?.suspension_reason} until={profile?.suspended_until} onCheck={check} checking={checking} />;
   }
   const showReason = kind === 'visit_hq' || kind === 'rejected';
   return (

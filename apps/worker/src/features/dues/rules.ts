@@ -323,6 +323,14 @@ export function whatsappLink(number: string | null | undefined): string | null {
   return null;
 }
 
+/** DHA's support mailbox (owner, 25 Nov). Fixed for now; it can move to an app setting next to the helpline number later. */
+export const SUPPORT_EMAIL = 'dhaworks.developments@gmail.com';
+
+/** A mailto link that opens the phone's mail app with the address, a subject and a starting message filled in. */
+export function supportMailLink(subject: string, body: string): string {
+  return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 /** The text on the profile row and the suspended screen. */
 export function owedText(summary: DuesSummary): string {
   return summary.owed > 0 ? formatRupees(summary.owed) : '';

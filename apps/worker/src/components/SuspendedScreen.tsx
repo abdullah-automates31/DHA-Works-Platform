@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/AppText';
-import { PrimaryButton, TextLink } from '@/components/AuthForm';
+import { OutlineButton, PrimaryButton, TextLink } from '@/components/AuthForm';
 import { Crest } from '@/components/Crest';
 import { DuesPayTo } from '@/components/DuesPayTo';
+import { HomeIcon, MailIcon } from '@/components/icons';
 import { maskPhone } from '@/features/auth/validation';
-import { whatsappLink } from '@/features/dues/rules';
+import { SUPPORT_EMAIL, supportMailLink, whatsappLink } from '@/features/dues/rules';
 import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
 import { dateText } from '@/features/myreports/rules';
@@ -20,7 +22,7 @@ import { colors, fontFamily } from '@/theme';
 // the worker owes, how to pay (My Dues opens even while suspended), and how to reach DHA support. The reason and end date
 // come from the profile the app already holds; the amount and the support number come from my_dues, which a suspended
 // worker may read. Nothing else in the app opens until DHA reactivates the account.
-export function SuspendedScreen({ reason, until, onCheck, checking }: { reason: string | null | undefined; until: string | null | undefined; onCheck: () => void; checking: boolean }) {
+export function SuspendedScreen({ reason, until, onCheck, checking }: { reason: string | null | undefined; until: string | null | undefined; onCheck: () => Promise<void>; checking: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
@@ -31,6 +33,33 @@ export function SuspendedScreen({ reason, until, onCheck, checking }: { reason: 
   const helpline = dues?.helpline ?? null;
   const whatsapp = whatsappLink(helpline);
   const end = dateText(until);
+  const [note, setNote] = useState<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Opens the phone's mail app with DHA's address, a subject and the worker's phone and amount already typed in.
+  async function emailSupport() {
+    setNote(null);
+    const link = supportMailLink(t('dues.suspended.mailSubject'), t('dues.suspended.mailBody', { phone: phone || '-', owed: formatRupees(owed) }));
+    try {
+      await Linking.openURL(link);
+    } catch {
+      if (mounted.current) setNote(t('dues.suspended.noMailApp', { address: SUPPORT_EMAIL }));
+    }
+  }
+
+  // Re-reads the account. If DHA has opened it again, the route gate moves the worker to Home by itself and this screen goes away;
+  // if it is still suspended, say so, so the tap visibly did something.
+  async function backHome() {
+    setNote(null);
+    await onCheck();
+    if (mounted.current) setNote(t('dues.suspended.stillSuspended'));
+  }
 
   return (
     <ScrollView contentContainerStyle={[styles.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]} bounces={false}>
@@ -64,8 +93,15 @@ export function SuspendedScreen({ reason, until, onCheck, checking }: { reason: 
         {owed > 0 ? <PrimaryButton label={t('dues.suspended.payCta')} onPress={() => router.push('/dues')} showArrow={false} /> : null}
         {helpline ? <PrimaryButton label={`${t('dues.suspended.call')} (${helpline})`} onPress={() => void Linking.openURL(`tel:${helpline}`)} showArrow={false} /> : null}
         {whatsapp ? <PrimaryButton label={t('dues.suspended.whatsapp')} onPress={() => void Linking.openURL(whatsapp)} showArrow={false} /> : null}
+        <OutlineButton label={t('dues.suspended.email')} icon={<MailIcon size={20} color={colors.signIn.hero} />} onPress={() => void emailSupport()} />
+        <OutlineButton label={t('dues.suspended.backHome')} icon={<HomeIcon size={20} color={colors.signIn.hero} />} onPress={() => void backHome()} loading={checking} />
+        {note ? (
+          <Text accessibilityRole="alert" style={styles.noContact}>
+            {note}
+          </Text>
+        ) : null}
         {!helpline ? <Text style={styles.noContact}>{t('dues.suspended.noContact')}</Text> : null}
-        <TextLink label={t('temp.status.refresh')} onPress={onCheck} disabled={checking} />
+        <TextLink label={t('temp.status.refresh')} onPress={() => void onCheck()} disabled={checking} />
       </View>
 
       <AppText variant="caption" color={colors.signIn.footnote} style={styles.center}>

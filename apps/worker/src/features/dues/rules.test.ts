@@ -21,6 +21,8 @@ import {
   paymentView,
   sendPayment,
   spanText,
+  SUPPORT_EMAIL,
+  supportMailLink,
   whatsappLink,
   whereText,
   type DuesPayment,
@@ -193,6 +195,16 @@ test('a WhatsApp link only for a mobile number', () => {
   assert.equal(whatsappLink('1092'), null, 'a short helpline has no WhatsApp');
   assert.equal(whatsappLink(''), null);
   assert.equal(whatsappLink(null), null);
+});
+
+test('the support email link has the address, a subject and a message, safely encoded', () => {
+  assert.equal(SUPPORT_EMAIL, 'dhaworks.developments@gmail.com');
+  const link = supportMailLink('Suspended account', 'Phone: +92 300 1234567\nOwed: Rs 160 & more');
+  assert.ok(link.startsWith('mailto:dhaworks.developments@gmail.com?subject='));
+  const url = new URL(link);
+  assert.equal(url.searchParams.get('subject'), 'Suspended account');
+  assert.equal(url.searchParams.get('body'), 'Phone: +92 300 1234567\nOwed: Rs 160 & more', 'a line break and an & survive the trip');
+  assert.ok(!link.includes(' ') && !link.includes('\n'), 'no raw spaces or line breaks in the link');
 });
 
 const detailAnswer = {
