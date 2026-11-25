@@ -125,7 +125,8 @@ https://dhaworks-admin-portal.vercel.app (the badge shows "Not checked yet" unti
 Shariq asked 25 Nov ("any update on the whole process? can we test?"). Suggested reply: rules and admin screen done and on DEV; reader written but
 not running on a server yet; the admin side can be tested now with test payments; the library question is answered.
 
-### Step C. Make PaddleOCR work on the dev PC (no Docker), using FAKE screenshots only
+### Step C. DONE 25 Nov (kept for the record): PaddleOCR on the dev PC with FAKE screenshots
+Result: PaddleOCR 3.7.0 + paddlepaddle 3.3.1 work; 5 fakes plus dark, blurred and compressed copies read 100 of 100 fields correctly, about 5 s each (small PP-OCRv6 models, 1200 px, oneDNN off). See services/screenshot-reader/README.md. Venv is `services/screenshot-reader/.venv`; run `tools	ry_ocr.py`. NEXT is Step D (real screenshots) and Step E (server). The text below is the original instruction.
 Needs about 1 to 2 GB of downloads. Nothing is sent out. Do it in a throwaway Python venv inside `services/screenshot-reader`:
 ```
 cd services/screenshot-reader
@@ -211,5 +212,7 @@ Optional: one sentence in the worker app `apps/worker/src/i18n/en.ts` (`dues.for
 > Hard rules: no third-party service of any kind (no Claude, Google or hosted OCR; images must never leave our own system); an open-source
 > library running on our own server is allowed (Shariq confirmed). No Docker on this PC. Work on branch dev only. Ask me before any
 > `supabase db push`, deploy or merge. Never print or commit secrets.
-> Today's task: Step C of the handoff (make PaddleOCR read fake payment screenshots on this PC in a venv, then fix paddle.py and the parsers
-> until amount and transaction ID come out right, with tests). Show me the result before you commit.
+> Step C is already done (PaddleOCR works on fake screenshots; see the README in services/screenshot-reader). Next task: Step D. Put the real
+> screenshots I give you in services/screenshot-reader/fixtures/real (git-ignored), write the answer .json for each, run tools/try_ocr.py on them,
+> and tune app/parsers/extract.py until amount and transaction ID are right (anything unsure must come out as unknown, never a guess). Add tests.
+> Show me the accuracy table before you commit.

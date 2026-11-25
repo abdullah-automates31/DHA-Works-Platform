@@ -21,7 +21,7 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def prepare(data: bytes, max_side: int = 1600) -> Image.Image:
+def prepare(data: bytes, max_side: int = 1200) -> Image.Image:
     """Open, honour the phone's rotation flag, drop any alpha, and shrink so the long side is at most max_side (never enlarge)."""
     try:
         img = Image.open(io.BytesIO(data))
@@ -44,7 +44,7 @@ def prepare(data: bytes, max_side: int = 1600) -> Image.Image:
     return img
 
 
-def read_picture(data: bytes, engine: Engine, max_side: int = 1600) -> tuple[dict[str, object], str]:
+def read_picture(data: bytes, engine: Engine, max_side: int = 1200) -> tuple[dict[str, object], str]:
     """(fields, sha256 of the original bytes). A picture that cannot be opened gives empty fields: the database then says "could not read"."""
     digest = sha256(data)
     try:

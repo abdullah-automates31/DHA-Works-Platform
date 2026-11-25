@@ -104,13 +104,17 @@ def parse_transaction_id(text: str) -> str | None:
 
 
 _MASK = re.compile(r"[*xX•·#]")
+_DATEISH = re.compile(r"(?<!\d)\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}(?!\d)|(?<!\d)\d{4}[-/.]\d{1,2}[-/.]\d{1,2}(?!\d)|(?<!\d)\d{1,2}:\d{2}(?::\d{2})?(?!\d)")
 
 
 def visible_account(text: str) -> str | None:
     """Only what is really shown of an account number. '0300 *** 4567' -> '4567'; 'PK36HABB0000123456789001' stays whole; a phone
     number '+92 300 1234567' -> '923001234567'. Fewer than 4 visible trailing characters -> None (the receiver's name decides)."""
-    m = re.search(r"(?:PK\d{2}[A-Z0-9]{4}[0-9]{16})|(?:[+0-9][0-9\s\-]{6,}[0-9])|(?:[0-9*xX•·#\s\-]{6,}[0-9]{2,})", text or "", re.I)
-    if not m:
+    # An IBAN; or a number with at least 10 digits (a phone: 03001234567, +92 300 1234567); or a MASKED number (at least one * x # mark).
+    # A short run of digits (a date such as "2026 03:45", an amount, a time) is never an account.
+    text = _DATEISH.sub(" ", text or "")  # a date or a time is never part of an account
+    m = re.search(r"PK\d{2}[A-Z0-9]{4}\d{16}|\+?\d(?:[\s\-]?\d){9,}|[0-9xX*•·#\s\-]*[*xX•·#][0-9xX*•·#\s\-]*\d{2,}", text, re.I)
+    if not m or len(re.sub(r"\s", "", m.group(0))) < 6:
         return None
     token = m.group(0)
     parts = _MASK.split(token)

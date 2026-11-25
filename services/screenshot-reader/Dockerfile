@@ -1,5 +1,5 @@
 # DHA's own screenshot reader. Built and run on the SERVER only (never on the developer PC: owner decision, 24 Nov 2026).
-# NOT YET BUILT: written from the PaddleOCR documentation, to be built and checked on the server (see README).
+# Built on the server (never on the developer PC). The engine itself WAS run on a Windows PC on 25 Nov 2026 (see README); this image build is not yet tried.
 FROM python:3.11-slim
 
 # libraries PaddleOCR's image code needs

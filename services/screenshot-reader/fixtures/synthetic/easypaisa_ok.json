@@ -1,0 +1,7 @@
+{
+  "app": "easypaisa",
+  "amount": 1250,
+  "transaction_id": "98765432101",
+  "receiver_name": "DHA WORKS",
+  "status": "success"
+}

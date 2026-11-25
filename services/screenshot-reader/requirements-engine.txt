@@ -1,5 +1,5 @@
-# The OCR engine. Installed on the SERVER only (heavy; the tests do not need it). Not run here yet: pin exact versions
-# after the first install on the server (pip freeze) and keep them, because PaddleOCR's answer format changed between 2.x and 3.x.
-paddlepaddle
-paddleocr
-numpy
+# The OCR engine. Installed on the SERVER only for deployment (heavy; the unit tests do not need it).
+# Versions below were run and measured on 25 Nov 2026 (Windows, CPU, Python 3.11). Keep them: the answer format changed between 2.x and 3.x.
+paddlepaddle==3.3.1
+paddleocr==3.7.0
+numpy==2.3.5

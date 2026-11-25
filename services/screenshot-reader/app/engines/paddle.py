@@ -1,11 +1,12 @@
 """PaddleOCR (open source, runs on our own server, CPU only). The image never leaves this machine.
 
-NOT YET RUN: PaddleOCR is installed only on the server (see README), so this file is checked by unit tests on the shape of its answers
+RUN AND MEASURED 25 Nov 2026 (paddlepaddle 3.3.1, paddleocr 3.7.0, CPU, Windows): reads fake screenshots correctly in about 5 s each. Unit tests check the shape of its answers
 (normalise()), not against the real library. PaddleOCR 2.x returns [[box, (text, score)], ...] per image; 3.x returns result objects with
 rec_texts / rec_scores / rec_polys. Both are handled. Pin the version in requirements.txt and run the accuracy set before trusting it.
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from PIL import Image
@@ -67,19 +68,31 @@ class PaddleEngine:
     name = "paddleocr"
 
     def __init__(self) -> None:
-        from paddleocr import PaddleOCR  # imported here so the tests and the stub never need it
+        import paddleocr  # imported here so the tests and the stub never need it
+        from paddleocr import PaddleOCR
 
-        try:
+        self._v3 = int(str(getattr(paddleocr, "__version__", "3")).split(".")[0]) >= 3
+        if self._v3:
+            # 3.x. A phone screenshot is flat and upright, so the document-photo steps (rotation and un-warping) are switched off:
+            # faster, and less to go wrong. oneDNN is off because it crashes the 3.x CPU runtime on Windows
+            # ("ConvertPirAttribute2RuntimeAttribute not support", tested 25 Nov 2026 with paddlepaddle 3.3.1 / paddleocr 3.7.0).
+            # The "small" PP-OCRv6 models read a 1000 px screenshot in about 5 s on a plain CPU with the same text right as the "medium"
+            # ones (about 30 s), measured 25 Nov 2026 on fake screenshots. READER_OCR_SIZE=medium switches back if real ones read worse.
+            size = os.environ.get("READER_OCR_SIZE", "small")
+            self._ocr = PaddleOCR(
+                text_detection_model_name=f"PP-OCRv6_{size}_det",
+                text_recognition_model_name=f"PP-OCRv6_{size}_rec",
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                enable_mkldnn=False,
+            )
+        else:
             self._ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)  # 2.x
-        except (TypeError, ValueError):
-            self._ocr = PaddleOCR(use_textline_orientation=True, lang="en")  # 3.x
 
     def read(self, image: Image.Image) -> list[OcrLine]:
         import numpy as np
 
         arr = np.array(image.convert("RGB"))
-        try:
-            raw = self._ocr.ocr(arr, cls=True)  # 2.x
-        except TypeError:
-            raw = self._ocr.predict(arr)  # 3.x
+        raw = self._ocr.predict(arr) if self._v3 else self._ocr.ocr(arr, cls=True)
         return normalise(raw)

@@ -13,7 +13,7 @@ class Settings:
     engine: str = "paddle"          # "paddle" or "stub"
     max_concurrency: int = 2
     max_image_bytes: int = 5 * 1024 * 1024   # the dues-proof bucket allows 5 MB
-    max_side_px: int = 1600
+    max_side_px: int = 1200
     bucket: str = "dues-proof"
 
     @staticmethod

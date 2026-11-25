@@ -58,6 +58,13 @@ def test_visible_account():
     assert visible_account("+92 300 1234567") == "923001234567"
     assert visible_account("03001234567") == "03001234567"
     assert visible_account("DHA Works") is None
+    # found by the first real OCR run (25 Nov): digits of a date or a time were read as an account
+    assert visible_account("24 Nov 2026 03:45 PM") is None
+    assert visible_account("23 Nov 2026 11:20 AM") is None
+    assert visible_account("24-11-2026 16:02") is None
+    assert visible_account("Rs. 1,250.00") is None
+    assert visible_account("0300 *****67") is None  # two digits shown: the name decides
+    assert visible_account("PK36XXXX0000001234567890") == "0000001234567890"
 
 
 def test_status():
