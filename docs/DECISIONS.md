@@ -303,3 +303,7 @@ The 16 Nov rule (a busy worker only quotes a booked time, no finish estimate) is
 **Docker on the server only (owner, 24 Nov).** The 20 Nov "no Docker" decision is about the developer PC and the local Supabase stack and stands. The reader runs in a container on a server (plain Docker Compose with an HTTPS front); never start Docker on the PC.
 
 **Two phases (owner, 24 Nov).** Phase 1 (done): migration 0080, the rules, the admin portal badge and comparison, tests, a demo seed. Phase 2: the real OCR engine on a server, the per-app parsers tuned on 30 to 50 sample screenshots, then switched on. Test screenshots must be synthetic, or the owner's own small transfers kept out of git (the repository is public).
+
+## 25 Nov 2026: Shariq confirms open-source libraries are fine (screenshot check)
+
+Shariq on WhatsApp: "It's okay to use libraries. Just don't share images outside of our system." So the reader may use an open-source OCR library (PaddleOCR) inside our own code on our own server. The hard rule stays: no payment screenshot is ever sent to any outside company or service (no Claude/Anthropic, Google, or hosted OCR API). Model files are downloaded once and bundled into our image. This closes the open question about "own SDK" in the 24 Nov entry.

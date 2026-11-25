@@ -224,7 +224,7 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Shariq: is an open-source OCR (PaddleOCR) running on our own server what he means by "our own SDK, no 3rd party"? | Shariq |
+| 1 | Shariq: is an open-source OCR (PaddleOCR) running on our own server what he means by "our own SDK, no 3rd party"? | ANSWERED by Shariq 25 Nov: "It's okay to use libraries. Just don't share images outside of our system." (see DECISIONS 25 Nov) |
 | 2 | **Where the reader runs:** a small Linux server and a name (subdomain) pointing at it. Not chosen, not priced (a basic server is probably a few dollars a month; measure PaddleOCR's memory and speed there). | Owner and Shariq |
 | 3 | The owner or Shariq sets the secrets on the server (`SUPABASE_SERVICE_ROLE_KEY`, `READER_WEBHOOK_SECRET`) and in each Supabase project's Vault (`reader_url`, `reader_secret`). Never by Claude. | Owner |
 | 4 | **Accuracy gate:** 30 to 50 small transfers between own accounts (right, wrong amount, wrong account, old date, repeated ID, edited; each app). Target 95% of amounts and transaction IDs read correctly; unsure must be "could not read". The label sets per app are starter sets until then. | Owner |
