@@ -232,3 +232,14 @@ A worker with a job in progress may take another job. The quote is held back unt
 - **Tested:** pgTAP (`admin_password_reset`, `admin_reset_skip_code`), 17 Deno tests and the reset attack drill (71 checks) with real GoTrue: recover, magic link and OTP sessions, direct password update, replay, wrong codes, locks, bot check and session kill.
 - **Known limits (owner accepted):** the reset code and the sign-in code share an inbox, so an email break-in can still take over an admin; mitigation is the admin safety guide (2-Step Verification on the admin's mailbox). The "not an admin" message lets someone learn which addresses are admins, slowly. After a reset the first password sign-in skips the code once (10 minutes).
 - No authenticator app (owner decision, 19 Nov).
+
+
+## 14. Dues payment screenshots and the screenshot reader (24 to 26 Nov 2026)
+
+- **What the pictures hold:** a worker's payment screenshot shows names, account numbers and amounts. It is stored in the private bucket `dues-proof` (folder per worker, signed links for staff only, migration 0073). The repository is public, so no real screenshot may ever be committed (`fixtures/real/` and the accuracy reports are git-ignored).
+- **Trust boundary of the reader:** the reader is the only place a screenshot is read by a program, and it runs on OUR machine. **No image leaves our own system** (Shariq, 25 Nov): no Claude, Google or hosted OCR. Open-source libraries are allowed. The reader logs ids and counts only, never what was read.
+- **The reader cannot decide:** it returns fixed fields; the database function `dues_check_apply` applies the rules. Text written inside a picture cannot change a rule. The function is callable by the service role only (checked on DEV 26 Nov: anonymous and signed-in roles cannot run it or read `dues_payment_checks`; the table has no grants for any app role, the service role included).
+- **The service-role key** is typed on the reader server only. It is a full-access key: never in git, chat, an app or a browser bundle. The inbound call is protected by a shared secret (`x-reader-secret`, constant-time compare) kept in Vault and on the server; a wrong secret gets 401.
+- **Limits:** an edited screenshot can still pass a "matches" badge and it does not prove the money arrived; the admin keeps the final confirm. The reader refuses files over 5 MB (checked while downloading). One engine is shared, so reads take turns.
+- **Status:** OFF (Shariq, 26 Nov). A later P2M integration would confirm payments from the provider's record instead.
+- **Another AI tool in the repository:** Kilo Code and opencode edit the working tree at the owner's request. Review `git diff` before any commit; scan for keys (done 26 Nov, none found).

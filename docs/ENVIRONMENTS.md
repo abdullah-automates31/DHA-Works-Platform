@@ -108,3 +108,13 @@ Needs from the user before the first real build: an Expo account and `eas init` 
 ## 21 Nov 2026: iPhone without an Apple Developer account
 
 The Apple Developer account is bought next month (Shariq), so until then there is no signed iOS build, no TestFlight and no iOS push. What works on an iPhone meanwhile: the **worker app in Expo Go** (Metro on the LAN, or a published EAS Update opened in Expo Go; push is skipped on iOS), and the **customer app built by Shariq from Xcode with a free Apple ID** (a 7-day certificate, installed on his own device). The demo plan around this is in [DEMO-SCRIPT.md](DEMO-SCRIPT.md); the decision is in DECISIONS.md 21 Nov.
+
+
+## 24 to 26 Nov 2026: the screenshot reader (dormant) and its environment
+
+- **Runs where:** on the developer PC in a git-ignored venv (`services/screenshot-reader/.venv`, Python 3.11, PaddleOCR 3.7.0 and paddlepaddle 3.3.1, pinned in `requirements-engine.txt`; the OCR models are cached in `C:\Users\Abdullah Ali\.paddlex`). **Docker is for a SERVER only, never on the developer PC** (owner, 20 and 24 Nov). No server or domain is chosen. The reader is OFF (Shariq, 26 Nov).
+- **Server environment (typed on the server only, never in git or chat):** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `READER_WEBHOOK_SECRET` (at least 16 random characters), `READER_DOMAIN`, `READER_ENGINE` (paddle or stub), `READER_MAX_CONCURRENCY`, optional `READER_OCR_SIZE` (small by default, medium is 6 times slower). Template: `services/screenshot-reader/.env.example`.
+- **Per Supabase project (Vault, one time, by the owner or Shariq):** `reader_url` and `reader_secret`. Without them the trigger does nothing. DEV has neither today (checked 26 Nov), which is why the check is off.
+- **The service-role key** gives full database access: it belongs only on the server, never in the repository, a chat or the phone apps. A secret scan of the repository on 26 Nov found none.
+- **Real screenshots** go only in `services/screenshot-reader/fixtures/real/` (git-ignored); the repository is public. The accuracy reports (`accuracy_report.csv`, `accuracy_summary.txt`) are git-ignored too.
+- **Hosted TEST project** (`bqjzzjhwcxvomcabpyfm`): migration 0080 is applied there; all 51 pgTAP files pass (26 Nov).

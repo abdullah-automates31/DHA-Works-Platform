@@ -169,3 +169,24 @@ Done by the owner on the phone and in the portal against DEV (fee 20 percent, mi
 ## Screenshot check of dues payments (24 Nov 2026, migration 0080)
 
 Automated: pgTAP `supabase/tests/dues_screenshot_check.test.sql` (every rule, exact amounts, part payments, reused ID and picture, receiver matching, nothing readable, closed table and functions for every app role, staff see the check and the worker never does, the trigger never breaks a payment); admin `features/dues/screenCheck.test.ts` and the parse test in `dues.test.ts`; reader service `services/screenshot-reader/tests` (pytest, no OCR engine needed). Results on 24 Nov: pgTAP 51 files pass on the hosted TEST project, admin 149, reader 47. **Not yet done:** the accuracy run on 30 to 50 real small-transfer screenshots (see services/screenshot-reader/README.md), the real OCR engine on a server, and a live check on DEV (needs `db push` and the Vault entries).
+
+
+## Added 26 Nov: full check of everything that needs no approval (dues, reader, worker app)
+
+Run on 26 Nov 2026 by Claude Code; results:
+
+| Check | Result |
+|---|---|
+| pgTAP, hosted TEST project (`node scripts/test-db-hosted.cjs`) | all 51 files pass (includes `dues.test.sql` and `dues_screenshot_check.test.sql`) |
+| Worker: typecheck, lint, `npm run worker:test` | clean, 361 pass |
+| Worker: `npx expo export --platform android` | bundles (4.2 MB) |
+| Admin: typecheck, lint, tests, build | clean, 150 pass (134 in the standalone repository) |
+| Edge Functions: `deno test` send-push and admin-2fa | 11 and 15 pass |
+| Reader: pytest (`services/screenshot-reader`) | 53 pass (6 new on the real `Io` class with a mock transport) |
+| Real PaddleOCR on 8 fake screens (`tools/try_ocr.py`) | 35 of 35 checked fields right, about 4.5 s each; 15 dark, blurred and compressed copies also 75 of 75 |
+| DEV migrations (`supabase migration list --linked`) | local and remote match through 0080 |
+| DEV objects of 0080 | trigger and crons present; anon and authenticated cannot read `dues_payment_checks` or run `dues_check_apply`; Vault `reader_url` and `reader_secret` absent (reader off) |
+| Secret scan of tracked and untracked files | none found |
+
+**Dues, what each side was checked to do:** the worker sees dues, paid and left (`my_dues`, checked on DEV); sending a payment needs a screenshot and a transaction ID, refuses an amount above what is owed, refuses a repeated transaction ID, allows at most 3 pending (`dues.test.sql`); staff see paid so far, left, overdue, next due, per-job fee, paid and left, each payment with when it was sent, the screenshot link, status and who confirmed it, and (from 26 Nov) a last-payment line.
+**Not done:** nothing was tried on a phone (crest, Email Support, Back to Home); the paying path was not run live on DEV because the test worker owes Rs 0 (a new completed job creates a new due); the accuracy run on 30 to 50 REAL screenshots; the Docker image was never built; the reader is off by Shariq's decision.

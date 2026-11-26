@@ -2,7 +2,7 @@
 
 A home-services marketplace for DHA Karachi. A verified resident posts a repair job with photos, several **verified** workers send **itemised quotes**, the resident accepts one, the work is done, and the customer pays **cash**. DHA staff verify every worker and resident and handle reports.
 
-> Status (21 Nov 2026, demo week; the demo is Fri 27 Nov, see [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md)): **database and mobile API built and live on the hosted DEV project (migrations through 0070); the Worker app and the admin portal (screens A01 to A15) are built and tested; the customer app is Shariq Bhai's separate repository.** The admin portal is deployed on Vercel. Start with [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and find release versions in [docs/RELEASES.md](docs/RELEASES.md).
+> Status (26 Nov 2026; newest facts in [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and the 22 to 26 Nov update, and in [docs/HANDOFF-SCREENSHOT-CHECK.md](docs/HANDOFF-SCREENSHOT-CHECK.md); the 27 Nov demo is NOT DHA Works): **database and mobile API built and live on the hosted DEV project (migrations through 0080); the Worker app and the admin portal (screens A01 to A15) are built and tested; the customer app is Shariq Bhai's separate repository.** The admin portal is deployed on Vercel. Start with [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and find release versions in [docs/RELEASES.md](docs/RELEASES.md).
 
 ## The three products
 
@@ -28,7 +28,8 @@ Read in this order if you are new.
 | 6 | [docs/DATA-MODEL.md](docs/DATA-MODEL.md) | Summary of tables and database rules |
 | 6a | [docs/DB-API-DESIGN.md](docs/DB-API-DESIGN.md) | **Source of truth for the database and mobile APIs:** state machine, tables, RPCs per screen, RLS, open questions |
 | 6b | [docs/HANDOVER.md](docs/HANDOVER.md) | **Read first in a new session:** current state, what is built, what is pending, exact next steps |
-| 6c | [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md) | **The 27 Nov demo:** devices, clean demo data, the 9-step story, checklists, things not to show, E2E bug log |
+| 6c | [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md) | **History (the 27 Nov demo is not DHA Works):** devices, clean demo data, the 9-step story, checklists, things not to show, E2E bug log |
+| 6d | [docs/HANDOFF-SCREENSHOT-CHECK.md](docs/HANDOFF-SCREENSHOT-CHECK.md) | **Dues screenshot check (reader OFF by Shariq 26 Nov):** what is built, rules, DEV state, next steps, a prompt for another AI tool |
 | 7 | [docs/SECURITY.md](docs/SECURITY.md) | What we protect, auth, RLS, storage, abuse controls, incident response |
 | 8 | [docs/UI-UX.md](docs/UI-UX.md) | Design direction, palette, screens, component rules, worker and admin plans |
 | 9 | [docs/TESTING.md](docs/TESTING.md) | Test strategy and the tests that matter most |

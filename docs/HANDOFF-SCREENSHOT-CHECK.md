@@ -218,3 +218,17 @@ Optional: one sentence in the worker app `apps/worker/src/i18n/en.ts` (`dues.for
 > screenshots I give you in services/screenshot-reader/fixtures/real (git-ignored), write the answer .json for each, run tools/try_ocr.py on them,
 > and tune app/parsers/extract.py until amount and transaction ID are right (anything unsure must come out as unknown, never a guess). Add tests.
 > Show me the accuracy table before you commit.
+
+----------------------------------------------------------------------------------------------------
+## 11. STATUS AT THE END OF 26 NOV 2026 (newest; where this differs from the text above, this wins)
+
+- **Decision:** Shariq: reader OFF, DHA approves dues by hand. The QR and "Verify payment" flow is the P2M integration, later, after DHA is onboarded. Nothing to deploy for the reader now.
+- **Steps A to E above are ON HOLD.** Do not merge portal PR #1, set the Vault entries, build a server or write a local runner unless the owner says so.
+- **Step C is DONE** (PaddleOCR runs; fake screenshots read 100 percent, about 5 s each). Reader tests are 53, not 47. Pinned: paddlepaddle 3.3.1, paddleocr 3.7.0, numpy 2.3.5; small PP-OCRv6 models, 1200 px, oneDNN off, reads take turns (a lock), downloads refuse files over 5 MB while streaming.
+- **A real test happened:** on 25 Nov someone inserted a Rs 50 JazzCash test payment on DEV directly (no `dues_payment_submitted` audit row) and ran the full reader chain once with the service key on this PC; it was flagged correctly (`amount_more_than_owed`, `txn_mismatch`, because the worker owed Rs 0). That payment is still pending in the queue.
+- **DEV data now:** the test worker has 5 dues, Rs 260 in total, all paid. The Rs 250 payment of 22 Nov was voided on 25 Nov (owner's OK). To test paying, a new job must be completed (the 20 percent fee, minimum Rs 50, is on).
+- **Also done 25 and 26 Nov (not OCR):** worker crest without the green square, Email Support and Back to Home on the Suspended screen, admin "Last payment / Latest screenshot sent" line (monorepo dev; standalone PR #2 not merged). Kilo Code's glass tab bar was reverted at the owner's request (patch kept outside the repository).
+- **Everything checked on 26 Nov:** see docs/TEST-PLAN.md "Added 26 Nov". All green.
+- **The 27 Nov demo is not DHA Works** (owner): do not prepare a DHA Works demo.
+- **Waiting on the owner:** Shariq's first priority; decisions on portal PRs #1 and #2; later, 30 to 50 real screenshots and a server only if the reader is switched on.
+- **Other tools:** Kilo Code and opencode also change this repository. Always `git status` and `git diff` first; their scratch scripts are in `C:\Users\Abdullah Ali\kilo-scratch\`.

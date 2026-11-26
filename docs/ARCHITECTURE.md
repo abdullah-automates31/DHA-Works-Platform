@@ -141,3 +141,24 @@ DHA Karachi is bounded, so load is small. Free tiers of Supabase, Vercel and Exp
 | 4 | WhatsApp OTP provider | Twilio or Twilio Verify with a WhatsApp sender; account, sender and cost still to configure |
 | 5 | App names and store accounts | Create the Google Play developer account near M11 |
 | 6 | iOS | Later; no Mac available |
+
+
+## 14. Screenshot reader (built 24 to 26 Nov 2026, switched OFF by Shariq on 26 Nov)
+
+A fourth moving part, kept dormant. Full record: [HANDOFF-SCREENSHOT-CHECK.md](HANDOFF-SCREENSHOT-CHECK.md); decisions: [DECISIONS.md](DECISIONS.md) 24, 25 and 26 Nov.
+
+```
+worker sends a dues payment (submit_dues_payment, unchanged)
+  -> trigger dues_payments_screenshot_check -> private.post_screenshot_check -> net.http_post to the reader (Vault reader_url / reader_secret)
+  -> reader (services/screenshot-reader: FastAPI + PaddleOCR + our own parsers, on OUR machine): verify secret, ask dues_check_context,
+     download from the private bucket dues-proof, SHA-256, shrink to 1200 px, OCR, parse fixed fields
+  -> dues_check_apply (service role only) applies the rules and stores a verdict in the closed table dues_payment_checks
+  -> admin_dues_list / admin_dues_worker return `check` -> the admin portal shows a badge; staff still confirm or reject by hand
+```
+
+- **The reader only reads; the database decides.** The reader returns app, amount, transaction ID, date, receiver and status. Fixed rules in `dues_check_apply` produce the verdict, so text inside a picture cannot change a rule.
+- **Never breaks a payment.** The trigger never raises. If the reader is down, the payment stays in the manual queue ("Not checked yet") and the cron `dw-dues-check-retry` asks again every 5 minutes for an hour.
+- **No third party.** PaddleOCR is an open-source library running inside our own code (Shariq, 25 Nov: libraries are fine, no image outside our system). No Claude, Google or hosted OCR. Models are downloaded once; for a server they are bundled into the image.
+- **Status:** the database part (migration 0080) and the portal badge code exist. The reader runs on a Windows PC with the venv; the Docker image (server only, never on the developer PC) was never built; no server or domain is chosen. **It does nothing today** because the Vault entries do not exist. Switching it on needs: a server, `.env` secrets typed on the server by the owner or Shariq, the two Vault entries, merging portal PR #1, and the accuracy run on 30 to 50 real screenshots.
+- **Measured (fake screenshots, CPU, Windows):** about 5 seconds per picture with the small PP-OCRv6 models; the medium models take about 30 seconds with the same text. oneDNN must stay off on Windows (Paddle 3.x crashes with it).
+- **Later (P2M):** the owner's QR and "Verify payment" flow is a payment-provider integration to be done after DHA is onboarded. It would confirm payments from the provider's own record, stronger than reading a picture.

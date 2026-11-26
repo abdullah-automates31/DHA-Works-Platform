@@ -241,3 +241,14 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 | 3 | QR dues flow: where the QR comes from: decided when P2M onboarding happens (the provider supplies it). | Later |
 | 4 | QR dues flow: replace or sit beside the screenshot form: decide at P2M time. | Later |
 | 5 | Reader is OFF: hide the "Not checked yet" badge in the admin Dues queue until it is switched on? PR #1 (standalone portal) is NOT merged meanwhile. | Owner |
+
+## 26 Nov 2026: items added at the end of the day
+
+| # | Item | Status |
+|---|---|---|
+| 6 | Standalone portal PR #2 ("Last payment" line on the worker Dues tab): merge it? Merging deploys to Vercel; no database change. | Owner |
+| 7 | Standalone portal PR #1 (screenshot-check badge): keep it unmerged while the reader is off (every payment would say "Not checked yet") | Owner agrees or decides |
+| 8 | Make the support email on the Suspended screen a staff-editable setting (migration 0081 + Admin Settings field)? Today it is fixed in the app. | Owner, later |
+| 9 | The DEV DHA fee (20 percent, minimum Rs 50) is still ON for testing: set it back to 0 when the owner says the dues test passed | Owner |
+| 10 | P2M integration (QR and "Verify payment"): needs the payment provider, DHA's merchant account and a plan for how it sits next to the manual flow | After DHA is onboarded |
+| 11 | If the reader is ever switched on: choose a server and domain, set `.env` and the Vault entries, merge PR #1, run the accuracy test on 30 to 50 real screenshots | Only if Shariq changes his mind |

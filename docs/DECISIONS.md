@@ -321,3 +321,11 @@ Open questions for the owner and Shariq (also in OPEN-QUESTIONS 26 Nov): what is
 ### 26 Nov 2026, clarification from the owner (Shariq's answer): the QR flow is the P2M integration, to be done after DHA is onboarded
 
 The QR details screen and "Verify payment" button Shariq described above are the **P2M integration** (merchant QR payments). It is built **later, once DHA is successfully onboarded with the payment provider**; it is not a task for now and not a quick app screen. Until then the current flow stays: the worker pays by JazzCash, Easypaisa, bank and so on, attaches the screenshot and transaction ID, and **DHA staff approve the due by hand** in the admin portal. The screenshot reader stays off (see above). When P2M goes live, "Verify payment" would confirm a payment from the provider's own record instead of from a screenshot, which is a stronger check than reading a picture. Needs then: the provider and its API (not chosen), the merchant account for DHA, and a decision on how it sits next to the manual flow.
+
+### 26 Nov 2026, owner decisions (worker app, demo, tools)
+
+1. **The 27 Nov demo is NOT a DHA Works demo.** The owner said tomorrow's demo is for another thing (his word: Muayana) and DHA Works stays out of it. No DHA Works demo is prepared; stay inside DHA Works.
+2. **Liquid-glass floating tab bar for iPhone: reverted.** The owner tried it with Kilo Code to see it on his iPhone and does not want it now; decide at production time. The original bar stays; the tried version is saved outside the repository as `kilo-tabbar-liquid-glass.patch`.
+3. **Support email on the Suspended screen:** the address `dhaworks.developments@gmail.com` is fixed in the worker app for now (owner, 25 Nov). A staff-editable setting is a later option (needs a migration).
+4. **Other AI tools:** the owner also uses Kilo Code and opencode on this repository. Their changes are reviewed (`git diff`) before anyone commits; throwaway scripts live in `C:\Users\Abdullah Ali\kilo-scratch\`.
+5. **Autonomy:** the owner asked Claude to do, without asking, all work that needs no approval (checks, tests, reviews, small fixes on `dev`). Approval is still needed for: `db push` to DEV, function deploys, merging anything that deploys (the standalone portal's `main`), changing DEV settings such as the fee, and touching secrets.

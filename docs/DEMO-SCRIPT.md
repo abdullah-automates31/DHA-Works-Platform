@@ -1,5 +1,7 @@
 # DHA Works demo: script, seed data and E2E checklist
 
+> **26 Nov 2026 (owner): the 27 Nov demo is NOT a DHA Works demo.** Tomorrow's demo is for another thing and DHA Works stays out of it. Do not prepare this demo; this file is kept as history and for any later DHA Works demo.
+
 Written 21 Nov 2026 for the demo on **Fri 27 Nov**. Three products, one backend: the worker app, the customer (resident) app and the admin portal.
 Decisions behind it: the demo needs iPhones, but the Apple Developer account is bought next month, so there is no signed iOS build and **no iOS push** this week (memory: project-demo-week-iphone-plan).
 
