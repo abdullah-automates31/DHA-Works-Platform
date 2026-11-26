@@ -19,11 +19,12 @@ test('signing out lives in Settings only', () => {
   assert.ok(!/signOut/.test(HELP), 'Help has no Sign out');
 });
 
-test('the Profile menu does not repeat what Settings already has', () => {
-  for (const repeated of ["'/help'", "'/areas'", 'setReminders', 'saveTrades', "'profile.help'", "'profile.signOut'", "'profile.category'", "'profile.areas'"]) {
+test('the Profile menu does not repeat what Settings already has (the Job reminders switch stays on Profile by choice of the owner)', () => {
+  for (const repeated of ["'/help'", "'/areas'", 'saveTrades', "'profile.help'", "'profile.signOut'", "'profile.category'", "'profile.areas'"]) {
     assert.ok(!PROFILE.includes(repeated), `Profile must not contain ${repeated}: it lives in Settings`);
   }
   assert.ok(PROFILE.includes("router.push('/settings')"), 'Profile links to Settings');
+  assert.ok(PROFILE.includes('onToggleReminders') && PROFILE.includes("'profile.reminders'"), 'the Job reminders switch is on Profile');
 });
 
 test('Settings has one Help and support row, not several overlapping ones', () => {

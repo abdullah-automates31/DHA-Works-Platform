@@ -17,15 +17,15 @@ import { useMyProfile } from '@/lib/profile';
 import { colors, fontFamily } from '@/theme';
 
 // W16 Profile (worker/screens/w-profile.dc.html): name, trade and areas, "Verified worker", this week's cash,
-// rating and jobs done, an "Available today" switch, My dues, My introduction and a link to Settings. Everything else (trade, areas,
-// reminders, help, signing out) lives in Settings only (Shariq, 26 Nov: no item in two places). The figures come
+// rating and jobs done, an "Available today" switch, the Job reminders switch (the owner wants it here too, 26 Nov), My dues, My introduction and a link to
+// Settings. Everything else (trade, areas, help, signing out) lives in Settings only (Shariq, 26 Nov: no item in two places). The figures come
 // from get_my_earnings (cash counts only jobs whose two amounts matched). The mock's other rows (visit fee,
 // language, reviews) are not drawn in the approved rows and are not built.
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state: profileState } = useMyProfile();
-  const { data, reload, setAvailable } = useProfileSummary();
+  const { data, reload, setAvailable, setReminders } = useProfileSummary();
   const duesState = useMyDues().state;
   const owedValue = duesState.status === 'ready' ? owedText(duesState.dues.summary) : '';
   const [switchError, setSwitchError] = useState(false);
@@ -39,6 +39,11 @@ export default function ProfileScreen() {
   async function onToggle(value: boolean) {
     setSwitchError(false);
     if (!(await setAvailable(value))) setSwitchError(true);
+  }
+
+  async function onToggleReminders(value: boolean) {
+    setSwitchError(false);
+    if (!(await setReminders(value))) setSwitchError(true);
   }
 
   return (
@@ -88,6 +93,19 @@ export default function ProfileScreen() {
                   accessibilityLabel={t('profile.available')}
                   value={ready.available}
                   onValueChange={(value) => void onToggle(value)}
+                  trackColor={{ false: '#C9CFCB', true: colors.greenDark }}
+                  thumbColor="#fff"
+                />
+              </View>
+              <View style={[styles.row, styles.divider]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>{t('profile.reminders')}</Text>
+                  <Text style={styles.rowHint}>{t(ready.reminders ? 'profile.remindersOn' : 'profile.remindersOff')}</Text>
+                </View>
+                <Switch
+                  accessibilityLabel={t('profile.reminders')}
+                  value={ready.reminders}
+                  onValueChange={(value) => void onToggleReminders(value)}
                   trackColor={{ false: '#C9CFCB', true: colors.greenDark }}
                   thumbColor="#fff"
                 />
