@@ -1,12 +1,11 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { Card, InfoRow, NavRow, SectionTitle, SettingsTop, settingsStyles } from '@/components/SettingsParts';
 import { displayPhone, versionText } from '@/features/settings/rules';
-import { useHelpline } from '@/features/profile/useHelpline';
 import { t } from '@/i18n';
 import { useMyProfile } from '@/lib/profile';
 import { signOut } from '@/lib/signOut';
@@ -21,12 +20,11 @@ const STATUS_KEY = {
   rejected: 'settings.statusRejected',
 } as const;
 
-// Settings: the profile header opens Personal information; every other row opens its own screen. Terms and Privacy
-// Policy are "coming soon" rows with no link until those pages exist.
+// Settings: the ONE place for account, preferences, help and signing out (Shariq, 26 Nov: Profile and Settings used to repeat each other).
+// The profile header opens Personal information; every other row opens its own screen. Terms and Privacy Policy are "coming soon" rows.
 export default function SettingsScreen() {
   const router = useRouter();
   const { state } = useMyProfile();
-  const helpline = useHelpline();
   const [signingOut, setSigningOut] = useState(false);
   const profile = state.status === 'ready' ? state.profile : null;
   const approved = profile?.verification_status === 'approved';
@@ -83,11 +81,7 @@ export default function SettingsScreen() {
 
         <SectionTitle>{t('settings.support')}</SectionTitle>
         <Card>
-          <NavRow title={t('settings.helpAndFaq')} hint={t('settings.helpAndFaqHint')} onPress={() => router.push('/help')} divider />
-          <NavRow title={t('settings.verificationHelp')} hint={t('settings.verificationHelpHint')} onPress={() => router.push('/settings/verification')} divider />
-          <NavRow title={t('settings.supportScreen.title')} hint={t('settings.supportScreen.intro')} onPress={() => router.push('/settings/support')} divider />
-          {helpline ? <NavRow title={t('settings.callSupport', { number: helpline })} onPress={() => void Linking.openURL(`tel:${helpline}`)} divider /> : null}
-          <NavRow title={t('settings.reportProblem')} hint={t('settings.reportProblemHint')} onPress={() => router.push('/report')} />
+          <NavRow title={t('help.title')} hint={t('settings.helpAndSupportHint')} onPress={() => router.push('/help')} />
         </Card>
 
         <SectionTitle>{t('settings.legal')}</SectionTitle>

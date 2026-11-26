@@ -1,39 +1,33 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/AuthForm';
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { ShieldCheckIcon } from '@/components/icons';
-import { FieldError, Pill } from '@/components/onboarding';
+import { FieldError } from '@/components/onboarding';
 import { owedText } from '@/features/dues/rules';
 import { useMyDues } from '@/features/dues/useMyDues';
 import { formatRupees } from '@/features/home/format';
 import { areaSummary, ratingText, tradeSummary } from '@/features/profile/summary';
 import { useProfileSummary } from '@/features/profile/useProfileSummary';
-import { toggleTrade } from '@/features/work/rules';
 import { t } from '@/i18n';
 import { useMyProfile } from '@/lib/profile';
-import { signOut } from '@/lib/signOut';
-import { showToast } from '@/lib/toast';
 import { colors, fontFamily } from '@/theme';
 
 // W16 Profile (worker/screens/w-profile.dc.html): name, trade and areas, "Verified worker", this week's cash,
-// rating and jobs done, an "Available today" switch, the trade sheet, My areas, Help and Sign out. The figures come
+// rating and jobs done, an "Available today" switch, My dues, My introduction and a link to Settings. Everything else (trade, areas,
+// reminders, help, signing out) lives in Settings only (Shariq, 26 Nov: no item in two places). The figures come
 // from get_my_earnings (cash counts only jobs whose two amounts matched). The mock's other rows (visit fee,
 // language, reviews) are not drawn in the approved rows and are not built.
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state: profileState } = useMyProfile();
-  const { data, reload, setAvailable, setReminders, saveTrades } = useProfileSummary();
+  const { data, reload, setAvailable } = useProfileSummary();
   const duesState = useMyDues().state;
   const owedValue = duesState.status === 'ready' ? owedText(duesState.dues.summary) : '';
-  const [sheet, setSheet] = useState(false);
-  const [picked, setPicked] = useState<number[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState(false);
 
   const profile = profileState.status === 'ready' ? profileState.profile : null;
@@ -42,39 +36,9 @@ export default function ProfileScreen() {
   const names = ready ? ready.trades.filter((tr) => ready.mine.includes(tr.id)).map((tr) => tr.name) : [];
   const approved = profile?.verification_status === 'approved';
 
-  function openSheet() {
-    if (!ready) return;
-    setPicked(ready.mine);
-    setError(null);
-    setSheet(true);
-  }
-
-  async function onSaveTrades() {
-    if (saving) return;
-    if (picked.length === 0) {
-      setError(t('profile.errors.pickTrade'));
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    const ok = await saveTrades(picked);
-    setSaving(false);
-    if (!ok) {
-      setError(t('profile.errors.generic'));
-      return;
-    }
-    setSheet(false);
-    showToast(t('common.saved'));
-  }
-
   async function onToggle(value: boolean) {
     setSwitchError(false);
     if (!(await setAvailable(value))) setSwitchError(true);
-  }
-
-  async function onToggleReminders(value: boolean) {
-    setSwitchError(false);
-    if (!(await setReminders(value))) setSwitchError(true);
   }
 
   return (
@@ -128,55 +92,15 @@ export default function ProfileScreen() {
                   thumbColor="#fff"
                 />
               </View>
-              <View style={[styles.row, styles.divider]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>{t('profile.reminders')}</Text>
-                  <Text style={styles.rowHint}>{t(ready.reminders ? 'profile.remindersOn' : 'profile.remindersOff')}</Text>
-                </View>
-                <Switch
-                  accessibilityLabel={t('profile.reminders')}
-                  value={ready.reminders}
-                  onValueChange={(value) => void onToggleReminders(value)}
-                  trackColor={{ false: '#C9CFCB', true: colors.greenDark }}
-                  thumbColor="#fff"
-                />
-              </View>
               <Row title={t('dues.profileRow')} value={owedValue} onPress={() => router.push('/dues')} divider />
-              <Row title={t('profile.category')} value={tradeSummary(names)} onPress={openSheet} divider />
               <Row title={t('profile.introduction')} onPress={() => router.push('/introduction')} divider />
-              <Row title={t('profile.areas')} value={areaSummary(areas)} onPress={() => router.push('/areas')} divider />
-              <Row title={t('settings.open')} onPress={() => router.push('/settings')} divider />
-              <Row title={t('profile.help')} onPress={() => router.push('/help')} divider />
-              <Row title={t('profile.signOut')} danger onPress={() => void signOut()} />
+              <Row title={t('settings.open')} value={t('profile.settingsHint')} onPress={() => router.push('/settings')} />
             </View>
             {switchError ? <FieldError>{t('profile.errors.generic')}</FieldError> : null}
           </>
         ) : null}
       </ScrollView>
 
-      <Modal visible={sheet} transparent animationType="slide" onRequestClose={() => setSheet(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setSheet(false)} accessibilityLabel={t('common.cancel')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(22, insets.bottom) }]}>
-          <View style={styles.grab} />
-          <Text style={styles.sheetTitle}>{t('profile.sheetTrade')}</Text>
-          <Text style={styles.sheetBody}>{t('profile.sheetTradeBody')}</Text>
-          <View style={styles.pills}>
-            {(ready?.trades ?? []).map((tr) => (
-              <Pill
-                key={tr.id}
-                label={tr.name}
-                on={picked.includes(tr.id)}
-                onPress={() => {
-                  setPicked((current) => toggleTrade(current, tr.id));
-                  setError(null);
-                }}
-              />
-            ))}
-          </View>
-          {error ? <FieldError>{error}</FieldError> : null}
-          <PrimaryButton label={t('profile.save')} onPress={() => void onSaveTrades()} loading={saving} showArrow={false} />
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -229,10 +153,4 @@ const styles = StyleSheet.create({
   message: { backgroundColor: colors.mint, borderRadius: 18, padding: 16, gap: 10 },
   messageTitle: { fontFamily: fontFamily.extrabold, fontSize: 16, color: colors.greenDark },
   messageBody: { fontFamily: fontFamily.semibold, fontSize: 13, lineHeight: 19, color: colors.muted },
-  backdrop: { flex: 1, backgroundColor: 'rgba(16,38,28,0.45)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 10, gap: 12 },
-  grab: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: '#D5DDD8' },
-  sheetTitle: { fontFamily: fontFamily.extrabold, fontSize: 18, color: colors.ink },
-  sheetBody: { fontFamily: fontFamily.semibold, fontSize: 13, color: colors.muted },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

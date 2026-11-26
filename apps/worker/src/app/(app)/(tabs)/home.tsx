@@ -53,7 +53,10 @@ export default function HomeScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
-        <ProfilePhoto size={44} />
+        {/* The photo opens the Profile tab (Shariq, 26 Nov: it looks tappable, so it must be). */}
+        <Pressable accessibilityRole="button" accessibilityLabel={t('home.openProfile')} onPress={() => router.navigate('/profile')} hitSlop={8}>
+          <ProfilePhoto size={44} />
+        </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.date}>{formatHomeDate(now)}</Text>
           <Text style={styles.greeting} numberOfLines={1}>
