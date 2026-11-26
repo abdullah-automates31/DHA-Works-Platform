@@ -307,3 +307,13 @@ The 16 Nov rule (a busy worker only quotes a booked time, no finish estimate) is
 ## 25 Nov 2026: Shariq confirms open-source libraries are fine (screenshot check)
 
 Shariq on WhatsApp: "It's okay to use libraries. Just don't share images outside of our system." So the reader may use an open-source OCR library (PaddleOCR) inside our own code on our own server. The hard rule stays: no payment screenshot is ever sent to any outside company or service (no Claude/Anthropic, Google, or hosted OCR API). Model files are downloaded once and bundled into our image. This closes the open question about "own SDK" in the 24 Nov entry.
+
+## 26 Nov 2026: Shariq says keep the screenshot reader OFF; DHA approves dues by hand; new QR flow is second priority
+
+Source: Shariq on WhatsApp, 26 Nov, around 1:49 AM (the owner sent screenshots of the chat).
+
+1. **The OCR (screenshot reader) stays OFF for now.** Shariq: "for now keep this off. DHA will manually approve due." So no server, no Vault entries `reader_url` and `reader_secret`, no local runner. Everything already built stays in the repository (migration 0080 on DEV, the admin badge code, `services/screenshot-reader`); it does nothing while the two Vault entries are missing. The owner had told Shariq a server is needed before production for the reader to work 24/7: that stays true if the reader is ever switched on.
+2. **New dues flow described by Shariq, marked second priority.** When a worker taps a due, the app first checks whether it is already paid. If not paid, it opens a details screen with a QR code and, under it, a short guide: "Open any banking app, click pay via QR, scan QR." Further down the same screen is a "Verify payment" option: after paying, the worker comes back and taps it. DHA has no P2M integration yet, so it "will verify payment anyway and the due becomes paid." (Not built.)
+3. Shariq also sent a 15 second voice note at 1:29 AM that is not written down anywhere; the first priority is probably in it.
+
+Open questions for the owner and Shariq (also in OPEN-QUESTIONS 26 Nov): what is the first priority; what exactly "Verify payment" does today (does the tap make the due paid at once, or does it only send DHA a request that staff approve by hand); where the QR comes from (one DHA QR image set by staff in Settings, or one per account); whether the QR flow replaces the screenshot and transaction-ID form or sits beside it; whether the admin badge ("Not checked yet" on every payment) should be hidden while the reader is off.

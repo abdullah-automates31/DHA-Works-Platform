@@ -231,3 +231,13 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 | 5 | 0080 is applied on DEV (24 Nov). The demo seed `supabase/dev/seed_dues_checks.sql` is NOT run: DEV has no pending payments. Send 4 small test payments with a screenshot from the worker app (or the demo data), then run it for the Fri 27 Nov demo. Standalone portal pull request #1 waits for review (merging deploys on Vercel). | Owner |
 | 6 | Free upgrade for later: match payments against DHA's own bank / JazzCash / Easypaisa statement export. Which receiving accounts can export a statement or send alerts? | Owner and Shariq |
 | 7 | One sentence for the worker in My Dues that the screenshot is read automatically (worker app text, ships with the next worker build). | Owner decides |
+
+## 26 Nov 2026: after Shariq's WhatsApp (reader off, QR flow second priority)
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Shariq's first priority (probably in his 15 second voice note of 26 Nov, 1:29 AM, not written down) | Owner to tell me |
+| 2 | QR dues flow: does tapping "Verify payment" mark the due paid at once, or send DHA a request that staff approve by hand? | Owner / Shariq |
+| 3 | QR dues flow: where does the QR come from (one DHA QR image set by staff in Settings, or one per saved payment account)? | Owner / Shariq |
+| 4 | QR dues flow: does it replace the screenshot and transaction-ID form, or sit beside it? | Owner / Shariq |
+| 5 | Reader is OFF: hide the "Not checked yet" badge in the admin Dues queue until it is switched on? PR #1 (standalone portal) is NOT merged meanwhile. | Owner |

@@ -1,3 +1,5 @@
+> **26 Nov UPDATE (Shariq): keep the reader OFF for now; DHA approves dues by hand. A QR payment flow is described in docs/DECISIONS.md 26 Nov as second priority. Do not build a server, a local runner or merge portal PR #1 until the owner says so. Steps C to E below are on hold.**
+
 # HANDOFF: automatic check of dues payment screenshots (written 25 Nov 2026)
 
 Plain-words handoff so any person or any AI tool (for example opencode) can carry on without the earlier chat.
