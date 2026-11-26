@@ -237,7 +237,7 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 | # | Item | Status |
 |---|---|---|
 | 1 | Shariq's first priority (probably in his 15 second voice note of 26 Nov, 1:29 AM, not written down) | Owner to tell me |
-| 2 | QR dues flow: does tapping "Verify payment" mark the due paid at once, or send DHA a request that staff approve by hand? | Owner / Shariq |
-| 3 | QR dues flow: where does the QR come from (one DHA QR image set by staff in Settings, or one per saved payment account)? | Owner / Shariq |
-| 4 | QR dues flow: does it replace the screenshot and transaction-ID form, or sit beside it? | Owner / Shariq |
+| 2 | QR dues flow ("Verify payment"): ANSWERED 26 Nov by the owner from Shariq: it is the P2M integration, done LATER after DHA is onboarded; for now DHA staff approve dues by hand. | Closed for now |
+| 3 | QR dues flow: where the QR comes from: decided when P2M onboarding happens (the provider supplies it). | Later |
+| 4 | QR dues flow: replace or sit beside the screenshot form: decide at P2M time. | Later |
 | 5 | Reader is OFF: hide the "Not checked yet" badge in the admin Dues queue until it is switched on? PR #1 (standalone portal) is NOT merged meanwhile. | Owner |
