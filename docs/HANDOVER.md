@@ -2,7 +2,18 @@
 
 Read this first in a new session. It is the detailed record of where the work stands. Section 0 and the update blocks after it are current (newest: 22 to 26 Nov 2026); the rest is the 5 Nov record, so nothing from earlier sessions is lost. The product rules are in [DECISIONS.md](DECISIONS.md); the database design is in [DB-API-DESIGN.md](DB-API-DESIGN.md).
 
-## 0. Latest state (17 Nov 2026) - read this before section 1
+## 0. Latest state (27 Nov 2026) - read this before section 1
+
+- **27 Nov, what changed:**
+  - **Job reminders (suspended workers):** migration `20261127100000` (`private.send_job_reminders()`) no longer sends the one-hour visit reminder to a suspended worker. pgTAP `job_reminder_sweep.test.sql`. Applied on TEST and **on DEV 27 Nov** (the only pending DEV migration that day). Commit `b8ad0f9`.
+  - **Admin verification queue:** the Waiting column and "Sorted by waiting time" are hidden on the Approved and Rejected tabs. The column reads `verification_updated_at`, which every decision sets, so on those tabs it showed the decision date, not a wait. Pending and the open tabs are unchanged. Monorepo `dev` `1db1ce9`, `e3cc44a`; standalone `db0f960`.
+  - **Admin sidebar:** the "Search everything" box is removed (monorepo `128337a`). `/search` still exists; nothing links to it.
+  - **Standalone portal `main`:** pushed `58e97b5` -> `db0f960` on the owner's explicit request. Vercel should build it; the build result is not confirmed yet.
+  - Checks: monorepo admin typecheck, lint and 151 tests pass; standalone typecheck, lint and 134 tests pass.
+- **Open:** confirm the Vercel build; the phone (`adb devices` shows only the emulator; the moto g05 needs USB debugging and the RSA prompt accepted) before any phone test of reminders or the worker app; Windhawk "Translucent Windows" result unconfirmed (registry write refused); reminder edge cases not tested (offline, Android 13+ notification permission, cancelled/completed/expired, push retry cron).
+- **Rule kept:** production (standalone `main`) pushes and DEV `db push` need the owner's explicit request in the chat.
+
+Older state below (17 Nov), kept for history:
 
 Sections 1 onward were written on 5 Nov and are kept for history; where they disagree with this section, this section wins. Day-by-day detail of 14 to 16 Nov is in the list below; product rules are in [DECISIONS.md](DECISIONS.md) (end of file).
 

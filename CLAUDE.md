@@ -2,7 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Current state (26 Nov 2026)
+## Current state (27 Nov 2026)
+
+- **27 Nov 2026 (READ THIS FIRST):** (1) **Job reminders:** migration `20261127100000` stops the one-hour visit reminder going to a suspended worker (`private.send_job_reminders()`, pgTAP `job_reminder_sweep.test.sql`, commit `b8ad0f9`). Applied on hosted TEST and **on hosted DEV 27 Nov** (owner asked for it in chat). (2) **Admin verification queue:** the "Waiting" column and "Sorted by waiting time" are hidden on the Approved and Rejected tabs, because the column reads `verification_updated_at` (set by every decision, so it showed the decision date). Pending and the open tabs are unchanged (`showsWaiting` in `apps/admin/src/features/verification/rules.ts`). Monorepo `dev` `1db1ce9`, `e3cc44a`. (3) **Admin sidebar:** "Search everything" removed (`128337a`); the `/search` page still exists. (4) **Standalone portal `main`:** `db0f960` pushed on the owner's explicit request (Vercel deploys it; build not yet confirmed). Checks: monorepo admin 151 tests, standalone 134 tests, typecheck and lint clean. **Open:** phone not visible to adb (only the emulator; needs USB debugging and the RSA prompt), Windhawk result unconfirmed, reminder edge cases untested. **Rule:** a push to standalone `main` or a DEV `db push` happens only when the owner asks for it in the chat, even after "do everything" (see memory `feedback-explicit-approval-for-main-and-db`). Full detail: `docs/HANDOVER.md` section 0.
 
 Read `docs/HANDOVER.md` **section 0** first in every session (current state, git, next steps); the rest of HANDOVER is the 5 Nov record. `docs/` is the source of truth (`README.md` has the reading order); `docs/DECISIONS.md` wins conflicts and `docs/DB-API-DESIGN.md` is the database/API spec.
 
