@@ -267,3 +267,13 @@ export function whenText(iso: string | null, now: Date = new Date()): string {
   if (text === '') return ms < 0 ? 'just now' : 'in under an hour';
   return ms < 0 ? `${text} ago` : `in ${text}`;
 }
+
+/** The two facts staff ask first: the last payment that counted (confirmed), and the latest screenshot the worker sent (any status). */
+export function lastPayments(payments: LedgerPayment[]): { confirmed: LedgerPayment | null; latestSent: LedgerPayment | null } {
+  const byTime = (a: LedgerPayment, b: LedgerPayment) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  const sorted = [...payments].sort(byTime);
+  return {
+    confirmed: sorted.find((p) => p.status === 'confirmed') ?? null,
+    latestSent: sorted.find((p) => p.proofPath) ?? null,
+  };
+}

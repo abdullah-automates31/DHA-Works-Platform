@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { workerDueCounts, METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parsePayAccounts, parseTab, parseWorkerDues, payAccountsFromForm, safeProofPath, whenText } from './parse.ts';
+import { workerDueCounts, METHODS, methodLabel, parseCounts, parseDuesList, parseRupees, parsePayAccounts, parseTab, parseWorkerDues, payAccountsFromForm, safeProofPath, whenText, lastPayments } from './parse.ts';
 
 const A = '00000000-0000-0000-0000-0000000000a1';
 const B = '00000000-0000-0000-0000-0000000000b1';
@@ -178,4 +178,19 @@ test('the screenshot check comes with each payment in the queue and the ledger (
   });
   assert.equal(w?.payments[0]?.check?.verdict, 'flagged');
   assert.equal(w?.payments[1]?.check, null, 'cash recorded by staff has no check');
+});
+
+test('the last confirmed payment and the latest screenshot are found whatever the order', () => {
+  const p = (id: string, status: 'pending' | 'confirmed' | 'rejected', createdAt: string, proofPath: string | null) =>
+    ({ id, amount: 50, method: 'bank', reference: id, note: null, proofPath, status, createdAt, decidedAt: null, reason: null, byStaff: false, createdBy: null, decidedBy: null, check: null });
+  const list = [
+    p('old', 'confirmed', '2026-11-20T10:00:00Z', null),
+    p('new-pending', 'pending', '2026-11-25T10:00:00Z', 'w/dues/a.jpg'),
+    p('mid', 'confirmed', '2026-11-22T10:00:00Z', 'w/dues/b.jpg'),
+    p('rej', 'rejected', '2026-11-23T10:00:00Z', 'w/dues/c.jpg'),
+  ];
+  const r = lastPayments(list);
+  assert.equal(r.confirmed?.id, 'mid', 'the newest CONFIRMED one, not the pending or rejected');
+  assert.equal(r.latestSent?.id, 'new-pending', 'the newest one that has a screenshot');
+  assert.deepEqual(lastPayments([]), { confirmed: null, latestSent: null });
 });

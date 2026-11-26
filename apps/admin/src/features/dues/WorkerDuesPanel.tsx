@@ -8,7 +8,7 @@ import type { Database } from '@dha/supabase';
 import { decidePaymentAction, recordPaymentAction, waiveDueAction, warnWorkerAction } from './actions';
 import { CheckBadge, CheckPanel } from './CheckPanel';
 import { ProofLink, signedProofUrls } from './ProofLink';
-import { METHODS, methodLabel, parseWorkerDues, whenText, type LedgerDue } from './parse';
+import { METHODS, lastPayments, methodLabel, parseWorkerDues, whenText, type LedgerDue } from './parse';
 
 const DUE_CHIP: Record<LedgerDue['status'], { tone: 'wait' | 'ok' | 'red' | 'gray'; label: string }> = {
   due: { tone: 'wait', label: 'Due' },
@@ -25,6 +25,7 @@ export async function WorkerDuesPanel({ supabase, workerId, workerName }: { supa
   const now = new Date();
   const proofUrls = await signedProofUrls(supabase, w.payments.map((p) => p.proofPath));
   const s = w.summary;
+  const last = lastPayments(w.payments);
   const hasOpenDue = w.dues.some((d) => d.status === 'due' || d.status === 'overdue');
 
   return (
@@ -35,6 +36,10 @@ export async function WorkerDuesPanel({ supabase, workerId, workerName }: { supa
         <div className="card stat"><span>Paid so far</span><b>{rupees(s.paidTotal)}</b></div>
         <div className="card stat"><span>Next due</span><b className="txt">{s.owed > 0 && s.nextDueAt ? whenText(s.nextDueAt, now) : '-'}</b></div>
       </div>
+      <div className="note"><span>
+        <b>Last payment:</b> {last.confirmed ? `${rupees(last.confirmed.amount)} on ${dateTime(last.confirmed.createdAt)}${last.confirmed.decidedBy ? `, confirmed by ${last.confirmed.decidedBy}` : ''}` : 'none confirmed yet'}.{' '}
+        <b>Latest screenshot sent:</b> {last.latestSent ? `${dateTime(last.latestSent.createdAt)} (${last.latestSent.status === 'pending' ? 'waiting to be checked' : last.latestSent.status})` : 'none yet'}.
+      </span></div>
       {s.overdue > 0 ? (
         <div className="note red" role="status"><span><b>{workerName} is overdue by {rupees(s.overdue)}{s.overdueSince ? ` (since ${dateTime(s.overdueSince)})` : ''}.</b> {w.suspended ? 'The account is already suspended.' : 'Send a warning, or suspend the account from the Account box on the right.'}</span></div>
       ) : null}
