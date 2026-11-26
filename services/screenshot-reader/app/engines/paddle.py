@@ -7,6 +7,7 @@ rec_texts / rec_scores / rec_polys. Both are handled. Pin the version in require
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any
 
 from PIL import Image
@@ -71,6 +72,7 @@ class PaddleEngine:
         import paddleocr  # imported here so the tests and the stub never need it
         from paddleocr import PaddleOCR
 
+        self._lock = threading.Lock()
         self._v3 = int(str(getattr(paddleocr, "__version__", "3")).split(".")[0]) >= 3
         if self._v3:
             # 3.x. A phone screenshot is flat and upright, so the document-photo steps (rotation and un-warping) are switched off:
@@ -94,5 +96,8 @@ class PaddleEngine:
         import numpy as np
 
         arr = np.array(image.convert("RGB"))
-        raw = self._ocr.predict(arr) if self._v3 else self._ocr.ocr(arr, cls=True)
+        # One PaddleOCR object is shared by every request. It is not documented as safe for two reads at once, and on a CPU two
+        # parallel reads would not be faster anyway, so reads take turns.
+        with self._lock:
+            raw = self._ocr.predict(arr) if self._v3 else self._ocr.ocr(arr, cls=True)
         return normalise(raw)

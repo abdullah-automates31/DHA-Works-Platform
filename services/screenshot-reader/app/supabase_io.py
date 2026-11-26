@@ -25,11 +25,18 @@ class Io:
         return out if isinstance(out, dict) else {}
 
     def download(self, proof_path: str) -> bytes:
-        r = self._c.get(f"{self._s.supabase_url}/storage/v1/object/{self._s.bucket}/{proof_path}", headers=self._headers())
-        r.raise_for_status()
-        if len(r.content) > self._s.max_image_bytes:
-            raise ValueError("screenshot is larger than allowed")
-        return r.content
+        url = f"{self._s.supabase_url}/storage/v1/object/{self._s.bucket}/{proof_path}"
+        limit = self._s.max_image_bytes
+        data = bytearray()
+        with self._c.stream("GET", url, headers=self._headers()) as r:
+            r.raise_for_status()
+            if int(r.headers.get("content-length") or 0) > limit:
+                raise ValueError("screenshot is larger than allowed")
+            for chunk in r.iter_bytes():  # stop reading as soon as it is too big, never hold more than the limit
+                data.extend(chunk)
+                if len(data) > limit:
+                    raise ValueError("screenshot is larger than allowed")
+        return bytes(data)
 
     def apply(self, payment_id: str, extracted: dict[str, object], sha: str | None, engine: str) -> object:
         return self._rpc("dues_check_apply", {"p_payment": payment_id, "p_extracted": extracted, "p_sha": sha, "p_engine": engine})
