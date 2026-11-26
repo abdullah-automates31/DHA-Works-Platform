@@ -50,11 +50,6 @@ export function Sidebar({ name, workers, residents, reports, requests = 0, dues 
           <span>Admin portal</span>
         </div>
       </div>
-      {/* Search everything: workers, residents, jobs and reports (results page /search). */}
-      <form className="gsrch" action="/search" method="get" role="search">
-        <Icon size={16}>{ICONS.search}</Icon>
-        <input type="search" name="q" placeholder="Search everything" aria-label="Search everything" maxLength={80} autoComplete="off" />
-      </form>
       {groups.map((g, i) => (
         <div key={g.title ?? i} style={{ display: 'contents' }}>
           {g.title ? <div className="sep">{g.title}</div> : null}
