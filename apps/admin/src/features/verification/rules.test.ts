@@ -29,9 +29,9 @@ test('waiting time reads like the design', () => {
   assert.equal(waitingText(ago(-5), now), 'just now');
 });
 
-test('the waiting column is shown for open applications, not for approved ones', () => {
-  for (const tab of ['pending', 'visit_hq', 'needs_changes', 'rejected'] as const) assert.equal(showsWaiting(tab), true, tab);
-  assert.equal(showsWaiting('approved'), false);
+test('the waiting column is shown for open applications, not for decided ones', () => {
+  for (const tab of ['pending', 'visit_hq', 'needs_changes'] as const) assert.equal(showsWaiting(tab), true, tab);
+  for (const tab of ['approved', 'rejected'] as const) assert.equal(showsWaiting(tab), false, tab);
 });
 
 test('names, phases and phones are formatted', () => {

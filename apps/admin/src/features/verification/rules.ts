@@ -51,11 +51,11 @@ export function waitingText(sinceIso: string, now: Date = new Date()): string {
 
 /**
  * The queue's "Waiting" column measures time since the application was last changed (the database's
- * verification_updated_at). That is a waiting time only while the application is open. On Approved the same
- * value is the approval date, so the column and the "Sorted by waiting time" note are hidden there.
+ * verification_updated_at). That is a waiting time only while the application is open. On Approved and Rejected
+ * the same value is the decision date, so the column and the "Sorted by waiting time" note are hidden there.
  */
 export function showsWaiting(tab: Tab): boolean {
-  return tab !== 'approved';
+  return tab !== 'approved' && tab !== 'rejected';
 }
 
 export function initials(name: string | null): string {
