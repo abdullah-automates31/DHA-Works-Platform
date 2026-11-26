@@ -24,6 +24,10 @@ import {
   SUPPORT_EMAIL,
   supportMailLink,
   whatsappLink,
+  dateTimeText,
+  isOwnProofPath,
+  parsePaymentDetail,
+  paymentNoteKey,
   whereText,
   type DuesPayment,
   type DueRow,
@@ -273,4 +277,69 @@ test('the rejection message shows only while the latest payment is the rejected 
   assert.equal(latestRejection([pay('c', 'pending'), pay('a', 'rejected')]), null);
   assert.equal(latestRejection([pay('d', 'confirmed'), pay('a', 'rejected')]), null);
   assert.equal(latestRejection([]), null);
+});
+
+const paymentAnswer = {
+  payment: { id: 'p1', amount: 80, method: 'jazzcash', reference: 'PD-1', status: 'confirmed', created_at: '2026-11-24T10:30:00Z', decided_at: '2026-11-24T10:31:00Z', reason: null, by_staff: false, proof_path: '11111111-1111-1111-1111-111111111111/dues/p1.jpg' },
+  covers: [
+    { due_id: 'd1', job_id: 'j1', code: 'DW-2092', title: 'Kitchen sink', phase: 6, lane: 'Lane 4', completed_at: '2026-11-22T09:00:00Z', fee: 50, covered: 50 },
+    { due_id: 'd2', job_id: 'j2', code: 'DW-2719', title: 'Tap', phase: 5, lane: '', completed_at: null, fee: 60, covered: 30 },
+    { job_id: 'broken' },
+  ],
+  credit: 0,
+  projected: false,
+};
+
+test('one payment in full is read into plain values, a broken cover is skipped', () => {
+  const d = parsePaymentDetail(paymentAnswer);
+  assert.ok(d);
+  assert.equal(d.payment.amount, 80);
+  assert.equal(d.payment.method, 'jazzcash');
+  assert.equal(d.payment.status, 'confirmed');
+  assert.equal(d.payment.byStaff, false);
+  assert.equal(d.payment.proofPath, '11111111-1111-1111-1111-111111111111/dues/p1.jpg');
+  assert.equal(d.covers.length, 2, 'the cover without a due id is dropped');
+  const [first, second] = d.covers;
+  assert.ok(first && second);
+  assert.deepEqual([first.code, first.covered, first.fee], ['DW-2092', 50, 50]);
+  assert.equal(second.covered, 30, 'a part of a fee is kept as it is');
+  assert.equal(second.completedAt, null);
+  assert.equal(d.credit, 0);
+  assert.equal(d.projected, false);
+});
+
+test('an answer that does not look right is refused whole', () => {
+  assert.equal(parsePaymentDetail(null), null);
+  assert.equal(parsePaymentDetail({}), null);
+  assert.equal(parsePaymentDetail({ payment: { id: 'p1', status: 'weird' }, covers: [] }), null);
+  assert.equal(parsePaymentDetail({ payment: { amount: 5, status: 'pending' } }), null, 'no id');
+  const bare = parsePaymentDetail({ payment: { id: 'p9', amount: 10, status: 'rejected', reason: 'the id was not found' } });
+  assert.ok(bare);
+  assert.deepEqual([bare.covers.length, bare.credit, bare.projected, bare.payment.reason], [0, 0, false, 'the id was not found']);
+});
+
+test('only the worker\'s own screenshot path is ever turned into a link', () => {
+  assert.equal(isOwnProofPath('11111111-1111-1111-1111-111111111111/dues/1795360988038-0f91a322.jpg'), true);
+  assert.equal(isOwnProofPath('11111111-1111-1111-1111-111111111111/other/x.jpg'), false);
+  assert.equal(isOwnProofPath('../secret/dues/x.jpg'), false);
+  assert.equal(isOwnProofPath('11111111-1111-1111-1111-111111111111/dues/a/b.jpg'), false);
+  assert.equal(isOwnProofPath(null), false);
+  assert.equal(isOwnProofPath(''), false);
+});
+
+test('each state gets its own plain sentence', () => {
+  const base = parsePaymentDetail(paymentAnswer)!.payment;
+  assert.equal(paymentNoteKey({ ...base, status: 'pending' }), 'waiting');
+  assert.equal(paymentNoteKey({ ...base, status: 'rejected' }), 'rejected');
+  assert.equal(paymentNoteKey({ ...base, status: 'confirmed', byStaff: false }), 'confirmed');
+  assert.equal(paymentNoteKey({ ...base, status: 'confirmed', byStaff: true }), 'confirmedStaff');
+});
+
+test('date and time read plainly, empty when there is none', () => {
+  assert.equal(dateTimeText(null), '');
+  assert.equal(dateTimeText('nonsense'), '');
+  const out = dateTimeText(new Date(2026, 10, 26, 15, 5).toISOString());
+  assert.equal(out, '26 Nov 2026, 3:05 PM');
+  assert.equal(dateTimeText(new Date(2026, 10, 26, 0, 7).toISOString()), '26 Nov 2026, 12:07 AM');
+  assert.equal(dateTimeText(new Date(2026, 10, 26, 12, 0).toISOString()), '26 Nov 2026, 12:00 PM');
 });

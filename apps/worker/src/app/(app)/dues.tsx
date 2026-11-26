@@ -186,10 +186,17 @@ function SearchResults({ state, query, now }: { state: ReturnType<typeof useDues
 }
 
 function PaymentCard({ payment }: { payment: DuesPayment }) {
+  const router = useRouter();
   const view = paymentView(payment);
   const chip = colors.chip[view.tone];
   return (
-    <View style={styles.item} accessible accessibilityLabel={`${methodLabel(payment.method)} ${formatRupees(payment.amount)} ${view.label}`}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${methodLabel(payment.method)} ${formatRupees(payment.amount)} ${view.label}`}
+      accessibilityHint={t('dues.payment.open')}
+      onPress={() => router.push({ pathname: '/dues/payment/[id]', params: { id: payment.id } })}
+      style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
+    >
       <View style={styles.itemHead}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={styles.itemTitle}>{formatRupees(payment.amount)}</Text>
@@ -198,10 +205,11 @@ function PaymentCard({ payment }: { payment: DuesPayment }) {
         <View style={[styles.chip, { backgroundColor: chip.bg }]}>
           <Text style={[styles.chipText, { color: chip.fg }]}>{view.label}</Text>
         </View>
+        <Text style={styles.arrow}>{'›'}</Text>
       </View>
       {payment.byStaff ? <Text style={styles.itemSub}>{t('dues.byStaff')}</Text> : null}
       {payment.status === 'rejected' ? <Text style={styles.itemNote}>{payment.reason ? t('dues.reasonLabel', { reason: payment.reason }) : t('dues.rejectedNoReason')}</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 

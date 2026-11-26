@@ -2940,6 +2940,7 @@ export type Database = {
       my_due_detail: { Args: { p_due: string }; Returns: Json }
       my_dues: { Args: { p_limit?: number }; Returns: Json }
       my_job_fee: { Args: { p_job_id: string }; Returns: number }
+      my_payment_detail: { Args: { p_payment: string }; Returns: Json }
       my_reports: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json

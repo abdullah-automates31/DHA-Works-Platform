@@ -57,3 +57,9 @@ test('no screen draws an empty white circle in its header (Shariq, 26 Nov: a whi
   walk(SRC);
   assert.deepEqual(offenders, [], 'use <View style={{ width: 44, height: 44 }} /> for the empty side of a header');
 });
+
+test('a payment card in My Dues opens the payment details (owner, 26 Nov)', () => {
+  const dues = read('app/(app)/dues.tsx');
+  assert.ok(/function PaymentCard[\s\S]*router\.push\(\{ pathname: '\/dues\/payment\/\[id\]'/.test(dues), 'the card is a button that opens /dues/payment/<id>');
+  assert.ok(read('app/(app)/dues/payment/[id].tsx').includes("'/dues/[id]'"), 'each due it paid opens the due screen');
+});

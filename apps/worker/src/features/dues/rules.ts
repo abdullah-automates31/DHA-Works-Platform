@@ -385,3 +385,80 @@ export function whereText(phase: number, lane: string): string {
   const p = t('dues.detail.phase', { phase: String(phase) });
   return lane.trim() === '' ? p : `${p}, ${t('dues.detail.lane', { lane: lane.trim() })}`;
 }
+
+// ---- one payment in full (my_payment_detail, migration 0081) -----------------------------------------------------------------
+
+export type PaymentCover = { dueId: string; jobId: string; code: string; title: string; phase: number; lane: string; completedAt: string | null; fee: number; covered: number };
+export type PaymentDetail = {
+  payment: { id: string; amount: number; method: string; reference: string; status: 'pending' | 'confirmed' | 'rejected'; createdAt: string; decidedAt: string | null; reason: string; byStaff: boolean; proofPath: string | null };
+  /** The dues this payment paid (or, while it waits, would pay), oldest first. */
+  covers: PaymentCover[];
+  /** What was left over after every due: it stays as credit against the next dues. */
+  credit: number;
+  /** True while DHA has not decided: the list is "where it would go", not what it paid. */
+  projected: boolean;
+};
+
+/** The worker's own screenshot is exactly <worker id>/dues/<file>; nothing else is ever turned into a link. */
+export function isOwnProofPath(path: string | null | undefined): path is string {
+  return typeof path === 'string' && /^[0-9a-fA-F-]{36}\/dues\/[A-Za-z0-9._-]{1,120}$/.test(path);
+}
+
+/** Reads the answer of my_payment_detail(). Anything that does not look right makes the whole answer null; a bad cover is skipped. */
+export function parsePaymentDetail(json: unknown): PaymentDetail | null {
+  const o = obj(json);
+  const p = obj(o?.payment);
+  if (!o || !p || typeof p.id !== 'string') return null;
+  const status = p.status;
+  if (status !== 'pending' && status !== 'confirmed' && status !== 'rejected') return null;
+  const covers: PaymentCover[] = [];
+  for (const raw of Array.isArray(o.covers) ? o.covers : []) {
+    const c = obj(raw);
+    if (!c || typeof c.due_id !== 'string' || typeof c.job_id !== 'string') continue;
+    covers.push({
+      dueId: c.due_id,
+      jobId: c.job_id,
+      code: str(c.code),
+      title: str(c.title),
+      phase: num(c.phase),
+      lane: str(c.lane),
+      completedAt: typeof c.completed_at === 'string' ? c.completed_at : null,
+      fee: num(c.fee),
+      covered: num(c.covered),
+    });
+  }
+  return {
+    payment: {
+      id: p.id,
+      amount: num(p.amount),
+      method: str(p.method),
+      reference: str(p.reference),
+      status,
+      createdAt: str(p.created_at),
+      decidedAt: typeof p.decided_at === 'string' ? p.decided_at : null,
+      reason: str(p.reason),
+      byStaff: p.by_staff === true,
+      proofPath: typeof p.proof_path === 'string' ? p.proof_path : null,
+    },
+    covers,
+    credit: num(o.credit),
+    projected: o.projected === true,
+  };
+}
+
+/** Which plain sentence goes under the amount: what the state means for the worker. */
+export function paymentNoteKey(p: PaymentDetail['payment']): 'waiting' | 'confirmed' | 'confirmedStaff' | 'rejected' {
+  if (p.status === 'pending') return 'waiting';
+  if (p.status === 'rejected') return 'rejected';
+  return p.byStaff ? 'confirmedStaff' : 'confirmed';
+}
+
+/** "26 Nov 2026, 3:45 PM" from an ISO time, in the phone's own time zone; empty when there is none. */
+export function dateTimeText(iso: string | null | undefined): string {
+  const day = dateText(iso);
+  if (!day || !iso) return '';
+  const d = new Date(iso);
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${day}, ${h % 12 === 0 ? 12 : h % 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+}
