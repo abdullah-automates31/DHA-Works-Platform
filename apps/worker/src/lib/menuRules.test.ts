@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
@@ -41,4 +41,19 @@ test('Help and support uses the same building blocks as Settings (no separate ol
 
 test('the Home photo opens the Profile tab', () => {
   assert.ok(/onPress=\{\(\) => router\.navigate\('\/profile'\)\}[^>]*>\s*<ProfilePhoto/.test(HOME), 'the photo is wrapped in a button that opens /profile');
+});
+
+test('no screen draws an empty white circle in its header (Shariq, 26 Nov: a white spot top right on Introduction)', () => {
+  // The back button is a white 44 px circle. A header balances it with an INVISIBLE spacer; a View that reuses the button's style
+  // without a button inside shows as a stray white circle.
+  const offenders: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (/\.tsx$/.test(name) && /<View style=\{styles\.back\} \/>/.test(readFileSync(path, 'utf8'))) offenders.push(path.slice(SRC.length + 1));
+    }
+  };
+  walk(SRC);
+  assert.deepEqual(offenders, [], 'use <View style={{ width: 44, height: 44 }} /> for the empty side of a header');
 });

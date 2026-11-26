@@ -34,7 +34,7 @@ export default function IntroductionScreen() {
           <ChevronLeftIcon size={22} color={colors.greenDark} />
         </Pressable>
         <Text style={styles.topTitle}>{t('introduction.title')}</Text>
-        <View style={styles.back} />
+        <View style={{ width: 44, height: 44 }} />
       </View>
       {work.status === 'loading' ? (
         <SkeletonGroup>
