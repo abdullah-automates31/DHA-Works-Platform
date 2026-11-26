@@ -5,7 +5,7 @@ import { loadAvatarSrcs } from '@/lib/avatars';
 import { ClearAllBar } from '@/components/ListBits';
 import { requireSession } from '@/lib/auth';
 import { loadCounts, loadFilters, loadQueue } from './queries';
-import { documentsChip, initials, PAGE_SIZE, parsePositiveInt, parseTab, phasesText, phoneText, tabsFor, waitingText, type Role } from './rules';
+import { documentsChip, initials, PAGE_SIZE, parsePositiveInt, parseTab, phasesText, phoneText, showsWaiting, tabsFor, waitingText, type Role } from './rules';
 
 type Params = { tab?: string; q?: string; f?: string; page?: string; done?: string };
 
@@ -39,6 +39,8 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
   const avatars = await loadAvatarSrcs(supabase, rows.map((r) => r.id));
   const last = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isWorker = role === 'worker';
+  const waiting = showsWaiting(tab);
+  const columns = (isWorker ? 7 : 6) - (waiting ? 0 : 1);
   const activeFilters = [q ? `"${q}"` : null, filter ? (filters.find((x) => x.id === filter)?.label ?? (isWorker ? 'Category' : 'Phase')) : null].filter((x): x is string => x !== null);
 
   return (
@@ -76,9 +78,11 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
           </Link>
         ))}
         <span className="fx" />
-        <span className="mut b" style={{ fontSize: 13 }}>
-          Sorted by waiting time
-        </span>
+        {waiting ? (
+          <span className="mut b" style={{ fontSize: 13 }}>
+            Sorted by waiting time
+          </span>
+        ) : null}
       </div>
 
       {!result.ok ? <div className="note red">The list could not be loaded. Reload the page. If it keeps happening, sign out and in again.</div> : null}
@@ -102,14 +106,14 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
                   <th>Documents</th>
                 </>
               )}
-              <th>Waiting</th>
+              {waiting ? <th>Waiting</th> : null}
               <th />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={isWorker ? 7 : 6} className="mut" style={{ textAlign: 'center', padding: 32 }}>
+                <td colSpan={columns} className="mut" style={{ textAlign: 'center', padding: 32 }}>
                   {q || filter ? 'Nobody matches this search.' : 'Nothing here right now.'}
                 </td>
               </tr>
@@ -141,7 +145,7 @@ export async function QueueView({ role, params }: { role: Role; params: Params }
                       <td><Chip tone={docs.tone}>{docs.label}</Chip></td>
                     </>
                   )}
-                  <td><b>{waitingText(r.waitingSince)}</b></td>
+                  {waiting ? <td><b>{waitingText(r.waitingSince)}</b></td> : null}
                   <td style={{ textAlign: 'right' }}>
                     <Link className="btn sm" href={`/${role}s/${r.id}`}>Review</Link>
                   </td>

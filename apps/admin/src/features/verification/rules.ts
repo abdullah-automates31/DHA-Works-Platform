@@ -49,6 +49,15 @@ export function waitingText(sinceIso: string, now: Date = new Date()): string {
   return `${Math.floor(hours / 24)} d`;
 }
 
+/**
+ * The queue's "Waiting" column measures time since the application was last changed (the database's
+ * verification_updated_at). That is a waiting time only while the application is open. On Approved the same
+ * value is the approval date, so the column and the "Sorted by waiting time" note are hidden there.
+ */
+export function showsWaiting(tab: Tab): boolean {
+  return tab !== 'approved';
+}
+
 export function initials(name: string | null): string {
   // Only words that start with a letter count, so a tag like "[FAKE]" or a bracketed title never becomes the initial.
   const letters = (name ?? '').trim().split(/\s+/).map((w) => w.match(/^\p{L}/u)?.[0]).filter((c): c is string => !!c);

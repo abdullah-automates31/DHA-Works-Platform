@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   bucketFor, canSubmit, CHECKLIST, DECISIONS, documentsChip, emptyChecks, initials, isDecision, normaliseChecks, parsePositiveInt,
-  parseTab, phasesText, phoneText, statusChip, waitingText,
+  parseTab, phasesText, phoneText, showsWaiting, statusChip, waitingText,
 } from './rules.ts';
 
 const now = new Date('2026-11-07T12:00:00Z');
@@ -27,6 +27,11 @@ test('waiting time reads like the design', () => {
   assert.equal(waitingText(ago(72), now), '3 d');
   assert.equal(waitingText('not a date', now), 'just now');
   assert.equal(waitingText(ago(-5), now), 'just now');
+});
+
+test('the waiting column is shown for open applications, not for approved ones', () => {
+  for (const tab of ['pending', 'visit_hq', 'needs_changes', 'rejected'] as const) assert.equal(showsWaiting(tab), true, tab);
+  assert.equal(showsWaiting('approved'), false);
 });
 
 test('names, phases and phones are formatted', () => {
