@@ -109,17 +109,33 @@ _DATEISH = re.compile(r"(?<!\d)\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}(?!\d)|(?<!\d)\d{4
 
 def visible_account(text: str) -> str | None:
     """Only what is really shown of an account number. '0300 *** 4567' -> '4567'; 'PK36HABB0000123456789001' stays whole; a phone
-    number '+92 300 1234567' -> '923001234567'. Fewer than 4 visible trailing characters -> None (the receiver's name decides)."""
-    # An IBAN; or a number with at least 10 digits (a phone: 03001234567, +92 300 1234567); or a MASKED number (at least one * x # mark).
+    number '+92 300 1234567' -> '923001234567'. Fewer than 3 visible trailing characters -> None (the receiver's name decides)."""
+    # An IBAN (PK + 22-24 chars); or a Pakistani mobile (03xx..., 11 digits); or a phone with formatting (+, spaces, dashes);
+    # or a MASKED number (at least one * x # mark, with 3+ visible trailing digits).
+    # A bare run of 12+ digits with NO formatting is a transaction ID, not an account.
     # A short run of digits (a date such as "2026 03:45", an amount, a time) is never an account.
-    text = _DATEISH.sub(" ", text or "")  # a date or a time is never part of an account
-    m = re.search(r"PK\d{2}[A-Z0-9]{4}\d{16}|\+?\d(?:[\s\-]?\d){9,}|[0-9xX*•·#\s\-]*[*xX•·#][0-9xX*•·#\s\-]*\d{2,}", text, re.I)
-    if not m or len(re.sub(r"\s", "", m.group(0))) < 6:
+    text = _DATEISH.sub(" ", text or "")
+    # IBAN (Pakistan: PK + 22-24 chars) - return full match
+    m = re.search(r"PK\d{2}[A-Z0-9]{4,}\d{16}", text, re.I)
+    if m:
+        return m.group(0)
+    # Pakistani mobile: raw 11 digits starting with 03
+    m = re.search(r"\b03\d{9}\b", text)
+    if m:
+        return m.group(0)
+    # Phone with formatting: +92..., 0300-..., 0300 ..., or masked with * x # (3+ visible trailing digits)
+    m = re.search(r"(\+?\d[\d\s\-]{8,}\d|[0-9xX*•·#\s\-]*[*xX•·#][0-9xX*•·#\s\-]*\d{3,})", text, re.I)
+    if not m:
         return None
-    token = m.group(0)
+    token = m.group(1) if m.lastindex else m.group(0)
+    # Must have some formatting (space, dash, +, or mask char) or be an IBAN - otherwise it's a raw txn ID
+    if not re.search(r"[\s\-\+*xX•·#]", token):
+        return None
+    if len(re.sub(r"\s", "", token)) < 6:
+        return None
     parts = _MASK.split(token)
     tail = re.sub(r"[^A-Za-z0-9]", "", parts[-1]) if len(parts) > 1 else re.sub(r"[^A-Za-z0-9]", "", token)
-    return tail if len(tail) >= 4 else None
+    return tail if len(tail) >= 3 else None
 
 
 _FAILED = re.compile(r"\b(?:failed|failure|unsuccessful|declined|rejected|cancell?ed|reversed|insufficient)\b", re.I)

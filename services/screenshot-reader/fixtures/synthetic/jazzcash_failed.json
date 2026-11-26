@@ -3,5 +3,6 @@
   "amount": 50,
   "transaction_id": "555500001111",
   "receiver_name": "DHA WORKS",
+  "receiver_account": "4567",
   "status": "failed"
 }

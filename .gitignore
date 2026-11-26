@@ -36,3 +36,5 @@ services/screenshot-reader/.venv/
 services/screenshot-reader/**/__pycache__/
 services/screenshot-reader/.pytest_cache/
 services/screenshot-reader/.env
+services/screenshot-reader/accuracy_report.csv
+services/screenshot-reader/accuracy_summary.txt

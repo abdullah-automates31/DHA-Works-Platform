@@ -1,0 +1,8 @@
+{
+  "app": "nayapay",
+  "amount": 250,
+  "transaction_id": "NP20261124ABCD1234",
+  "receiver_name": "DHA WORKS",
+  "receiver_account": "4567",
+  "status": "success"
+}

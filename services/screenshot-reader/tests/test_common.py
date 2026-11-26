@@ -54,6 +54,7 @@ def test_transaction_ids():
 def test_visible_account():
     assert visible_account("0300 *** 4567") == "4567"
     assert visible_account("03*******67") is None  # only two digits shown: not enough, the name decides
+    assert visible_account("03XX XXXX567") == "567"  # three digits shown (Easypaisa style)
     assert visible_account("PK36HABB0000123456789001") == "PK36HABB0000123456789001"
     assert visible_account("+92 300 1234567") == "923001234567"
     assert visible_account("03001234567") == "03001234567"
@@ -64,7 +65,7 @@ def test_visible_account():
     assert visible_account("24-11-2026 16:02") is None
     assert visible_account("Rs. 1,250.00") is None
     assert visible_account("0300 *****67") is None  # two digits shown: the name decides
-    assert visible_account("PK36XXXX0000001234567890") == "0000001234567890"
+    assert visible_account("PK36XXXX0000001234567890") == "PK36XXXX0000001234567890"
 
 
 def test_status():
