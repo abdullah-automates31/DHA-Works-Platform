@@ -44,6 +44,8 @@ py -m venv .venv
 .venv\Scripts\python tools\try_ocr.py [folder] [--rows]              # reads each picture, compares with its .json, prints ok / FAIL
 ```
 Put real screenshots (and a `.json` with the right answers next to each) in `fixtures\real\` (git-ignored) and run `tools\try_ocr.py fixtures\real`.
+Or run `tools\step_d_accuracy_test.py`: it reads each real screenshot, asks you to type the true values from the receipt, and writes
+`accuracy_report.csv` and `accuracy_summary.txt` (both git-ignored; they hold what was read from real screenshots).
 The pictures stay on this computer. Only the model files are downloaded, once.
 
 ## Put it on a server (the owner or Shariq does this; Docker is used on the server only, never on the developer PC)
