@@ -243,3 +243,8 @@ A worker with a job in progress may take another job. The quote is held back unt
 - **Limits:** an edited screenshot can still pass a "matches" badge and it does not prove the money arrived; the admin keeps the final confirm. The reader refuses files over 5 MB (checked while downloading). One engine is shared, so reads take turns.
 - **Status:** OFF (Shariq, 26 Nov). A later P2M integration would confirm payments from the provider's record instead.
 - **Another AI tool in the repository:** Kilo Code and opencode edit the working tree at the owner's request. Review `git diff` before any commit; scan for keys (done 26 Nov, none found).
+
+## 15. Payment detail and the customer Worker details screen (26 Nov 2026)
+- **Payment detail (26 Nov, migration 0081):** `my_payment_detail` returns the worker's OWN screenshot path (`<worker id>/dues/<file>`, needed for a short-lived link; the storage policy `dues_proof_read` already allows exactly that folder) and never the automatic check. A payment that is not the caller's looks the same as one that does not exist. The app turns only a path of the exact own-folder shape into a link (`isOwnProofPath`). The function is worker-only, anon has no execute.
+- **Customer worker screen (PR #21):** it adds no new data: phone and visit time still arrive only after the quote is accepted (`unlockedPhone`, unchanged and tested); the job card uses `getJob`, which the resident can already read.
+- **Copying secrets between folders is refused** by the permission check and is against the customer-repo rule (config only from the vault): see docs/ENVIRONMENTS.md, 26 Nov.

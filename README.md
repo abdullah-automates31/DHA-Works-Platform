@@ -2,7 +2,7 @@
 
 A home-services marketplace for DHA Karachi. A verified resident posts a repair job with photos, several **verified** workers send **itemised quotes**, the resident accepts one, the work is done, and the customer pays **cash**. DHA staff verify every worker and resident and handle reports.
 
-> Status (26 Nov 2026; newest facts in [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and the 22 to 26 Nov update, and in [docs/HANDOFF-SCREENSHOT-CHECK.md](docs/HANDOFF-SCREENSHOT-CHECK.md); the 27 Nov demo is NOT DHA Works): **database and mobile API built and live on the hosted DEV project (migrations through 0080); the Worker app and the admin portal (screens A01 to A15) are built and tested; the customer app is Shariq Bhai's separate repository.** The admin portal is deployed on Vercel. Start with [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and find release versions in [docs/RELEASES.md](docs/RELEASES.md).
+> Status (26 Nov 2026; newest facts in [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and the 22 to 26 Nov update, and in [docs/HANDOFF-SCREENSHOT-CHECK.md](docs/HANDOFF-SCREENSHOT-CHECK.md); the 27 Nov demo is NOT DHA Works): **database and mobile API built and live on the hosted DEV project (migrations through 0081); the Worker app and the admin portal (screens A01 to A15) are built and tested; the customer app is Shariq Bhai's separate repository.** The admin portal is deployed on Vercel. Start with [docs/HANDOVER.md](docs/HANDOVER.md) section 0 and find release versions in [docs/RELEASES.md](docs/RELEASES.md).
 
 ## The three products
 

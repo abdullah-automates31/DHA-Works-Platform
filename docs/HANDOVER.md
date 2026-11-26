@@ -37,6 +37,7 @@ Sections 1 onward were written on 5 Nov and are kept for history; where they dis
 - **The 27 Nov demo is NOT a DHA Works demo (owner, 26 Nov):** tomorrow's demo is for another thing (the owner called it Muayana) and DHA Works is not part of it. Do not prepare a DHA Works demo; stay inside DHA Works. DEMO-SCRIPT.md is kept only as history.
 - **Waiting on the owner:** Shariq's first priority (probably in a 15 second voice note of 26 Nov, 1:29 AM), the decision on portal PRs #1 and #2, and later the 30 to 50 real screenshots and a server if the reader is ever switched on.
 - **Two other AI tools touch this repository now:** Kilo Code and opencode (owner's choice). Always run `git status` and `git diff` first, review what they changed, and never commit their work without the owner saying so. Their scratch scripts were moved to `C:\Users\Abdullah Ali\kilo-scratch\`.
+- **Later on 26 Nov:** payment detail screen + migration 0081 (applied on DEV and TEST; worker taps a payment card and sees what it paid); worker menus cleaned up (Sign out only in Settings, Help in the new look, Job reminders kept on Profile, Home photo opens Profile, white spot removed); customer app **PR #21** Worker details mirrors Customer details (built and installed on the emulator, owner still to look at it); admin PR #2. Worker tests 373, customer jobs module 228, pgTAP 52 files, admin 150. Next free migration: 0082. Details: CLAUDE.md first two bullets, docs/WORKER-APP.md, docs/ENVIRONMENTS.md (customer app on the emulator).
 
 ## 1. Where we are
 

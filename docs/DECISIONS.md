@@ -337,3 +337,7 @@ Shariq sent five points: log out in two places; Help and DHA support still in th
 ### 26 Nov 2026, payment detail screen (owner: option B)
 
 The owner asked that the cards under "Your payments" open and show the payment, which job it was for, and when and where. Decision (owner chose the full version): a new function `my_payment_detail` (migration 0081) works out which dues a payment paid, because a payment is **not stored against a job**; all confirmed payments are pooled and clear the oldest dues first. The screen words a waiting payment as "where it would go" and tells the worker the list is the oldest-first rule, so it is honest when staff later waive a due. The worker may see their own screenshot (already allowed by the storage policy); never the automatic check. Details: docs/WORKER-APP.md, docs/DB-API-DESIGN.md.
+
+### 26 Nov 2026, customer app: Worker details mirrors Customer details (owner request)
+
+The owner asked that the resident sees the worker exactly as the worker sees the customer. Decision: the resident's worker screen becomes the same three-card layout (centred top card with Call, Contact, This job with "See full job details"), in Shariq's repository as **pull request #21** (branch and PR only). The voice introduction, bio and Performance stay below (a resident compares quotes by them); the "Your booking" card is folded into Contact and This job; the rating and trade chips stay on the top card. No backend change.

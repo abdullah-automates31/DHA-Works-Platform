@@ -190,3 +190,16 @@ Run on 26 Nov 2026 by Claude Code; results:
 
 **Dues, what each side was checked to do:** the worker sees dues, paid and left (`my_dues`, checked on DEV); sending a payment needs a screenshot and a transaction ID, refuses an amount above what is owed, refuses a repeated transaction ID, allows at most 3 pending (`dues.test.sql`); staff see paid so far, left, overdue, next due, per-job fee, paid and left, each payment with when it was sent, the screenshot link, status and who confirmed it, and (from 26 Nov) a last-payment line.
 **Not done:** nothing was tried on a phone (crest, Email Support, Back to Home); the paying path was not run live on DEV because the test worker owes Rs 0 (a new completed job creates a new due); the accuracy run on 30 to 50 REAL screenshots; the Docker image was never built; the reader is off by Shariq's decision.
+
+## Added 26 Nov (later): payment detail, menus, customer Worker details
+
+| Check | Result |
+|---|---|
+| pgTAP, hosted TEST project (`node scripts/test-db-hosted.cjs`) | all 52 files pass (new: `dues_payment_detail.test.sql`: roles, other worker, exact overlaps, waived due excluded, rejected, projection, office cash with credit, sum equals what My Dues shows paid) |
+| 0081 on DEV: read-only call as the test worker | each payment shows the right dues: Rs 160 paid DW-2095, DW-2094, DW-2783; Rs 50 bank paid DW-2092; Rs 50 office cash paid DW-2719; rejected paid nothing; the pending Rs 50 would be all credit |
+| Generated types from DEV | identical to the committed file |
+| Worker: typecheck, lint, tests, Android bundle | clean, 373 pass (new guards in `lib/menuRules.test.ts`: one home for each menu item, Help in the Settings look, tappable Home photo and payment cards, no white spacer circle) |
+| Customer app: `:feature:jobs:jvmTest` | 228 pass, 0 failures (3 new view model tests); `assembleDevDebug` builds |
+| Customer app on the emulator | the dev build installs and opens at the sign-in screen; **the Worker details screen itself has not been looked at yet** (the owner signs in) |
+
+**Not done:** the phone checks of the worker changes (crest, Email Support, Back to Home, menus, Help, payment details); the screenshot of the new customer screen for the PR.

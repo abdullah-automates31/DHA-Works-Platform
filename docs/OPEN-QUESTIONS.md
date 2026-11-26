@@ -252,3 +252,14 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 | 9 | The DEV DHA fee (20 percent, minimum Rs 50) is still ON for testing: set it back to 0 when the owner says the dues test passed | Owner |
 | 10 | P2M integration (QR and "Verify payment"): needs the payment provider, DHA's merchant account and a plan for how it sits next to the manual flow | After DHA is onboarded |
 | 11 | If the reader is ever switched on: choose a server and domain, set `.env` and the Vault entries, merge PR #1, run the accuracy test on 30 to 50 real screenshots | Only if Shariq changes his mind |
+
+## 26 Nov 2026: items added after the payment detail and the customer Worker details work
+
+| # | Item | Status |
+|---|---|---|
+| 12 | Customer app PR #21 (Worker details mirrors Customer details): the owner checks it on the emulator or a phone; Shariq reviews and merges. No reviewer requested yet. No screenshot is attached to the PR (GitHub does not take images from here; the owner can drag one in; blur the phone and address in the worker-side reference). | Owner, then Shariq |
+| 13 | The customer Worker details screen keeps About (voice, bio) and Performance below the three cards (not an exact copy). Remove them? | Owner |
+| 14 | Job reminders switch is on both Profile and Settings > Notifications (owner wants it on Profile). Keep both, or only one? | Owner |
+| 15 | Distance: today a phase-centre estimate; an exact distance would need job coordinates, hidden on purpose until a quote is accepted | Shariq |
+| 16 | Payment detail: a payment is not stored per job, so what it paid is worked out oldest-first and can change if staff waive a due. Store the allocation per payment instead? | Shariq, later |
+| 17 | Standalone portal PRs #1 (badge) and #2 (last payment) are still not merged | Owner |

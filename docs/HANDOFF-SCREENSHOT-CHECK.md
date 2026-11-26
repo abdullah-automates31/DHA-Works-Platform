@@ -232,3 +232,5 @@ Optional: one sentence in the worker app `apps/worker/src/i18n/en.ts` (`dues.for
 - **The 27 Nov demo is not DHA Works** (owner): do not prepare a DHA Works demo.
 - **Waiting on the owner:** Shariq's first priority; decisions on portal PRs #1 and #2; later, 30 to 50 real screenshots and a server only if the reader is switched on.
 - **Other tools:** Kilo Code and opencode also change this repository. Always `git status` and `git diff` first; their scratch scripts are in `C:\Users\Abdullah Ali\kilo-scratch\`.
+
+- **Later on 26 Nov (not OCR, same session):** worker menus and Help, Job reminders kept on Profile, the white-spot fix, the payment detail screen with migration 0081 (on DEV and TEST), the customer app PR #21, and an emulator build of it. The reader is still OFF and nothing about it changed. See docs/HANDOVER.md "Later on 26 Nov" and CLAUDE.md.

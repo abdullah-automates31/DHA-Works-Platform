@@ -136,3 +136,7 @@ Screens are in `DHA-Works-UI/` (outside this repo); these are the corrections th
 - **C20 / W13:** drop the "disputed" state added in section 8; a price difference never disputes a job. Pending: whether C20 itself goes.
 - **Rating screen:** a rating below 3 files a Poor work report automatically; the resident may be told "staff will review this".
 - **"v2 need expiry":** unclear, pending (quote expiry?).
+
+## 26 Nov 2026: worker app menu structure (Shariq's feedback)
+
+Profile = me and my work today (photo and name, this week's cash, rating, jobs done, Available today, Job reminders, My dues, My introduction, a link to Settings). Settings = Account (Personal, Professional, Service area, Verification), Preferences (Notifications, Privacy), one **Help and support** row, Legal and version, **Sign out (only here)**. Help and support = Contact DHA (call, message, email), Common questions, Problems with a job (Report a problem, My reports), drawn with the same blocks as Settings. A header balances its back button with an INVISIBLE spacer, never a white circle. Details: docs/WORKER-APP.md, "One home for every menu item".
