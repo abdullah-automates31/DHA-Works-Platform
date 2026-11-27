@@ -263,3 +263,15 @@ Plan and bug log: [DEMO-SCRIPT.md](DEMO-SCRIPT.md). Decisions: DECISIONS.md 21 N
 | 15 | Distance: today a phase-centre estimate; an exact distance would need job coordinates, hidden on purpose until a quote is accepted | Shariq |
 | 16 | Payment detail: a payment is not stored per job, so what it paid is worked out oldest-first and can change if staff waive a due. Store the allocation per payment instead? | Shariq, later |
 | 17 | Standalone portal PRs #1 (badge) and #2 (last payment) are still not merged | Owner |
+
+## 28 Nov 2026: items from the phone testing
+
+| # | Item | Status |
+|---|---|---|
+| 18 | Commit the Open jobs layout fix (`open-jobs.tsx`, uncommitted on `dev`) | Owner |
+| 19 | Customer app PR #21: Visit time is shown raw (`2026-11-28 01:05`) and the "This job" rows run behind the navigation bar. Fix both on the PR branch (new commit, PR only)? | Owner, then Shariq |
+| 20 | Install the newest worker build on the Motorola (EAS cloud build started 28 Nov; the phone has the 20 Nov build) and test the one-hour reminder on the real phone | Claude, after the build |
+| 21 | A job that is reopened (after a replace or staff replacement) can send the same worker a second `new_job` notice (`private.notify_matching_workers` has no check for an existing notice). Add a dedupe? | Owner |
+| 22 | Windows long paths (`LongPathsEnabled`) would let the worker app build locally; today we use EAS cloud builds | Owner, optional |
+| 23 | DEV test data: cancel DW-2787 and DW-2788, close DW-2063 | Owner (ask first) |
+| 24 | Standalone portal docs commit c5ce71f is unpushed (a push deploys on Vercel) | Owner, explicit go |

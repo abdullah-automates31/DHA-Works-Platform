@@ -2,7 +2,19 @@
 
 Read this first in a new session. It is the detailed record of where the work stands. Section 0 and the update blocks after it are current (newest: 22 to 26 Nov 2026); the rest is the 5 Nov record, so nothing from earlier sessions is lost. The product rules are in [DECISIONS.md](DECISIONS.md); the database design is in [DB-API-DESIGN.md](DB-API-DESIGN.md).
 
-## 0. Latest state (27 Nov 2026) - read this before section 1
+## 0. Latest state (28 Nov 2026) - read this before section 1
+
+- **27 to 28 Nov, later (newest):**
+  - **Phone:** the Motorola moto g05 (ZY32LMKVK3) is now visible to adb (the owner approved USB debugging). It is signed in to the worker app as SYED ABDULLAH ALI (worker ba8426a9), on an **old build from 20 Nov** (no dues, no 26 Nov menu work). A `staff_message` push reached it (push_sent_at 19:53:08, owner confirmed), so FCM, the token and `send-push` work on a real phone. The one-hour visit reminder is **still only verified on the emulator** (to test on the phone: a job for worker ba8426a9 with a visit about 1 hour ahead).
+  - **Portal "Warn the worker" was not a bug:** `admin_dues_warn` (migration 20261122100000, type `dues_warning`) was used on ALI KHAN, who has no row in `device_tokens`.
+  - **Customer app PR #21** (commit 901c7e6, worktree `C:\Users\Abdullah Ali\dha-tmp-workerdetails`) was built and installed on the Motorola. Owner's screenshot shows two things to fix on that branch: the Visit time is raw (`2026-11-28 01:05`, should read like the rest of the app) and the "This job" rows run behind the navigation bar (needs a bottom inset). Not fixed; waiting on the owner. No image can be attached to the PR from here.
+  - **Worker app, Open jobs layout (uncommitted on `dev`):** `apps/worker/src/app/(app)/(tabs)/open-jobs.tsx` controls row wraps (`flexWrap`, gaps) so the distance pill no longer runs off the screen on a phone with large text. Worker typecheck clean, 373 tests pass.
+  - **Local worker build on this PC is blocked** (space in the user name: NDK short-name linker error; 260-character path in react-native-reanimated; low free memory). Not worth retrying. The EAS cloud build for the `development` profile was started 28 Nov ~00:57 (result not known when written); when done, download the APK and `adb install -r` it, then check `lastUpdateTime`. See ENVIRONMENTS.md "Building the worker app on this PC".
+  - **Duplicate `new_job` notices:** DW-2789 once showed two; not reproduced. Likely source: `private.notify_matching_workers` (reopen after a replace or staff replacement) inserts again for every matching worker with no dedupe. Not fixed.
+  - **Left to the owner:** commit the layout fix; fix PR #21's two issues; DW-2787/DW-2788 (cancel) and DW-2063 (close) on DEV, ask first; the standalone portal's unpushed docs commit c5ce71f (a push deploys on Vercel, explicit go needed); Shariq's yes/no on quick messages and travelling/arrived statuses (he said live tracking is not MVP); merge decisions on portal PRs #1 and #2.
+  - Memory records (outside the repo): `project-session-2026-11-27-28-phone-builds-and-fixes`, `reference-windows-android-local-build`.
+
+## Earlier on 27 Nov 2026
 
 - **27 Nov, what changed:**
   - **Job reminders (suspended workers):** migration `20261127100000` (`private.send_job_reminders()`) no longer sends the one-hour visit reminder to a suspended worker. pgTAP `job_reminder_sweep.test.sql`. Applied on TEST and **on DEV 27 Nov** (the only pending DEV migration that day). Commit `b8ad0f9`.

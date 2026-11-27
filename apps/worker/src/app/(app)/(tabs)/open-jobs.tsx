@@ -166,7 +166,8 @@ const styles = StyleSheet.create({
   menuHolder: { position: 'absolute', right: 20, zIndex: 20, elevation: 20 },
   title: { fontFamily: fontFamily.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.28, color: colors.ink },
   subtitle: { fontFamily: fontFamily.bold, fontSize: 12, color: colors.muted, marginTop: 2 },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 },
+  // wraps: on a phone with large text the sort switch and the distance pill no longer fit on one line, and the pill ran off the screen
+  controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 10, rowGap: 8, marginTop: 12 },
   segment: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, padding: 4 },
   segItem: { height: 36, paddingHorizontal: 18, borderRadius: 16, justifyContent: 'center' },
   segOn: { backgroundColor: colors.green },
